@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readDirectory: (path) => ipcRenderer.invoke('read-directory', path),
   getFilePath: (filePath) => ipcRenderer.invoke('get-file-path', filePath),
   processFitsFile: (filePath) => ipcRenderer.invoke('process-fits-file', filePath),
+  processFitsFileStretched: (filePath, applyStretch) => ipcRenderer.invoke('process-fits-file-stretched', filePath, applyStretch),
   checkDirectoryExists: (directoryPath) => ipcRenderer.invoke('check-directory-exists', directoryPath),
   
   // Move dialog functionality

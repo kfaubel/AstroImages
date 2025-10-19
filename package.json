@@ -16,5 +16,25 @@
   },
   "dependencies": {
     "canvas": "^3.2.0"
+  },
+  "build": {
+    "appId": "com.astro-images.app",
+    "productName": "Astro Images",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "renderer.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "dir",
+      "icon": null,
+      "sign": false
+    }
   }
 }

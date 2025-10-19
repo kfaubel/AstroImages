@@ -91,6 +91,7 @@ const zoomOutBtn = document.getElementById('zoom-out');
 const zoomActualBtn = document.getElementById('zoom-actual');
 const zoomFitBtn = document.getElementById('zoom-fit');
 const zoomLevel = document.getElementById('zoom-level');
+const autoStretchCheckbox = document.getElementById('auto-stretch');
 
 // Resize elements
 const sidebar = document.getElementById('sidebar');
@@ -221,6 +222,15 @@ zoomInBtn.addEventListener('click', zoomIn);
 zoomOutBtn.addEventListener('click', zoomOut);
 zoomActualBtn.addEventListener('click', zoomActual);
 zoomFitBtn.addEventListener('click', zoomFit);
+
+// Auto-stretch event listener
+autoStretchCheckbox.addEventListener('change', handleAutoStretchChange);
+
+// Restore auto-stretch setting from localStorage
+const savedAutoStretch = localStorage.getItem('autoStretchEnabled');
+if (savedAutoStretch !== null) {
+    autoStretchCheckbox.checked = savedAutoStretch === 'true';
+}
 
 // Image panning event listeners
 imageContainer.addEventListener('mousedown', startImageDrag);
@@ -1153,11 +1163,12 @@ async function displayImage(file) {
         let imageSrc;
         
         if (file.isFits) {
-            // Process FITS file
+            // Process FITS file with optional stretching
             console.log('Processing FITS file:', file.path);
             try {
-                imageSrc = await window.electronAPI.processFitsFile(file.path);
-                console.log('FITS processing completed successfully');
+                const applyStretch = autoStretchCheckbox.checked;
+                imageSrc = await window.electronAPI.processFitsFileStretched(file.path, applyStretch);
+                console.log('FITS processing completed successfully with stretch:', applyStretch);
             } catch (error) {
                 console.error('FITS processing failed:', error);
                 throw error;
@@ -1196,6 +1207,8 @@ async function displayImage(file) {
         // Use setTimeout to ensure the image is rendered and container dimensions are available
         setTimeout(() => {
             zoomFit();
+            // Apply auto-stretch if enabled
+            applyAutoStretch(autoStretchCheckbox.checked);
         }, 50);
         
         // Show image info
@@ -1415,6 +1428,54 @@ function resetZoom() {
         imageDisplay.style.transform = 'scale(1)';
         updateZoomDisplay();
         updateZoomButtons();
+    }
+}
+
+// Get the currently displayed file
+function getCurrentFile() {
+    if (currentImageIndex >= 0 && currentImageIndex < currentFiles.length) {
+        return currentFiles[currentImageIndex];
+    }
+    return null;
+}
+
+// Auto-stretch functionality
+async function handleAutoStretchChange() {
+    const isAutoStretchEnabled = autoStretchCheckbox.checked;
+    
+    // Save the setting to localStorage
+    localStorage.setItem('autoStretchEnabled', isAutoStretchEnabled.toString());
+    
+    // If we have a current image displayed, apply the stretch
+    if (imageDisplay.src && imageDisplay.style.display !== 'none') {
+        const currentFile = getCurrentFile();
+        if (currentFile && currentFile.isFits) {
+            // For FITS files, we need to reprocess with the new stretch setting
+            try {
+                showLoading('Applying histogram stretch...');
+                const imageSrc = await window.electronAPI.processFitsFileStretched(currentFile.path, isAutoStretchEnabled);
+                imageDisplay.src = imageSrc;
+                hideLoading();
+            } catch (error) {
+                console.error('Error applying stretch to FITS file:', error);
+                hideLoading();
+            }
+        } else {
+            // For regular images, use CSS filters
+            applyAutoStretch(isAutoStretchEnabled);
+        }
+    }
+}
+
+function applyAutoStretch(enabled) {
+    if (enabled) {
+        // Apply auto-stretch using CSS filters
+        // This is a basic implementation - for FITS files, more sophisticated
+        // histogram stretching would typically be done in the main process
+        imageDisplay.style.filter = 'contrast(1.2) brightness(1.1)';
+    } else {
+        // Remove auto-stretch
+        imageDisplay.style.filter = '';
     }
 }
 

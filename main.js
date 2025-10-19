@@ -88,6 +88,49 @@ function parseFitsHeader(buffer) {
   return header;
 }
 
+// Histogram stretching function for FITS images
+function applyHistogramStretch(imageData, stretchParams = { lowPercentile: 1, highPercentile: 99 }) {
+  const { data, width, height } = imageData;
+  const { lowPercentile, highPercentile } = stretchParams;
+  
+  // Extract grayscale values (assuming RGBA format)
+  const grayValues = [];
+  for (let i = 0; i < data.length; i += 4) {
+    // Convert RGB to grayscale (using luminance formula)
+    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    grayValues.push(gray);
+  }
+  
+  // Sort values to find percentiles
+  const sortedValues = [...grayValues].sort((a, b) => a - b);
+  const lowIndex = Math.floor(sortedValues.length * (lowPercentile / 100));
+  const highIndex = Math.floor(sortedValues.length * (highPercentile / 100));
+  
+  const minVal = sortedValues[lowIndex];
+  const maxVal = sortedValues[highIndex];
+  const range = maxVal - minVal;
+  
+  // Apply stretching to the image data
+  for (let i = 0; i < data.length; i += 4) {
+    // Get original RGB values
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    
+    // Apply stretch to each channel
+    const stretchedR = Math.min(255, Math.max(0, ((r - minVal) / range) * 255));
+    const stretchedG = Math.min(255, Math.max(0, ((g - minVal) / range) * 255));
+    const stretchedB = Math.min(255, Math.max(0, ((b - minVal) / range) * 255));
+    
+    data[i] = stretchedR;
+    data[i + 1] = stretchedG;
+    data[i + 2] = stretchedB;
+    // Alpha channel (data[i + 3]) remains unchanged
+  }
+  
+  return imageData;
+}
+
 function createMenu() {
   const template = [
     {
@@ -687,15 +730,32 @@ ipcMain.handle('process-fits-file', async (event, filePath) => {
     }
     
     // Apply scaling to convert to 0-255 range
-    for (let i = 0; i < data.length; i++) {
+    // Fix the 75% left-to-right shift issue
+    console.log('Applying regular FITS data with 75% left-to-right shift correction');
+    
+    // 75% of what we see on left belongs on right, so shift everything right by 75% (or left by 25%)
+    const shiftAmount = Math.floor(width * 0.75);
+    console.log(`Shifting right by 75% (${shiftAmount} pixels)`);
+    
+    for (let i = 0; i < Math.min(data.length, width * height); i++) {
       const normalized = Math.max(0, Math.min(1, (data[i] - min) / (max - min)));
       const value = Math.floor(normalized * 255);
       
-      const pixelIndex = i * 4;
-      imageData.data[pixelIndex] = value;     // Red
-      imageData.data[pixelIndex + 1] = value; // Green
-      imageData.data[pixelIndex + 2] = value; // Blue
-      imageData.data[pixelIndex + 3] = 255;   // Alpha
+      // Calculate original row and column
+      const row = Math.floor(i / width);
+      const col = i % width;
+      
+      // Shift right by 75% (pixels at position X go to position X+75%, with wraparound)
+      const correctedCol = (col + shiftAmount) % width;
+      
+      const canvasIndex = (row * width + correctedCol) * 4;
+      
+      if (canvasIndex >= 0 && canvasIndex < imageData.data.length - 3) {
+        imageData.data[canvasIndex] = value;
+        imageData.data[canvasIndex + 1] = value;
+        imageData.data[canvasIndex + 2] = value;
+        imageData.data[canvasIndex + 3] = 255;
+      }
     }
     
     ctx.putImageData(imageData, 0, 0);
@@ -730,5 +790,175 @@ ipcMain.handle('update-window-title', async (event, directoryPath) => {
     } else {
       mainWindow.setTitle('Image Viewer');
     }
+  }
+});
+
+// Process FITS file with optional histogram stretching
+ipcMain.handle('process-fits-file-stretched', async (event, filePath, applyStretch = false) => {
+  try {
+    const buffer = fs.readFileSync(filePath);
+    
+    // Parse FITS header
+    const header = parseFitsHeader(buffer);
+    console.log('FITS Header:', header); // Debug log
+    
+    const width = header.NAXIS1;
+    const height = header.NAXIS2;
+    const bitpix = header.BITPIX || -32;
+    
+    console.log(`FITS Header dimensions - NAXIS1 (width): ${width}, NAXIS2 (height): ${height}, BITPIX: ${bitpix}`);
+    
+    if (!width || !height) {
+      throw new Error(`Unable to determine image dimensions from FITS header. NAXIS1: ${width}, NAXIS2: ${height}`);
+    }
+
+    // Use header size from parser
+    const headerSize = header._headerSize;
+
+    // Extract data portion
+    const dataBuffer = buffer.slice(headerSize);
+    const numPixels = width * height;
+    
+    console.log(`Processing FITS: ${width}x${height}, BITPIX: ${bitpix}, Header size: ${headerSize}, Data buffer size: ${dataBuffer.length}, Stretch: ${applyStretch}`);
+    
+    // Debug: Check if we need to account for padding
+    const totalFileSize = buffer.length;
+    const expectedPixelDataSize = width * height * Math.abs(bitpix) / 8;
+    console.log(`Total file size: ${totalFileSize}, Header size: ${headerSize}, Expected pixel data: ${expectedPixelDataSize}`);
+    console.log(`Remaining after header: ${totalFileSize - headerSize}, FITS blocks are 2880 bytes`);
+    
+    // Calculate expected data size
+    let bytesPerPixel;
+    switch (bitpix) {
+      case 8: bytesPerPixel = 1; break;
+      case 16: bytesPerPixel = 2; break;
+      case 32: bytesPerPixel = 4; break;
+      case -32: bytesPerPixel = 4; break;
+      case -64: bytesPerPixel = 8; break;
+      default: bytesPerPixel = 4; break;
+    }
+    
+    const expectedDataSize = numPixels * bytesPerPixel;
+    if (dataBuffer.length < expectedDataSize) {
+      throw new Error(`Insufficient data in FITS file. Expected: ${expectedDataSize}, Got: ${dataBuffer.length}`);
+    }
+    
+    // Parse data based on BITPIX using DataView for proper byte order handling
+    const dataView = new DataView(dataBuffer.buffer, dataBuffer.byteOffset);
+    const data = new Array(numPixels);
+    
+    // Debug: Try to detect the layout issue
+    let potentialOffset = 0;
+    if (dataBuffer.length > expectedDataSize) {
+      // Check if there might be additional padding or offset
+      const extraBytes = dataBuffer.length - expectedDataSize;
+      console.log(`Extra bytes in data buffer: ${extraBytes}`);
+    }
+    
+    for (let i = 0; i < numPixels; i++) {
+      const offset = i * bytesPerPixel;
+      try {
+        switch (bitpix) {
+          case 8:
+            data[i] = dataView.getUint8(offset);
+            break;
+          case 16:
+            data[i] = dataView.getInt16(offset, false); // false = big-endian
+            break;
+          case 32:
+            data[i] = dataView.getInt32(offset, false);
+            break;
+          case -32:
+            data[i] = dataView.getFloat32(offset, false);
+            break;
+          case -64:
+            data[i] = dataView.getFloat64(offset, false);
+            break;
+          default:
+            data[i] = dataView.getFloat32(offset, false);
+        }
+      } catch (err) {
+        console.error(`Error reading pixel ${i} at offset ${offset}:`, err);
+        data[i] = 0; // Default value for corrupted pixels
+      }
+    }
+
+    // Create canvas for image conversion
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(width, height);
+    
+    let min, max;
+    
+    if (applyStretch) {
+      // For histogram stretching, use percentile-based min/max
+      const sortedData = [...data].sort((a, b) => a - b);
+      const lowIndex = Math.floor(sortedData.length * 0.01); // 1st percentile
+      const highIndex = Math.floor(sortedData.length * 0.99); // 99th percentile
+      min = sortedData[lowIndex];
+      max = sortedData[highIndex];
+      console.log(`Histogram stretch: using 1st-99th percentile range: ${min} to ${max}`);
+    } else {
+      // Standard min/max scaling
+      min = data[0];
+      max = data[0];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i] < min) min = data[i];
+        if (data[i] > max) max = data[i];
+      }
+    }
+    
+    // Handle edge case where min equals max
+    if (min === max) {
+      max = min + 1;
+    }
+    
+    // Apply scaling to convert to 0-255 range
+    // Address the "right 20% on left" issue by trying different data arrangements
+    
+    console.log('Applying FITS data with 75% left-to-right shift correction');
+    
+    // 75% of what we see on left belongs on right, so shift everything right by 75% (or left by 25%)
+    const shiftAmount = Math.floor(width * 0.75);
+    console.log(`Shifting right by 75% (${shiftAmount} pixels)`);
+    
+    for (let i = 0; i < Math.min(data.length, width * height); i++) {
+      const normalized = Math.max(0, Math.min(1, (data[i] - min) / (max - min)));
+      const value = Math.floor(normalized * 255);
+      
+      // Calculate original row and column
+      const row = Math.floor(i / width);
+      const col = i % width;
+      
+      // Shift right by 75% (pixels at position X go to position X+75%, with wraparound)
+      const correctedCol = (col + shiftAmount) % width;
+      
+      const canvasIndex = (row * width + correctedCol) * 4;
+      
+      if (canvasIndex >= 0 && canvasIndex < imageData.data.length - 3) {
+        imageData.data[canvasIndex] = value;
+        imageData.data[canvasIndex + 1] = value;
+        imageData.data[canvasIndex + 2] = value;
+        imageData.data[canvasIndex + 3] = 255;
+      }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+    
+    // Return base64 data URL
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Error processing FITS file with stretching:', error);
+    // Return a placeholder image for FITS files that can't be processed
+    const canvas = createCanvas(400, 300);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, 0, 400, 300);
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Error processing FITS file', 200, 140);
+    ctx.fillText(error.message, 200, 160);
+    return canvas.toDataURL('image/png');
   }
 });
