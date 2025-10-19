@@ -141,7 +141,7 @@ function showLoading(message = 'Loading...') {
         clearTimeout(loadingTimeout);
         loadingTimeout = null;
     }
-    
+
     loadingText.textContent = message;
     loadingOverlay.style.display = 'flex';
 }
@@ -191,7 +191,7 @@ document.addEventListener('keydown', (e) => {
     // Only handle keyboard shortcuts when no dialog is open and not typing in an input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (keywordDialog.style.display === 'flex' || moveDialog.style.display === 'flex' || fitsHeadersDialog.style.display === 'flex') return;
-    
+
     switch (e.key) {
         case 'Home':
             e.preventDefault();
@@ -272,12 +272,12 @@ resizeHandle.addEventListener('mousedown', (e) => {
 
 document.addEventListener('mousemove', (e) => {
     if (!isResizing) return;
-    
+
     const containerRect = document.querySelector('.container').getBoundingClientRect();
     const newWidth = e.clientX - containerRect.left;
     const minWidth = 250;
     const maxWidth = window.innerWidth * 0.7;
-    
+
     if (newWidth >= minWidth && newWidth <= maxWidth) {
         sidebar.style.width = newWidth + 'px';
     }
@@ -289,7 +289,7 @@ document.addEventListener('mouseup', () => {
         resizeHandle.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        
+
         // Save the sidebar width to localStorage
         localStorage.setItem('sidebarWidth', sidebar.style.width);
     }
@@ -306,22 +306,22 @@ function loadSidebarWidth() {
 // Checkbox selection functionality
 function toggleFileSelection(index, event) {
     event.stopPropagation(); // Prevent file selection when clicking checkbox
-    
+
     if (selectedFiles.has(index)) {
         selectedFiles.delete(index);
     } else {
         selectedFiles.add(index);
     }
-    
+
     console.log(`File selection toggled for index ${index}. Selected files: [${Array.from(selectedFiles).join(', ')}]`);
-    
+
     updateSelectAllCheckbox();
     updateFileCheckbox(index);
 }
 
 function toggleSelectAll() {
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
-    
+
     if (selectAllCheckbox.checked) {
         // Select all files
         selectedFiles.clear();
@@ -334,14 +334,14 @@ function toggleSelectAll() {
         selectedFiles.clear();
         console.log('All files deselected');
     }
-    
+
     updateAllFileCheckboxes();
 }
 
 function updateSelectAllCheckbox() {
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
     if (!selectAllCheckbox) return;
-    
+
     if (selectedFiles.size === 0) {
         selectAllCheckbox.checked = false;
         selectAllCheckbox.indeterminate = false;
@@ -352,7 +352,7 @@ function updateSelectAllCheckbox() {
         selectAllCheckbox.checked = false;
         selectAllCheckbox.indeterminate = true;
     }
-    
+
     updateSelectionInfo();
 }
 
@@ -375,7 +375,7 @@ function getSelectedFiles() {
 
 function updateSelectionInfo() {
     const count = selectedFiles.size;
-    
+
     // Update menu state (selection info UI was removed)
     window.electronAPI.updateMenuState(count > 0);
 }
@@ -389,11 +389,11 @@ function clearSelection() {
 // Directory watching functions
 async function startWatchingDirectory(directoryPath) {
     if (!directoryPath) return;
-    
+
     try {
         // Stop any existing watcher first
         await stopWatchingDirectory();
-        
+
         const result = await window.electronAPI.startWatchingDirectory(directoryPath);
         if (result.success) {
             isWatchingDirectory = true;
@@ -408,7 +408,7 @@ async function startWatchingDirectory(directoryPath) {
 
 async function stopWatchingDirectory() {
     if (!isWatchingDirectory) return;
-    
+
     try {
         const result = await window.electronAPI.stopWatchingDirectory();
         if (result.success) {
@@ -424,23 +424,23 @@ async function stopWatchingDirectory() {
 
 function handleDirectoryChange(changeInfo) {
     console.log('Directory change detected:', changeInfo);
-    
+
     // Add a small delay to allow file operations to complete
     setTimeout(async () => {
         try {
             // Remember the current image being displayed
-            const currentImagePath = currentImageIndex >= 0 && currentImageIndex < currentFiles.length 
-                ? currentFiles[currentImageIndex].path 
+            const currentImagePath = currentImageIndex >= 0 && currentImageIndex < currentFiles.length
+                ? currentFiles[currentImageIndex].path
                 : null;
-            
+
             // Reload the file list
             const previousFiles = [...currentFiles];
             currentFiles = await window.electronAPI.readDirectory(currentDirectory);
-            
+
             // Check if the currently displayed image still exists
             if (currentImagePath) {
                 const currentImageStillExists = currentFiles.some(file => file.path === currentImagePath);
-                
+
                 if (!currentImageStillExists) {
                     // Current image has been deleted, hide it
                     hideImage();
@@ -454,11 +454,11 @@ function handleDirectoryChange(changeInfo) {
                     }
                 }
             }
-            
+
             // Re-render the file list without auto-selecting an image
             clearSelection(); // Clear previous selections when loading new files
             renderFileList(false);
-            
+
             console.log('File list refreshed due to directory change');
         } catch (error) {
             console.error('Error refreshing file list after directory change:', error);
@@ -483,11 +483,11 @@ function sortFiles(column) {
         sortColumn = column;
         sortDirection = 'asc';
     }
-    
+
     // Sort the files array
     currentFiles.sort((a, b) => {
         let valueA, valueB;
-        
+
         if (column === 'filename') {
             valueA = a.name.toLowerCase();
             valueB = b.name.toLowerCase();
@@ -498,12 +498,12 @@ function sortFiles(column) {
             valueA = (parsedA[column] || '').toLowerCase();
             valueB = (parsedB[column] || '').toLowerCase();
         }
-        
+
         // Primary sort
         let comparison = 0;
         if (valueA < valueB) comparison = -1;
         else if (valueA > valueB) comparison = 1;
-        
+
         // Secondary sort by filename if primary values are equal
         if (comparison === 0 && column !== 'filename') {
             const nameA = a.name.toLowerCase();
@@ -511,10 +511,10 @@ function sortFiles(column) {
             if (nameA < nameB) comparison = -1;
             else if (nameA > nameB) comparison = 1;
         }
-        
+
         return sortDirection === 'asc' ? comparison : -comparison;
     });
-    
+
     // Re-render the file list
     renderFileList(false);
 }
@@ -525,7 +525,7 @@ function updateSortIndicators() {
         cell.classList.remove('sort-asc', 'sort-desc');
         cell.classList.add('sortable');
     });
-    
+
     // Add current sort indicator
     if (sortColumn) {
         const headerCell = document.querySelector(`[data-sort-column="${sortColumn}"]`);
@@ -540,14 +540,14 @@ function parseFilename(filename) {
     const baseName = filename.replace(/\.[^/.]+$/, ""); // Remove extension
     const tokens = baseName.split('_');
     const parsed = {};
-    
+
     for (let i = 0; i < tokens.length - 1; i++) {
         const token = tokens[i].toLowerCase();
         if (keywords.includes(token)) {
             parsed[token] = tokens[i + 1];
         }
     }
-    
+
     return parsed;
 }
 
@@ -556,7 +556,7 @@ async function getFitsHeaders(file) {
     if (!file.isFits) {
         return {};
     }
-    
+
     try {
         const result = await window.electronAPI.getFitsHeaders(file.path);
         if (result.success) {
@@ -577,7 +577,7 @@ function updateTestResults() {
         testResults.textContent = 'Enter a filename to test parsing';
         return;
     }
-    
+
     const parsed = parseFilename(filename);
     if (Object.keys(parsed).length === 0) {
         testResults.textContent = 'No keywords found in filename';
@@ -606,12 +606,12 @@ function closeKeywordDialog() {
 function addKeyword() {
     const keyword = keywordInput.value.trim().toLowerCase();
     if (!keyword) return;
-    
+
     if (keywords.includes(keyword)) {
         alert('Keyword already exists');
         return;
     }
-    
+
     keywords.push(keyword);
     keywordInput.value = '';
     updateKeywordsDisplay();
@@ -629,7 +629,7 @@ function updateKeywordsDisplay() {
         keywordsContainer.innerHTML = '<div class="no-keywords">No keywords defined</div>';
         return;
     }
-    
+
     keywordsContainer.innerHTML = keywords.map(keyword => `
         <div class="keyword-item">
             <span class="keyword-text">${keyword}</span>
@@ -642,7 +642,7 @@ function saveKeywords() {
     // Save keywords to localStorage
     localStorage.setItem('filenameKeywords', JSON.stringify(keywords));
     closeKeywordDialog();
-    
+
     // Refresh file list to show new columns
     if (currentFiles.length > 0) {
         // Reset sort to filename when keywords change
@@ -680,7 +680,7 @@ function populateCommonFitsHeaders() {
             <div class="fits-header-description">${header.description}</div>
         </div>
     `).join('');
-    
+
     // Add event listeners for checkboxes
     commonFitsHeaders.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
@@ -699,16 +699,16 @@ function populateCommonFitsHeaders() {
 function addCustomFitsHeader() {
     const header = customHeaderInput.value.trim().toUpperCase();
     if (!header) return;
-    
+
     if (fitsHeaders.includes(header)) {
         alert('Header already selected');
         return;
     }
-    
+
     fitsHeaders.push(header);
     customHeaderInput.value = '';
     updateSelectedFitsHeadersDisplay();
-    
+
     // Update the checkbox if it exists in common headers
     const checkbox = document.getElementById(`fits-${header}`);
     if (checkbox) {
@@ -719,7 +719,7 @@ function addCustomFitsHeader() {
 function removeFitsHeader(header) {
     fitsHeaders = fitsHeaders.filter(h => h !== header);
     updateSelectedFitsHeadersDisplay();
-    
+
     // Update the checkbox if it exists in common headers
     const checkbox = document.getElementById(`fits-${header}`);
     if (checkbox) {
@@ -732,7 +732,7 @@ function updateSelectedFitsHeadersDisplay() {
         selectedFitsHeaders.innerHTML = '<div class="no-headers">No headers selected</div>';
         return;
     }
-    
+
     selectedFitsHeaders.innerHTML = fitsHeaders.map(header => `
         <div class="fits-header-item">
             <span class="fits-header-name">${header}</span>
@@ -745,7 +745,7 @@ function saveFitsHeaders() {
     // Save FITS headers to localStorage
     localStorage.setItem('fitsHeaders', JSON.stringify(fitsHeaders));
     closeFitsHeadersDialog();
-    
+
     // Refresh file list to show new columns
     if (currentFiles.length > 0) {
         // Reset sort to filename when headers change
@@ -768,16 +768,16 @@ function showMoveDialog() {
         alert('No files selected for moving.');
         return;
     }
-    
+
     const count = selectedFiles.size;
     moveFileCount.textContent = `${count} file${count === 1 ? '' : 's'} selected for moving`;
-    
+
     // Set default destination to current directory
     destinationPath.value = currentDirectory || '';
-    
+
     // Reset to move option
     document.querySelector('input[name="move-type"][value="move"]').checked = true;
-    
+
     updateMoveButtonState();
     moveDialog.style.display = 'flex';
 }
@@ -804,7 +804,7 @@ function updateMoveButtonState() {
     const moveType = document.querySelector('input[name="move-type"]:checked').value;
     const hasDestination = moveType === 'trash' || destinationPath.value.trim() !== '';
     executeMoveBtn.disabled = !hasDestination;
-    
+
     // Update destination input visibility
     const destinationSection = document.querySelector('.destination-section');
     destinationSection.style.display = moveType === 'trash' ? 'none' : 'block';
@@ -814,19 +814,19 @@ async function executeMoveFiles() {
     const selectedFileObjects = getSelectedFiles();
     const filePaths = selectedFileObjects.map(file => file.path);
     const moveType = document.querySelector('input[name="move-type"]:checked').value;
-    
+
     if (filePaths.length === 0) {
         alert('No files selected.');
         return;
     }
-    
+
     try {
         const actionText = moveType === 'trash' ? 'Moving files to trash...' : 'Moving files...';
         showLoading(actionText);
-        
+
         executeMoveBtn.disabled = true;
         executeMoveBtn.textContent = 'Moving...';
-        
+
         let results;
         if (moveType === 'trash') {
             results = await window.electronAPI.moveFilesToTrash(filePaths);
@@ -839,17 +839,17 @@ async function executeMoveFiles() {
             }
             results = await window.electronAPI.moveFiles(filePaths, destination);
         }
-        
+
         // Process results
         const successful = results.filter(r => r.success);
         const failed = results.filter(r => !r.success);
-        
+
         let message = '';
         if (successful.length > 0) {
             const action = moveType === 'trash' ? 'moved to trash' : 'moved';
             message += `${successful.length} file${successful.length === 1 ? '' : 's'} ${action} successfully.`;
         }
-        
+
         if (failed.length > 0) {
             message += `\n${failed.length} file${failed.length === 1 ? '' : 's'} failed to move:`;
             failed.forEach(f => {
@@ -857,18 +857,18 @@ async function executeMoveFiles() {
                 message += `\n- ${fileName}: ${f.error}`;
             });
         }
-        
+
         alert(message);
-        
+
         // Close dialog and refresh file list
         closeMoveDialog();
         clearSelection();
-        
+
         // Reload the current directory to reflect changes
         if (currentDirectory) {
             await loadFiles();
         }
-        
+
     } catch (error) {
         console.error('Error moving files:', error);
         alert('An error occurred while moving files: ' + error.message);
@@ -895,18 +895,18 @@ async function loadLastDirectoryOnStartup() {
             // Update title bar to show loading status
             await window.electronAPI.updateWindowTitle('Loading...');
             fileListDiv.innerHTML = '<div class="no-files">Loading files...</div>';
-            
+
             // Check if directory still exists
             const dirExists = await window.electronAPI.checkDirectoryExists(lastDir);
             if (!dirExists) {
                 throw new Error('Directory no longer exists');
             }
-            
+
             // Load the directory
             currentDirectory = lastDir;
             await loadFiles();
             await window.electronAPI.updateWindowTitle(lastDir);
-            
+
             // Start watching the restored directory
             await startWatchingDirectory(lastDir);
         } catch (error) {
@@ -941,7 +941,7 @@ async function handleFolderSelection(folderPath) {
         await window.electronAPI.updateWindowTitle(folderPath);
         saveLastDirectory(folderPath); // Save the selected directory
         await loadFiles();
-        
+
         // Start watching the new directory
         await startWatchingDirectory(folderPath);
     } catch (error) {
@@ -957,11 +957,11 @@ async function loadFiles() {
         const previousFilesLength = currentFiles.length;
         currentFiles = await window.electronAPI.readDirectory(currentDirectory);
         clearSelection(); // Clear previous selections when loading new files
-        
+
         // Check if this is a new directory (should auto-select first file)
         const shouldAutoSelectFirst = previousFilesLength === 0 && currentFiles.length > 0;
         await renderFileList(shouldAutoSelectFirst);
-        
+
     } catch (error) {
         console.error('Error loading files:', error);
         renderEmptyFileList();
@@ -990,41 +990,41 @@ async function renderFileList(autoSelectFirst = false) {
 
     // Create table structure with fixed header
     let html = '<div class="file-list-container">';
-    
+
     // Create fixed header outside scrollable area
     html += '<div class="file-header-fixed">';
-    
+
     // Checkbox column header
     html += '<div class="file-header-cell file-header-checkbox">';
     html += '<input type="checkbox" id="select-all-checkbox" class="select-all-checkbox" onchange="toggleSelectAll()">';
     html += '</div>';
-    
+
     html += '<div class="file-header-cell file-header-filename sortable" data-sort-column="filename">Filename</div>';
-    
+
     // Add keyword columns
     keywords.forEach(keyword => {
         html += `<div class="file-header-cell file-header-keyword sortable" data-sort-column="${keyword}">${keyword.charAt(0).toUpperCase() + keyword.slice(1)}</div>`;
     });
-    
+
     // Add FITS header columns
     fitsHeaders.forEach(header => {
         html += `<div class="file-header-cell file-header-fits sortable" data-sort-column="fits-${header}" title="FITS Header: ${header}">${header}</div>`;
     });
-    
+
     html += '</div>';
-    
+
     // Create scrollable file list area
     html += '<div class="file-list-scrollable">';
-    
+
     // Create file rows
     fileData.forEach(({ file, index, parsed, fitsHeaderData }) => {
         html += `<div class="file-row" data-index="${index}" data-file-index="${index}">`;
-        
+
         // Checkbox cell
         html += '<div class="file-cell file-cell-checkbox">';
         html += `<input type="checkbox" class="file-checkbox" ${selectedFiles.has(index) ? 'checked' : ''} onchange="toggleFileSelection(${index}, event)">`;
         html += '</div>';
-        
+
         // Filename cell
         html += `<div class="file-cell file-cell-filename">`;
         html += `<div class="tooltip">`;
@@ -1032,7 +1032,7 @@ async function renderFileList(autoSelectFirst = false) {
         html += `<div class="tooltip-text">${file.name}</div>`;
         html += `</div>`;
         html += `</div>`;
-        
+
         // Keyword value cells
         keywords.forEach(keyword => {
             const value = parsed[keyword] || '';
@@ -1049,7 +1049,7 @@ async function renderFileList(autoSelectFirst = false) {
             }
             html += `</div>`;
         });
-        
+
         // FITS header value cells
         fitsHeaders.forEach(header => {
             const value = fitsHeaderData[header] || '';
@@ -1067,26 +1067,26 @@ async function renderFileList(autoSelectFirst = false) {
             }
             html += `</div>`;
         });
-        
+
         html += '</div>';
     });
-    
+
     html += '</div>'; // Close file-list-scrollable
     html += '</div>'; // Close file-list-container
-    
+
     fileListDiv.innerHTML = html;
-    
+
     // Add click listeners to file rows
     document.querySelectorAll('.file-row').forEach(row => {
         row.addEventListener('click', (event) => {
             // Don't select file if clicking on checkbox
             if (event.target.type === 'checkbox') return;
-            
+
             const index = parseInt(row.dataset.index);
             selectFile(index);
         });
     });
-    
+
     // Add click listeners to header cells for sorting
     document.querySelectorAll('.file-header-cell[data-sort-column]').forEach(header => {
         header.addEventListener('click', () => {
@@ -1094,14 +1094,14 @@ async function renderFileList(autoSelectFirst = false) {
             sortFiles(column);
         });
     });
-    
+
     // Update sort indicators and checkbox states
     updateSortIndicators();
     updateSelectAllCheckbox();
-    
+
     // Update playback controls
     updatePlaybackButtons();
-    
+
     // Auto-select first file if requested
     if (autoSelectFirst && currentFiles.length > 0) {
         // Use setTimeout to ensure DOM is fully rendered before selecting
@@ -1115,7 +1115,7 @@ function renderEmptyFileList() {
     fileListDiv.innerHTML = '<div class="no-files">No image files found in this folder</div>';
     clearSelection();
     hideImage();
-    
+
     // Reset playback state and hide controls
     currentImageIndex = -1;
     stopPlayback();
@@ -1125,21 +1125,21 @@ function renderEmptyFileList() {
 async function selectFile(index) {
     // Update current image index
     currentImageIndex = index;
-    
+
     // Remove previous selection
     document.querySelectorAll('.file-row').forEach(item => {
         item.classList.remove('selected');
     });
-    
+
     // Add selection to clicked item
     const selectedItem = document.querySelector(`[data-index="${index}"]`);
     if (selectedItem) {
         selectedItem.classList.add('selected');
     }
-    
+
     // Update playback button states
     updatePlaybackButtons();
-    
+
     const file = currentFiles[index];
     await displayImage(file);
 }
@@ -1152,21 +1152,31 @@ async function displayImage(file) {
         } else {
             showLoading('Loading image...');
         }
-        
+
         // Hide no-image placeholder
         noImageDiv.style.display = 'none';
-        
+
         // Show loading state in image container
         imageDisplay.style.display = 'block';
         imageDisplay.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzk5OSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtZGFzaGFycmF5PSI4MCA4MCI+CjxhbmltYXRlVHJhbnNmb3JtIGF0dHJpYnV0ZU5hbWU9InRyYW5zZm9ybSIgdHlwZT0icm90YXRlIiB2YWx1ZXM9IjAgMjUgMjU7MzYwIDI1IDI1IiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIvPgo8L2NpcmNsZT4KPC9zdmc+';
-        
+
         let imageSrc;
-        
+
         if (file.isFits) {
             // Process FITS file with optional stretching
             console.log('Processing FITS file:', file.path);
             try {
                 const applyStretch = autoStretchCheckbox.checked;
+
+                // Try to load thumbnail first for faster preview
+                const thumbnail = await window.electronAPI.getFitsThumbnail(file.path, applyStretch);
+                if (thumbnail) {
+                    // Show thumbnail immediately
+                    imageDisplay.src = thumbnail;
+                    showLoading('Loading full resolution...');
+                }
+
+                // Then load full resolution
                 imageSrc = await window.electronAPI.processFitsFileStretched(file.path, applyStretch);
                 console.log('FITS processing completed successfully with stretch:', applyStretch);
             } catch (error) {
@@ -1177,32 +1187,32 @@ async function displayImage(file) {
             // Regular image file
             imageSrc = await window.electronAPI.getFilePath(file.path);
         }
-        
+
         // Load the processed image and wait for it to complete
         await new Promise((resolve, reject) => {
             const tempImage = new Image();
-            
+
             tempImage.onload = () => {
                 // Image loaded successfully
                 imageDisplay.src = imageSrc;
-                
+
                 // Store natural dimensions for zoom calculations
                 imageNaturalWidth = tempImage.naturalWidth;
                 imageNaturalHeight = tempImage.naturalHeight;
-                
+
                 // Show zoom controls first
                 zoomControls.style.display = 'flex';
-                
+
                 resolve();
             };
-            
+
             tempImage.onerror = () => {
                 reject(new Error('Failed to load image'));
             };
-            
+
             tempImage.src = imageSrc;
         });
-        
+
         // Always fit to window after image is loaded and displayed
         // Use setTimeout to ensure the image is rendered and container dimensions are available
         setTimeout(() => {
@@ -1210,30 +1220,30 @@ async function displayImage(file) {
             // Apply auto-stretch if enabled
             applyAutoStretch(autoStretchCheckbox.checked);
         }, 50);
-        
+
         // Show image info
         imageName.textContent = file.name;
-        
+
         // Get file size - this won't work in renderer process, so we'll estimate
         imageSize.textContent = file.isFits ? 'FITS Image' : '';
-        
+
         imageInfo.style.display = 'flex';
-        
+
         // Handle image load error (backup)
         imageDisplay.onerror = () => {
             hideImage();
             console.error('Failed to load image:', file.path);
         };
-        
+
         // Trigger next slideshow step if playing
         if (isPlaying) {
             scheduleNextSlide();
         }
-        
+
     } catch (error) {
         console.error('Error displaying image:', error);
         hideImage();
-        
+
         // Still continue slideshow if playing, even if image failed to load
         if (isPlaying) {
             scheduleNextSlide();
@@ -1247,13 +1257,13 @@ function hideImage() {
     imageDisplay.style.display = 'none';
     imageInfo.style.display = 'none';
     noImageDiv.style.display = 'block';
-    
+
     // Hide zoom controls
     zoomControls.style.display = 'none';
-    
+
     // Reset scroll bars
     imageContainer.classList.remove('fit-to-window');
-    
+
     // Reset current image index
     currentImageIndex = -1;
     updatePlaybackButtons();
@@ -1264,64 +1274,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadKeywords();
     loadFitsHeaders();
     loadSidebarWidth();
-    
+
     // Initialize playback controls
     updatePlayPauseButton();
     updatePlaybackButtons();
-    
+
     // Listen for menu-triggered folder selection
     window.electronAPI.onFolderSelected((folderPath) => {
         handleFolderSelection(folderPath);
     });
-    
+
     // Listen for menu-triggered move dialog
     window.electronAPI.onShowMoveDialog(() => {
         showMoveDialog();
     });
-    
+
     // Listen for menu-triggered keywords dialog
     window.electronAPI.onShowKeywordsDialog(() => {
         openKeywordDialog();
     });
-    
+
     // Listen for menu-triggered FITS headers dialog
     window.electronAPI.onShowFitsHeadersDialog(() => {
         openFitsHeadersDialog();
     });
-    
+
     // Listen for menu-triggered zoom commands
     window.electronAPI.onZoomIn(() => {
         zoomIn();
     });
-    
+
     window.electronAPI.onZoomOut(() => {
         zoomOut();
     });
-    
+
     window.electronAPI.onZoomActual(() => {
         zoomActual();
     });
-    
+
     window.electronAPI.onZoomFit(() => {
         zoomFit();
     });
-    
+
     // Listen for directory changes
     window.electronAPI.onDirectoryChanged((changeInfo) => {
         handleDirectoryChange(changeInfo);
     });
-    
+
     // Listen for watcher errors
     window.electronAPI.onWatcherError((error) => {
         handleWatcherError(error);
     });
-    
+
     await loadLastDirectoryOnStartup();
     console.log('Image Viewer loaded with keywords:', keywords);
     if (currentDirectory) {
         console.log('Restored last directory:', currentDirectory);
     }
-    
+
     // Add resize listener to maintain fit-to-window when pane size changes
     window.addEventListener('resize', () => {
         if (isFitToWindow && imageDisplay.src && imageDisplay.style.display !== 'none') {
@@ -1329,12 +1339,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const containerRect = imageContainer.getBoundingClientRect();
             const containerWidth = containerRect.width - 20; // Account for minimal padding
             const containerHeight = containerRect.height - 20;
-            
+
             if (imageNaturalWidth > 0 && imageNaturalHeight > 0) {
                 const scaleX = containerWidth / imageNaturalWidth;
                 const scaleY = containerHeight / imageNaturalHeight;
                 const scale = Math.min(scaleX, scaleY);
-                
+
                 // Update both current zoom and fit-to-window scale
                 fitToWindowScale = scale;
                 currentZoom = scale;
@@ -1366,21 +1376,21 @@ function zoomActual() {
 
 function zoomFit() {
     if (!imageDisplay.src || imageDisplay.style.display === 'none') return;
-    
+
     const containerRect = imageContainer.getBoundingClientRect();
     const containerWidth = containerRect.width - 20; // Account for minimal padding
     const containerHeight = containerRect.height - 20;
-    
+
     if (imageNaturalWidth > 0 && imageNaturalHeight > 0) {
         const scaleX = containerWidth / imageNaturalWidth;
         const scaleY = containerHeight / imageNaturalHeight;
         const scale = Math.min(scaleX, scaleY);
-        
+
         // Set both the current zoom and the fit-to-window reference to the same value
         currentZoom = scale;
         fitToWindowScale = scale;
         isFitToWindow = true;
-        
+
         // Apply the transform and update display
         imageDisplay.style.transform = `scale(${scale})`;
         updateZoomDisplay();
@@ -1391,7 +1401,7 @@ function zoomFit() {
 
 function setZoom(zoom) {
     currentZoom = Math.max(0.1, Math.min(5.0, zoom)); // Limit zoom between 10% and 500%
-    
+
     if (imageDisplay.style.display !== 'none') {
         imageDisplay.style.transform = `scale(${currentZoom})`;
         updateZoomDisplay();
@@ -1442,10 +1452,10 @@ function getCurrentFile() {
 // Auto-stretch functionality
 async function handleAutoStretchChange() {
     const isAutoStretchEnabled = autoStretchCheckbox.checked;
-    
+
     // Save the setting to localStorage
     localStorage.setItem('autoStretchEnabled', isAutoStretchEnabled.toString());
-    
+
     // If we have a current image displayed, apply the stretch
     if (imageDisplay.src && imageDisplay.style.display !== 'none') {
         const currentFile = getCurrentFile();
@@ -1482,7 +1492,7 @@ function applyAutoStretch(enabled) {
 // Image dragging functions
 function startImageDrag(e) {
     if (currentZoom <= 1.0) return; // Only allow dragging when zoomed in
-    
+
     e.preventDefault();
     isDragging = true;
     lastMouseX = e.clientX;
@@ -1492,14 +1502,14 @@ function startImageDrag(e) {
 
 function handleImageDrag(e) {
     if (!isDragging || currentZoom <= 1.0) return;
-    
+
     e.preventDefault();
     const deltaX = e.clientX - lastMouseX;
     const deltaY = e.clientY - lastMouseY;
-    
+
     imageContainer.scrollLeft -= deltaX;
     imageContainer.scrollTop -= deltaY;
-    
+
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
 }
@@ -1521,13 +1531,13 @@ function handleMouseWheel(e) {
 // Playback control functions
 function gotoFirstImage() {
     if (currentFiles.length === 0) return;
-    
+
     // Clear any pending timer
     if (playbackTimer) {
         clearTimeout(playbackTimer);
         playbackTimer = null;
     }
-    
+
     stopPlayback();
     currentImageIndex = 0;
     selectFile(currentImageIndex);
@@ -1536,13 +1546,13 @@ function gotoFirstImage() {
 
 function gotoPreviousImage() {
     if (currentFiles.length === 0 || currentImageIndex <= 0) return;
-    
+
     // Clear any pending timer
     if (playbackTimer) {
         clearTimeout(playbackTimer);
         playbackTimer = null;
     }
-    
+
     stopPlayback();
     currentImageIndex--;
     selectFile(currentImageIndex);
@@ -1551,13 +1561,13 @@ function gotoPreviousImage() {
 
 function gotoNextImage() {
     if (currentFiles.length === 0 || currentImageIndex >= currentFiles.length - 1) return;
-    
+
     // Clear any pending timer
     if (playbackTimer) {
         clearTimeout(playbackTimer);
         playbackTimer = null;
     }
-    
+
     stopPlayback();
     currentImageIndex++;
     selectFile(currentImageIndex);
@@ -1566,13 +1576,13 @@ function gotoNextImage() {
 
 function gotoLastImage() {
     if (currentFiles.length === 0) return;
-    
+
     // Clear any pending timer
     if (playbackTimer) {
         clearTimeout(playbackTimer);
         playbackTimer = null;
     }
-    
+
     stopPlayback();
     currentImageIndex = currentFiles.length - 1;
     selectFile(currentImageIndex);
@@ -1589,10 +1599,10 @@ function togglePlayback() {
 
 function startPlayback() {
     if (currentFiles.length === 0) return;
-    
+
     isPlaying = true;
     updatePlayPauseButton();
-    
+
     // If no image is selected, start from the beginning
     if (currentImageIndex === -1) {
         currentImageIndex = 0;
@@ -1601,7 +1611,7 @@ function startPlayback() {
         // If we're already on an image, schedule the next slide after current image is displayed
         scheduleNextSlide();
     }
-    
+
     updatePlaybackButtons();
 }
 
@@ -1611,10 +1621,10 @@ function scheduleNextSlide() {
         clearTimeout(playbackTimer);
         playbackTimer = null;
     }
-    
+
     // Only schedule if we're still playing
     if (!isPlaying) return;
-    
+
     // Schedule the next slide after the specified interval
     playbackTimer = setTimeout(() => {
         if (isPlaying && currentImageIndex < currentFiles.length - 1) {
@@ -1656,14 +1666,14 @@ function updatePlaybackButtons() {
     const hasFiles = currentFiles.length > 0;
     const isFirst = currentImageIndex <= 0;
     const isLast = currentImageIndex >= currentFiles.length - 1;
-    
+
     // Update button states
     gotoFirstBtn.disabled = !hasFiles || isFirst;
     gotoPreviousBtn.disabled = !hasFiles || isFirst;
     gotoNextBtn.disabled = !hasFiles || isLast;
     gotoLastBtn.disabled = !hasFiles || isLast;
     playPauseBtn.disabled = !hasFiles;
-    
+
     // Show/hide playback controls based on whether files are loaded
     if (hasFiles) {
         playbackControls.style.display = 'flex';
