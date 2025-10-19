@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { createCanvas } = require('canvas');
 
 let mainWindow;
+let currentWatcher = null; // File system watcher
 
 // Simple FITS header parser
 function parseFitsHeader(buffer) {
@@ -11,8 +12,9 @@ function parseFitsHeader(buffer) {
   let headerSize = blockSize;
   let foundEnd = false;
   
-  // Find the actual header size by looking for END keyword
-  for (let offset = 0; offset < Math.min(buffer.length, blockSize * 10); offset += blockSize) {
+  // Search for END keyword in more blocks (up to 50 blocks = ~144KB of header)
+  // This handles files with very large headers or multiple HDU sections
+  for (let offset = 0; offset < Math.min(buffer.length, blockSize * 50); offset += blockSize) {
     const block = buffer.slice(offset, offset + blockSize).toString('ascii');
     if (block.includes('END ')) {
       headerSize = offset + blockSize;
@@ -23,48 +25,324 @@ function parseFitsHeader(buffer) {
   }
   
   if (!foundEnd) {
-    console.warn('END keyword not found in FITS header, using default size');
+    console.warn('END keyword not found in FITS header, using available data');
+    headerSize = Math.min(buffer.length, blockSize * 50);
   }
   
   const headerText = buffer.slice(0, headerSize).toString('ascii');
   const lines = headerText.match(/.{80}/g) || [];
   
   const header = { _headerSize: headerSize };
+  
   for (const line of lines) {
-    if (line.startsWith('END ')) break;
+    if (line.startsWith('END ')) continue; // Don't break, look for additional sections
     
-    const match = line.match(/^(\w+)\s*=\s*([^/]*)/);
+    // More flexible regex for FITS keywords:
+    // - Case insensitive matching
+    // - Allow more characters in keywords (some software uses non-standard keywords)
+    // - Handle both = and : separators (some software uses colons)
+    const match = line.match(/^([A-Za-z0-9_-]{1,8})\s*[=:]\s*([^/]*)/);
     if (match) {
-      const key = match[1].trim();
+      const key = match[1].trim().toUpperCase(); // Normalize to uppercase
       let value = match[2].trim();
       
-      // Remove quotes for string values
-      if (value.startsWith("'") && value.endsWith("'")) {
-        value = value.slice(1, -1).trim();
-      } else if (!isNaN(value) && value !== '') {
-        value = parseFloat(value);
+      // Handle quoted string values more robustly
+      if (value.startsWith("'")) {
+        // Find the closing quote, handling potential single quotes in the string
+        let closingQuoteIndex = -1;
+        for (let i = value.length - 1; i >= 1; i--) {
+          if (value[i] === "'") {
+            closingQuoteIndex = i;
+            break;
+          }
+        }
+        if (closingQuoteIndex > 0) {
+          value = value.slice(1, closingQuoteIndex).trim();
+        } else {
+          value = value.slice(1).trim();
+        }
+      } else if (value === 'T') {
+        value = true;
+      } else if (value === 'F') {
+        value = false;
+      } else if (!isNaN(value) && value !== '' && !/^[TF]$/.test(value)) {
+        // Parse numeric values, but be more careful about what we convert
+        const num = parseFloat(value);
+        if (!isNaN(num) && isFinite(num)) {
+          value = num;
+        }
       }
+      // Keep as string for everything else
       
-      header[key] = value;
+      // Only store if we don't already have this keyword (first occurrence wins)
+      if (!header.hasOwnProperty(key)) {
+        header[key] = value;
+      }
     }
   }
+  
+  // Log some debug information about what we found
+  const keywords = Object.keys(header).filter(k => k !== '_headerSize');
+  console.log(`FITS parsing found ${keywords.length} keywords in ${headerSize} bytes`);
   
   return header;
 }
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Open Folder...',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow, {
+              properties: ['openDirectory']
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              // Send the selected folder path to the renderer process
+              mainWindow.webContents.send('folder-selected', result.filePaths[0]);
+            }
+          }
+        },
+        {
+          label: 'Move Selected...',
+          accelerator: 'CmdOrCtrl+M',
+          enabled: false, // Will be enabled/disabled based on selection
+          id: 'move-selected',
+          click: () => {
+            mainWindow.webContents.send('show-move-dialog');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Exit',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: 'Options',
+      submenu: [
+        {
+          label: 'Custom Keywords...',
+          click: () => {
+            mainWindow.webContents.send('show-keywords-dialog');
+          }
+        },
+        {
+          label: 'FITS Headers...',
+          click: () => {
+            mainWindow.webContents.send('show-fits-headers-dialog');
+          }
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => {
+            mainWindow.webContents.send('zoom-in');
+          }
+        },
+        {
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            mainWindow.webContents.send('zoom-out');
+          }
+        },
+        {
+          label: 'Actual Size',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => {
+            mainWindow.webContents.send('zoom-actual');
+          }
+        },
+        {
+          label: 'Fit to Window',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => {
+            mainWindow.webContents.send('zoom-fit');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            mainWindow.webContents.toggleDevTools();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            mainWindow.webContents.reload();
+          }
+        }
+      ]
+    }
+  ];
+
+  // macOS specific menu adjustments
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: app.getName(),
+      submenu: [
+        { label: 'About ' + app.getName(), role: 'about' },
+        { type: 'separator' },
+        { label: 'Services', role: 'services', submenu: [] },
+        { type: 'separator' },
+        { label: 'Hide ' + app.getName(), accelerator: 'Command+H', role: 'hide' },
+        { label: 'Hide Others', accelerator: 'Command+Shift+H', role: 'hideothers' },
+        { label: 'Show All', role: 'unhide' },
+        { type: 'separator' },
+        { label: 'Quit', accelerator: 'Command+Q', click: () => app.quit() }
+      ]
+    });
+
+    // Adjust File menu for macOS (remove Exit since it's in the app menu)
+    template[1].submenu = template[1].submenu.filter(item => item.label !== 'Exit');
+  }
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+// Window state management
+function saveWindowState() {
+  if (!mainWindow) return;
+  
+  const bounds = mainWindow.getBounds();
+  const isMaximized = mainWindow.isMaximized();
+  
+  const windowState = {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    isMaximized: isMaximized
+  };
+  
+  try {
+    const userDataPath = app.getPath('userData');
+    const statePath = path.join(userDataPath, 'window-state.json');
+    fs.writeFileSync(statePath, JSON.stringify(windowState, null, 2));
+  } catch (error) {
+    console.error('Failed to save window state:', error);
+  }
+}
+
+function loadWindowState() {
+  try {
+    const userDataPath = app.getPath('userData');
+    const statePath = path.join(userDataPath, 'window-state.json');
+    
+    if (fs.existsSync(statePath)) {
+      const windowState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      
+      // Validate the loaded state
+      if (windowState.width && windowState.height && 
+          windowState.width > 100 && windowState.height > 100) {
+        
+        // Ensure window position is on screen
+        const { screen } = require('electron');
+        const displays = screen.getAllDisplays();
+        let isOnScreen = false;
+        
+        if (windowState.x !== undefined && windowState.y !== undefined) {
+          for (const display of displays) {
+            const { x, y, width, height } = display.workArea;
+            if (windowState.x >= x && windowState.x < x + width &&
+                windowState.y >= y && windowState.y < y + height) {
+              isOnScreen = true;
+              break;
+            }
+          }
+          
+          // If window is off-screen, reset position
+          if (!isOnScreen) {
+            windowState.x = undefined;
+            windowState.y = undefined;
+          }
+        }
+        
+        return windowState;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load window state:', error);
+  }
+  
+  // Return default values if loading fails
+  return {
     width: 1200,
     height: 800,
+    x: undefined,
+    y: undefined,
+    isMaximized: false
+  };
+}
+
+function createWindow() {
+  const windowState = loadWindowState();
+  
+  const windowOptions = {
+    width: windowState.width,
+    height: windowState.height,
+    title: 'Image Viewer',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, 'assets', 'icon.png') // Optional: add an icon
-  });
+    icon: path.join(__dirname, 'assets', 'icon.png'), // Optional: add an icon
+    show: false // Don't show until ready
+  };
+  
+  // Set position if available
+  if (windowState.x !== undefined && windowState.y !== undefined) {
+    windowOptions.x = windowState.x;
+    windowOptions.y = windowState.y;
+  }
+  
+  mainWindow = new BrowserWindow(windowOptions);
 
   mainWindow.loadFile('index.html');
+
+  // Restore maximized state
+  if (windowState.isMaximized) {
+    mainWindow.maximize();
+  }
+  
+  // Show window when ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  // Save window state when moved or resized
+  mainWindow.on('resize', saveWindowState);
+  mainWindow.on('move', saveWindowState);
+  mainWindow.on('maximize', saveWindowState);
+  mainWindow.on('unmaximize', saveWindowState);
+  
+  // Save window state before closing
+  mainWindow.on('close', () => {
+    saveWindowState();
+  });
+
+  // Create menu
+  createMenu();
 
   // Open developer tools in development
   if (process.argv.includes('--dev')) {
@@ -82,6 +360,12 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
+  // Clean up file watcher
+  if (currentWatcher) {
+    currentWatcher.close();
+    currentWatcher = null;
+  }
+  
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -103,6 +387,180 @@ ipcMain.handle('select-directory', async () => {
     return result.filePaths[0];
   }
   return null;
+});
+
+ipcMain.handle('select-move-destination', async (event, defaultPath) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    defaultPath: defaultPath
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    return result.filePaths[0];
+  }
+  return null;
+});
+
+ipcMain.handle('move-files', async (event, filePaths, destinationPath) => {
+  try {
+    const results = [];
+    for (const filePath of filePaths) {
+      const fileName = path.basename(filePath);
+      const destinationFile = path.join(destinationPath, fileName);
+      
+      // Check if destination file already exists
+      if (fs.existsSync(destinationFile)) {
+        results.push({ 
+          success: false, 
+          file: filePath, 
+          error: `File already exists: ${fileName}` 
+        });
+        continue;
+      }
+      
+      try {
+        fs.renameSync(filePath, destinationFile);
+        results.push({ success: true, file: filePath });
+      } catch (error) {
+        results.push({ 
+          success: false, 
+          file: filePath, 
+          error: error.message 
+        });
+      }
+    }
+    return results;
+  } catch (error) {
+    console.error('Error moving files:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('move-files-to-trash', async (event, filePaths) => {
+  const { shell } = require('electron');
+  try {
+    const results = [];
+    for (const filePath of filePaths) {
+      try {
+        await shell.trashItem(filePath);
+        results.push({ success: true, file: filePath });
+      } catch (error) {
+        results.push({ 
+          success: false, 
+          file: filePath, 
+          error: error.message 
+        });
+      }
+    }
+    return results;
+  } catch (error) {
+    console.error('Error moving files to trash:', error);
+    throw error;
+  }
+});
+
+ipcMain.on('update-menu-state', (event, hasSelection) => {
+  const menu = Menu.getApplicationMenu();
+  if (menu) {
+    const moveItem = menu.getMenuItemById('move-selected');
+    if (moveItem) {
+      moveItem.enabled = hasSelection;
+    }
+  }
+});
+
+ipcMain.handle('start-watching-directory', (event, directoryPath) => {
+  try {
+    // Stop any existing watcher
+    if (currentWatcher) {
+      currentWatcher.close();
+      currentWatcher = null;
+    }
+
+    if (!directoryPath || !fs.existsSync(directoryPath)) {
+      return { success: false, error: 'Directory does not exist' };
+    }
+
+    // Create new watcher
+    currentWatcher = fs.watch(directoryPath, { persistent: false }, (eventType, filename) => {
+      console.log('Directory change detected:', eventType, filename);
+      
+      // Filter for image files only
+      if (filename) {
+        const ext = path.extname(filename).toLowerCase();
+        const isImageFile = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.fits', '.fit', '.fts'].includes(ext);
+        
+        if (isImageFile) {
+          // Send notification to renderer process
+          mainWindow.webContents.send('directory-changed', {
+            eventType,
+            filename,
+            directoryPath
+          });
+        }
+      } else {
+        // If no filename provided, assume general directory change
+        mainWindow.webContents.send('directory-changed', {
+          eventType,
+          filename: null,
+          directoryPath
+        });
+      }
+    });
+
+    currentWatcher.on('error', (error) => {
+      console.error('File watcher error:', error);
+      mainWindow.webContents.send('watcher-error', error.message);
+    });
+
+    console.log('Started watching directory:', directoryPath);
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Error starting directory watcher:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('stop-watching-directory', () => {
+  try {
+    if (currentWatcher) {
+      currentWatcher.close();
+      currentWatcher = null;
+      console.log('Stopped watching directory');
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Error stopping directory watcher:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-fits-headers', async (event, filePath) => {
+  try {
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File does not exist');
+    }
+
+    const buffer = fs.readFileSync(filePath);
+    const header = parseFitsHeader(buffer);
+    
+    // Log the parsed headers for debugging
+    console.log(`FITS headers for ${path.basename(filePath)}:`, Object.keys(header));
+    if (header.FILTER !== undefined) {
+      console.log(`  FILTER: "${header.FILTER}"`);
+    } else {
+      console.log('  FILTER: not found');
+    }
+    
+    // Remove the internal _headerSize property
+    delete header._headerSize;
+    
+    return { success: true, headers: header };
+  } catch (error) {
+    console.error('Error reading FITS headers:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 ipcMain.handle('read-directory', async (event, directoryPath) => {
@@ -261,5 +719,16 @@ ipcMain.handle('process-fits-file', async (event, filePath) => {
     ctx.fillText('File may be corrupted or unsupported', 200, 180);
     
     return canvas.toDataURL('image/png');
+  }
+});
+
+// Update window title
+ipcMain.handle('update-window-title', async (event, directoryPath) => {
+  if (mainWindow) {
+    if (directoryPath) {
+      mainWindow.setTitle(`Image Viewer - ${directoryPath}`);
+    } else {
+      mainWindow.setTitle('Image Viewer');
+    }
   }
 });

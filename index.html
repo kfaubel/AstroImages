@@ -9,11 +9,38 @@
 <body>
     <div class="container">
         <div class="sidebar" id="sidebar">
-            <div class="controls">
-                <button id="select-folder" class="btn-primary">Select Folder</button>
-                <button id="configure-keywords" class="btn-secondary">Configure Keywords</button>
-                <div class="current-folder" id="current-folder">No folder selected</div>
+            <!-- Playback Controls -->
+            <div class="playback-controls" id="playback-controls" style="display: none;">
+                <button id="goto-first" class="playback-btn" title="Go to first image">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 6C6.45 6 6 6.45 6 7V17C6 17.55 6.45 18 7 18S8 17.55 8 17V7C8 6.45 7.55 6 7 6M17 18L9.5 12L17 6V18Z"/>
+                    </svg>
+                </button>
+                <button id="goto-previous" class="playback-btn" title="Previous image">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.41 16.58L10.83 12L15.41 7.41L14 6L8 12L14 18L15.41 16.58Z"/>
+                    </svg>
+                </button>
+                <button id="play-pause" class="playback-btn play-btn" title="Play slideshow">
+                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5V19L19 12"/>
+                    </svg>
+                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                        <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z"/>
+                    </svg>
+                </button>
+                <button id="goto-next" class="playback-btn" title="Next image">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.58Z"/>
+                    </svg>
+                </button>
+                <button id="goto-last" class="playback-btn" title="Go to last image">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17 6C17.55 6 18 6.45 18 7V17C18 17.55 17.55 18 17 18S16 17.55 16 17V7C16 6.45 16.45 6 17 6M7 6V18L14.5 12L7 6Z"/>
+                    </svg>
+                </button>
             </div>
+            
             <div class="file-list" id="file-list">
                 <div class="no-files">Select a folder to view images</div>
             </div>
@@ -22,6 +49,29 @@
         <div class="resize-handle" id="resize-handle"></div>
         
         <div class="main-content" id="main-content">
+            <!-- Zoom Controls -->
+            <div class="zoom-controls" id="zoom-controls" style="display: none;">
+                <button id="zoom-in" class="zoom-btn" title="Zoom In">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3S3 5.91 3 9.5S5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14M9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14M12 10H10V12H9V10H7V9H9V7H10V9H12V10Z"/>
+                    </svg>
+                </button>
+                <button id="zoom-out" class="zoom-btn" title="Zoom Out">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3S3 5.91 3 9.5S5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14M9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14M7 9H12V10H7V9Z"/>
+                    </svg>
+                </button>
+                <button id="zoom-actual" class="zoom-btn" title="Actual Size (1:1)">
+                    1:1
+                </button>
+                <button id="zoom-fit" class="zoom-btn" title="Fit to Window">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 9V15H15V9H9M21 3H3C1.9 3 1 3.9 1 5V19C1 20.1 1.9 21 3 21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3M21 19H3V5H21V19Z"/>
+                    </svg>
+                </button>
+                <span id="zoom-level" class="zoom-level">100%</span>
+            </div>
+            
             <div class="image-container" id="image-container">
                 <div class="no-image">
                     <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor">
@@ -73,6 +123,92 @@
                 <button id="save-keywords" class="btn-primary">Save & Apply</button>
                 <button id="cancel-keywords" class="btn-secondary">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- FITS Headers Configuration Dialog -->
+    <div id="fits-headers-dialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3>Configure FITS Header Columns</h3>
+                <button id="close-fits-headers-dialog" class="close-btn">&times;</button>
+            </div>
+            <div class="dialog-content">
+                <p>Select FITS header keywords to display as columns in the file list. Only FITS files will have values for these columns.</p>
+                
+                <div class="fits-headers-section">
+                    <h4>Common FITS Headers:</h4>
+                    <div class="fits-headers-grid" id="common-fits-headers">
+                        <!-- Common headers will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="custom-header-section">
+                    <h4>Add Custom Header:</h4>
+                    <div class="input-group">
+                        <input type="text" id="custom-header-input" placeholder="Enter header keyword (e.g., 'EXPOSURE', 'FILTER')">
+                        <button id="add-custom-header" class="btn-secondary">Add Header</button>
+                    </div>
+                </div>
+                
+                <div class="selected-headers-section">
+                    <h4>Selected Headers:</h4>
+                    <div id="selected-fits-headers">
+                        <div class="no-headers">No headers selected</div>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button id="save-fits-headers" class="btn-primary">Save & Apply</button>
+                <button id="cancel-fits-headers" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move Files Dialog -->
+    <div id="move-dialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3>Move Selected Files</h3>
+                <button id="close-move-dialog" class="close-btn">&times;</button>
+            </div>
+            <div class="dialog-content">
+                <div class="move-info">
+                    <p id="move-file-count">0 files selected for moving</p>
+                </div>
+                
+                <div class="destination-section">
+                    <h4>Destination:</h4>
+                    <div class="destination-input-group">
+                        <input type="text" id="destination-path" readonly placeholder="Select destination folder">
+                        <button id="browse-destination" class="btn-secondary">Browse...</button>
+                    </div>
+                </div>
+                
+                <div class="move-options">
+                    <h4>Options:</h4>
+                    <label class="move-option">
+                        <input type="radio" name="move-type" value="move" checked>
+                        <span>Move to selected folder</span>
+                    </label>
+                    <label class="move-option">
+                        <input type="radio" name="move-type" value="trash">
+                        <span>Move to trash</span>
+                    </label>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button id="execute-move" class="btn-primary" disabled>Move Files</button>
+                <button id="cancel-move" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loading-text">Loading...</div>
         </div>
     </div>
 
