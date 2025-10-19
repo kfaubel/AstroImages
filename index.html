@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <div class="controls">
+                <button id="select-folder" class="btn-primary">Select Folder</button>
+                <button id="configure-keywords" class="btn-secondary">Configure Keywords</button>
+                <div class="current-folder" id="current-folder">No folder selected</div>
+            </div>
+            <div class="file-list" id="file-list">
+                <div class="no-files">Select a folder to view images</div>
+            </div>
+        </div>
+        
+        <div class="resize-handle" id="resize-handle"></div>
+        
+        <div class="main-content" id="main-content">
+            <div class="image-container" id="image-container">
+                <div class="no-image">
+                    <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                    </svg>
+                    <p>Select an image from the file list</p>
+                </div>
+                <img id="image-display" class="image-display" style="display: none;">
+            </div>
+            <div class="image-info" id="image-info" style="display: none;">
+                <span class="image-name" id="image-name"></span>
+                <span class="image-size" id="image-size"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyword Configuration Dialog -->
+    <div id="keyword-dialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3>Configure Filename Keywords</h3>
+                <button id="close-dialog" class="close-btn">&times;</button>
+            </div>
+            <div class="dialog-content">
+                <p>Define keywords that appear in filenames. The token following each keyword will be extracted as a value.</p>
+                <p><strong>Example:</strong> "sample_001_date_2023-10-19_type_raw.fits" with keyword "date" would extract "2023-10-19"</p>
+                
+                <div class="keyword-input-section">
+                    <div class="input-group">
+                        <input type="text" id="keyword-input" placeholder="Enter keyword (e.g., 'date', 'sample', 'type')">
+                        <button id="add-keyword" class="btn-secondary">Add Keyword</button>
+                    </div>
+                </div>
+                
+                <div class="keywords-list">
+                    <h4>Active Keywords:</h4>
+                    <div id="keywords-container">
+                        <div class="no-keywords">No keywords defined</div>
+                    </div>
+                </div>
+                
+                <div class="test-section">
+                    <h4>Test Filename Parsing:</h4>
+                    <input type="text" id="test-filename" placeholder="Enter a test filename to see how it would be parsed">
+                    <div id="test-results"></div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button id="save-keywords" class="btn-primary">Save & Apply</button>
+                <button id="cancel-keywords" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

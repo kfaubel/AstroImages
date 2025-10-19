@@ -1,0 +1,20 @@
+{
+  "name": "astro-images",
+  "version": "1.0.0",
+  "description": "A two-pane image viewer with file browser",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "electron . --dev"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "canvas": "^3.2.0"
+  }
+}
