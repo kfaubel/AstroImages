@@ -108,6 +108,64 @@ function setCachedImage(cacheKey, imageData) {
 let mainWindow; // Main application window
 let currentWatcher = null; // File system watcher for directory changes
 
+// ===== APPLICATION CONFIGURATION =====
+// Manages persistent user preferences and settings
+
+/**
+ * Load application configuration from disk
+ * @returns {Object} Configuration object with default values
+ */
+function loadAppConfig() {
+    try {
+        const userDataPath = app.getPath('userData');
+        const configPath = path.join(userDataPath, 'app-config.json');
+
+        if (fs.existsSync(configPath)) {
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            
+            // Merge with defaults to ensure all properties exist
+            return {
+                showSplashOnStartup: true,
+                windowState: {
+                    width: 1200,
+                    height: 800,
+                    isMaximized: false
+                },
+                ...config
+            };
+        }
+    } catch (error) {
+        console.error('Failed to load app config:', error);
+    }
+
+    // Return default configuration
+    return {
+        showSplashOnStartup: true,
+        windowState: {
+            width: 1200,
+            height: 800,
+            isMaximized: false
+        }
+    };
+}
+
+/**
+ * Save application configuration to disk
+ * @param {Object} config Configuration object to save
+ */
+function saveAppConfig(config) {
+    try {
+        const userDataPath = app.getPath('userData');
+        const configPath = path.join(userDataPath, 'app-config.json');
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    } catch (error) {
+        console.error('Failed to save app config:', error);
+    }
+}
+
+// Global config variable
+let appConfig = loadAppConfig();
+
 // ===== FITS FILE PROCESSING =====
 
 /**
@@ -379,6 +437,24 @@ function createMenu() {
                     }
                 }
             ]
+        },
+        {
+            label: 'Help',
+            submenu: [
+                {
+                    label: 'Help',
+                    accelerator: 'F1',
+                    click: () => {
+                        mainWindow.webContents.send('show-help-dialog');
+                    }
+                },
+                {
+                    label: 'About Astro Images',
+                    click: () => {
+                        mainWindow.webContents.send('show-about-dialog');
+                    }
+                }
+            ]
         }
     ];
 
@@ -401,6 +477,12 @@ function createMenu() {
 
         // Adjust File menu for macOS (remove Exit since it's in the app menu)
         template[1].submenu = template[1].submenu.filter(item => item.label !== 'Exit');
+        
+        // Replace About in Help menu with custom action
+        const helpMenu = template.find(menu => menu.label === 'Help');
+        if (helpMenu) {
+            helpMenu.submenu = helpMenu.submenu.filter(item => item.label !== 'About Astro Images');
+        }
     }
 
     const menu = Menu.buildFromTemplate(template);
@@ -411,7 +493,7 @@ function createMenu() {
 // Persist window size, position, and state across application restarts
 
 /**
- * Save current window state to disk for restoration on next startup
+ * Save current window state to the application configuration
  */
 function saveWindowState() {
     if (!mainWindow) return;
@@ -419,7 +501,7 @@ function saveWindowState() {
     const bounds = mainWindow.getBounds();
     const isMaximized = mainWindow.isMaximized();
 
-    const windowState = {
+    appConfig.windowState = {
         x: bounds.x,
         y: bounds.y,
         width: bounds.width,
@@ -427,58 +509,43 @@ function saveWindowState() {
         isMaximized: isMaximized
     };
 
-    try {
-        const userDataPath = app.getPath('userData');
-        const statePath = path.join(userDataPath, 'window-state.json');
-        fs.writeFileSync(statePath, JSON.stringify(windowState, null, 2));
-    } catch (error) {
-        console.error('Failed to save window state:', error);
-    }
+    saveAppConfig(appConfig);
 }
 
 /**
- * Load previously saved window state from disk
+ * Load window state from application configuration
  * @returns {Object} Window state object with position, size, and maximized state
  */
 function loadWindowState() {
-    try {
-        const userDataPath = app.getPath('userData');
-        const statePath = path.join(userDataPath, 'window-state.json');
+    const windowState = appConfig.windowState || {};
 
-        if (fs.existsSync(statePath)) {
-            const windowState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    // Validate the loaded state
+    if (windowState.width && windowState.height &&
+        windowState.width > 100 && windowState.height > 100) {
 
-            // Validate the loaded state
-            if (windowState.width && windowState.height &&
-                windowState.width > 100 && windowState.height > 100) {
+        // Ensure window position is on screen
+        const { screen } = require('electron');
+        const displays = screen.getAllDisplays();
+        let isOnScreen = false;
 
-                // Ensure window position is on screen
-                const { screen } = require('electron');
-                const displays = screen.getAllDisplays();
-                let isOnScreen = false;
-
-                if (windowState.x !== undefined && windowState.y !== undefined) {
-                    for (const display of displays) {
-                        const { x, y, width, height } = display.workArea;
-                        if (windowState.x >= x && windowState.x < x + width &&
-                            windowState.y >= y && windowState.y < y + height) {
-                            isOnScreen = true;
-                            break;
-                        }
-                    }
-
-                    // If window is off-screen, reset position
-                    if (!isOnScreen) {
-                        windowState.x = undefined;
-                        windowState.y = undefined;
-                    }
+        if (windowState.x !== undefined && windowState.y !== undefined) {
+            for (const display of displays) {
+                const { x, y, width, height } = display.workArea;
+                if (windowState.x >= x && windowState.x < x + width &&
+                    windowState.y >= y && windowState.y < y + height) {
+                    isOnScreen = true;
+                    break;
                 }
+            }
 
-                return windowState;
+            // If window is off-screen, reset position
+            if (!isOnScreen) {
+                windowState.x = undefined;
+                windowState.y = undefined;
             }
         }
-    } catch (error) {
-        console.error('Failed to load window state:', error);
+
+        return windowState;
     }
 
     // Return default values if loading fails
@@ -506,7 +573,7 @@ function createWindow() {
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
         },
-        icon: path.join(__dirname, 'assets', 'icon.png'), // Optional: add an icon
+        icon: path.join(__dirname, 'icon.ico'), // Application icon
         show: false // Don't show until ready
     };
 
@@ -1225,4 +1292,36 @@ ipcMain.handle('get-fits-thumbnail', async (event, filePath, applyStretch = fals
         console.error('Error getting FITS thumbnail:', error);
         return null;
     }
+});
+
+// ===== SPLASH SCREEN AND ABOUT HANDLERS =====
+
+/**
+ * Get application configuration including splash screen preference
+ */
+ipcMain.handle('get-app-config', async () => {
+    return appConfig;
+});
+
+/**
+ * Update splash screen preference
+ */
+ipcMain.handle('set-splash-preference', async (event, showSplash) => {
+    appConfig.showSplashOnStartup = showSplash;
+    saveAppConfig(appConfig);
+    return { success: true };
+});
+
+/**
+ * Get application information for About dialog
+ */
+ipcMain.handle('get-app-info', async () => {
+    return {
+        name: 'Astro Images',
+        version: '1.0.0',
+        author: 'Ken Faubel',
+        description: 'Astronomical Image Viewer',
+        copyright: '© 2025 Ken Faubel. All rights reserved.',
+        license: 'MIT License'
+    };
 });

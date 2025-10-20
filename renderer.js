@@ -1759,6 +1759,164 @@ window.addEventListener('beforeunload', async () => {
     await stopWatchingDirectory();
 });
 
+// ===== SPLASH SCREEN AND HELP FUNCTIONALITY =====
+
+/**
+ * Initialize splash screen functionality
+ */
+async function initializeSplashScreen() {
+    try {
+        const config = await window.electronAPI.getAppConfig();
+        
+        // Show splash screen on startup if enabled
+        if (config.showSplashOnStartup) {
+            showSplashScreen();
+        }
+    } catch (error) {
+        console.error('Error loading splash screen config:', error);
+    }
+}
+
+/**
+ * Show the splash screen / about dialog
+ */
+function showSplashScreen() {
+    const splashScreen = document.getElementById('splash-screen');
+    const dontShowCheckbox = document.getElementById('dont-show-splash');
+    
+    if (splashScreen) {
+        // Reset checkbox state
+        dontShowCheckbox.checked = false;
+        splashScreen.style.display = 'flex';
+        
+        // Focus the first button for accessibility
+        setTimeout(() => {
+            const closeBtn = document.getElementById('close-splash-btn');
+            if (closeBtn) closeBtn.focus();
+        }, 100);
+    }
+}
+
+/**
+ * Hide the splash screen
+ */
+async function hideSplashScreen() {
+    const splashScreen = document.getElementById('splash-screen');
+    const dontShowCheckbox = document.getElementById('dont-show-splash');
+    
+    if (splashScreen) {
+        splashScreen.style.display = 'none';
+        
+        // Save preference if checkbox is checked
+        if (dontShowCheckbox && dontShowCheckbox.checked) {
+            try {
+                await window.electronAPI.setSplashPreference(false);
+                console.log('Splash screen disabled for future startups');
+            } catch (error) {
+                console.error('Error saving splash preference:', error);
+            }
+        }
+    }
+}
+
+/**
+ * Show the help dialog
+ */
+function showHelpDialog() {
+    const helpDialog = document.getElementById('help-dialog');
+    if (helpDialog) {
+        helpDialog.style.display = 'flex';
+        
+        // Focus the close button for accessibility
+        setTimeout(() => {
+            const closeBtn = document.getElementById('close-help-btn');
+            if (closeBtn) closeBtn.focus();
+        }, 100);
+    }
+}
+
+/**
+ * Hide the help dialog
+ */
+function hideHelpDialog() {
+    const helpDialog = document.getElementById('help-dialog');
+    if (helpDialog) {
+        helpDialog.style.display = 'none';
+    }
+}
+
+// ===== SPLASH SCREEN EVENT HANDLERS =====
+
+// Handle splash screen close buttons
+document.getElementById('close-splash')?.addEventListener('click', hideSplashScreen);
+document.getElementById('close-splash-btn')?.addEventListener('click', hideSplashScreen);
+
+// Handle help button in splash screen
+document.getElementById('help-button')?.addEventListener('click', () => {
+    hideSplashScreen();
+    showHelpDialog();
+});
+
+// Handle help dialog close buttons
+document.getElementById('close-help-dialog')?.addEventListener('click', hideHelpDialog);
+document.getElementById('close-help-btn')?.addEventListener('click', hideHelpDialog);
+
+// Handle keyboard navigation for dialogs
+document.addEventListener('keydown', (e) => {
+    // Close splash screen with Escape key
+    if (e.key === 'Escape') {
+        const splashScreen = document.getElementById('splash-screen');
+        const helpDialog = document.getElementById('help-dialog');
+        
+        if (splashScreen && splashScreen.style.display !== 'none') {
+            hideSplashScreen();
+        } else if (helpDialog && helpDialog.style.display !== 'none') {
+            hideHelpDialog();
+        }
+    }
+    
+    // Show help with F1 key
+    if (e.key === 'F1') {
+        e.preventDefault();
+        showHelpDialog();
+    }
+});
+
+// Handle clicks outside dialog to close
+document.addEventListener('click', (e) => {
+    const splashScreen = document.getElementById('splash-screen');
+    const helpDialog = document.getElementById('help-dialog');
+    
+    // Close splash screen if clicking on overlay
+    if (e.target === splashScreen) {
+        hideSplashScreen();
+    }
+    
+    // Close help dialog if clicking on overlay
+    if (e.target === helpDialog) {
+        hideHelpDialog();
+    }
+});
+
+// ===== IPC EVENT HANDLERS FOR MENU ACTIONS =====
+
+// Listen for Help menu actions from main process
+window.electronAPI.onShowHelpDialog(() => {
+    showHelpDialog();
+});
+
+window.electronAPI.onShowAboutDialog(() => {
+    showSplashScreen();
+});
+
+// ===== INITIALIZATION =====
+
+// Initialize splash screen when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Small delay to ensure all other initialization is complete
+    setTimeout(initializeSplashScreen, 500);
+});
+
 // Make removeKeyword available globally for onclick handlers
 window.removeKeyword = removeKeyword;
 
@@ -1772,3 +1930,9 @@ window.removeFitsHeader = removeFitsHeader;
 // Make selection functions available for potential main process communication
 window.getSelectedFiles = getSelectedFiles;
 window.clearSelection = clearSelection;
+
+// Make splash screen functions available globally
+window.showSplashScreen = showSplashScreen;
+window.hideSplashScreen = hideSplashScreen;
+window.showHelpDialog = showHelpDialog;
+window.hideHelpDialog = hideHelpDialog;

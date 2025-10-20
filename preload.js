@@ -40,6 +40,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // ===== UI MANAGEMENT =====
     updateWindowTitle: (directoryPath) => ipcRenderer.invoke('update-window-title', directoryPath),
 
+    // ===== APPLICATION CONFIGURATION =====
+    getAppConfig: () => ipcRenderer.invoke('get-app-config'),
+    setSplashPreference: (showSplash) => ipcRenderer.invoke('set-splash-preference', showSplash),
+    getAppInfo: () => ipcRenderer.invoke('get-app-info'),
+
     // ===== EVENT LISTENERS =====
     // Register callbacks for events from the main process
     onFolderSelected: (callback) => {
@@ -82,6 +87,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     onWatcherError: (callback) => {
         ipcRenderer.on('watcher-error', (event, error) => callback(error));
+    },
+
+    // Help and About events
+    onShowHelpDialog: (callback) => {
+        ipcRenderer.on('show-help-dialog', () => callback());
+    },
+
+    onShowAboutDialog: (callback) => {
+        ipcRenderer.on('show-about-dialog', () => callback());
     },
 
     // Remove listener

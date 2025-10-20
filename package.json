@@ -8,7 +8,7 @@
     "build": "electron-builder",
     "dev": "electron . --dev"
   },
-  "author": "",
+  "author": "Ken Faubel",
   "license": "MIT",
   "devDependencies": {
     "electron": "^27.0.0",
@@ -30,11 +30,13 @@
       "index.html",
       "styles.css",
       "fits-worker.js",
+      "icon.ico",
+      "splash.png",
       "node_modules/**/*"
     ],
     "win": {
       "target": "dir",
-      "icon": null,
+      "icon": "icon.ico",
       "sign": false
     }
   }

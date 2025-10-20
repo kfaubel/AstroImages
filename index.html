@@ -217,6 +217,137 @@
         </div>
     </div>
 
+    <!-- Splash Screen / About Dialog -->
+    <div id="splash-screen" class="splash-overlay" style="display: none;">
+        <div class="splash-dialog">
+            <div class="splash-header">
+                <div class="app-logo">
+                    <div class="logo-placeholder">
+                        <!-- 100x100 image placeholder replaced with actual splash.png -->
+                        <img src="splash.png" alt="Astro Images Logo" width="100" height="100" style="border-radius: 8px;">
+                    </div>
+                    <div class="app-title">
+                        <h1>Astro Images</h1>
+                        <div class="app-version">Version 1.0.0</div>
+                    </div>
+                </div>
+                <button id="close-splash" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="splash-content">
+                <div class="app-description">
+                    <h3>Astronomical Image Viewer</h3>
+                    <p>A specialized image viewer designed for astronomical images, particularly FITS files. 
+                    Features include viewing files based on file name attributes, FITS headers and a view
+                    of the image.</p>
+                </div>
+                
+                <div class="app-info">
+                    <div class="author-info">
+                        <strong>Author:</strong> Ken Faubel
+                    </div>
+                    <div class="copyright-info">
+                        <strong>Copyright:</strong> © 2025 Ken Faubel. All rights reserved.
+                    </div>
+                    <div class="license-info">
+                        <strong>License:</strong> MIT License
+                    </div>
+                </div>
+            </div>
+            
+            <div class="splash-footer">
+                <label class="splash-option">
+                    <input type="checkbox" id="dont-show-splash" />
+                    <span>Don't show this splash screen on startup</span>
+                </label>
+                <div class="splash-buttons">
+                    <button id="help-button" class="btn-secondary">Help</button>
+                    <button id="close-splash-btn" class="btn-primary">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Page Dialog -->
+    <div id="help-dialog" class="dialog-overlay help-overlay" style="display: none;">
+        <div class="dialog help-dialog">
+            <div class="dialog-header">
+                <h3>Astro Images - Help</h3>
+                <button id="close-help-dialog" class="close-btn">&times;</button>
+            </div>
+            <div class="dialog-content help-content">
+                <div class="help-section">
+                    <h4>Getting Started</h4>
+                    <p>Use <strong>File → Open Folder</strong> (Ctrl+O) to select a directory containing your astronomical images. 
+                    The file list will automatically display all supported image formats including FITS, JPEG, PNG, and others.</p>
+                </div>
+                
+                <div class="help-section">
+                    <h4>FITS File Support</h4>
+                    <p>Astro Images specializes in FITS (Flexible Image Transport System) files, the standard format for astronomical images:</p>
+                    <ul>
+                        <li><strong>Automatic Processing:</strong> FITS files are automatically converted to displayable format</li>
+                        <li><strong>Header Parsing:</strong> Access to all FITS header metadata via Options → FITS Headers</li>
+                        <li><strong>Coordinate Correction:</strong> Automatic correction for common FITS data layout issues</li>
+                        <li><strong>Histogram Stretching:</strong> Enable Auto Stretch for enhanced contrast in faint astronomical objects</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4>Navigation and Viewing</h4>
+                    <ul>
+                        <li><strong>Image Selection:</strong> Click any file in the list to view it</li>
+                        <li><strong>Playback Controls:</strong> Use the transport controls for slideshow navigation</li>
+                        <li><strong>Zoom Controls:</strong> Zoom in/out, fit to window, or view at actual size</li>
+                        <li><strong>Auto Stretch:</strong> Toggle histogram stretching for better visibility of faint details</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4>File Management</h4>
+                    <ul>
+                        <li><strong>Multiple Selection:</strong> Ctrl+click or Shift+click to select multiple files</li>
+                        <li><strong>Move Files:</strong> Use File → Move Selected (Ctrl+M) or the Move button</li>
+                        <li><strong>Directory Monitoring:</strong> Automatic refresh when files are added/removed</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4>Customization</h4>
+                    <ul>
+                        <li><strong>Filename Keywords:</strong> Configure custom keywords for filename parsing (Options → Custom Keywords)</li>
+                        <li><strong>FITS Headers:</strong> Select which FITS header fields to display as columns (Options → FITS Headers)</li>
+                        <li><strong>Interface:</strong> Resizable sidebar and responsive layout</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4>Keyboard Shortcuts</h4>
+                    <ul>
+                        <li><strong>Ctrl+O:</strong> Open folder</li>
+                        <li><strong>Ctrl+M:</strong> Move selected files</li>
+                        <li><strong>Ctrl+Plus:</strong> Zoom in</li>
+                        <li><strong>Ctrl+Minus:</strong> Zoom out</li>
+                        <li><strong>Ctrl+0:</strong> Actual size</li>
+                        <li><strong>Ctrl+F:</strong> Fit to window</li>
+                        <li><strong>F12:</strong> Developer tools</li>
+                        <li><strong>Ctrl+R:</strong> Reload application</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4>Technical Information</h4>
+                    <p>Astro Images is built with Electron and uses specialized algorithms for astronomical image processing. 
+                    The application automatically handles coordinate correction for FITS files and provides advanced caching 
+                    for improved performance with large astronomical datasets.</p>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button id="close-help-btn" class="btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         console.log('Basic JavaScript is working');
         document.body.style.backgroundColor = '#f0f0f0'; // Quick visual test
