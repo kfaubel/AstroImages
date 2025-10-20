@@ -1,29 +1,42 @@
-let currentDirectory = null;
-let currentFiles = [];
-let keywords = []; // Array of keywords for filename parsing
-let fitsHeaders = []; // Array of FITS headers to display
-let sortColumn = null; // Current sort column
-let sortDirection = 'asc'; // 'asc' or 'desc'
-let selectedFiles = new Set(); // Set of selected file indices
-let isWatchingDirectory = false; // Track if we're currently watching a directory
+/**
+ * AstroImages - Renderer Process
+ * Handles all UI interactions and user interface logic
+ * 
+ * This file manages the main application interface, including:
+ * - File list management and display
+ * - Image viewing and zoom controls
+ * - FITS header display and parsing
+ * - Directory watching and file operations
+ */
 
-// Playback control variables
-let currentImageIndex = -1; // Currently displayed image index
-let isPlaying = false; // Is slideshow playing
-let playbackTimer = null; // Timer for slideshow
-let playbackInterval = 2000; // 2 seconds per image
+// ===== GLOBAL APPLICATION STATE =====
+let currentDirectory = null;           // Currently selected directory path
+let currentFiles = [];                 // Array of image files in current directory
+let keywords = [];                     // Custom keywords for filename parsing
+let fitsHeaders = [];                  // FITS headers to display in table
+let sortColumn = null;                 // Current sort column identifier
+let sortDirection = 'asc';             // Sort direction: 'asc' or 'desc'
+let selectedFiles = new Set();         // Set of selected file indices
+let isWatchingDirectory = false;       // Whether directory watching is active
 
-// Zoom control variables
-let currentZoom = 1.0; // Current zoom level (1.0 = 100%)
-let fitToWindowScale = 1.0; // Scale factor when image is fitted to window
-let isFitToWindow = true; // Is image currently in fit-to-window mode
-let isDragging = false; // Is user dragging the image
-let lastMouseX = 0; // Last mouse X position for dragging
-let lastMouseY = 0; // Last mouse Y position for dragging
-let imageNaturalWidth = 0; // Natural width of current image
-let imageNaturalHeight = 0; // Natural height of current image
+// ===== PLAYBACK CONTROL STATE =====
+let currentImageIndex = -1;           // Index of currently displayed image
+let isPlaying = false;                // Whether slideshow is active
+let playbackTimer = null;             // Timer handle for slideshow
+let playbackInterval = 2000;          // Milliseconds between images (2 seconds)
 
-// Common FITS header keywords with descriptions
+// ===== ZOOM AND PAN CONTROL STATE =====
+let currentZoom = 1.0;                // Current zoom level (1.0 = 100%)
+let fitToWindowScale = 1.0;           // Scale factor for fit-to-window mode
+let isFitToWindow = true;             // Whether image is in fit-to-window mode
+let isDragging = false;               // Whether user is currently dragging image
+let lastMouseX = 0;                   // Last recorded mouse X position
+let lastMouseY = 0;                   // Last recorded mouse Y position
+let imageNaturalWidth = 0;            // Original width of current image
+let imageNaturalHeight = 0;           // Original height of current image
+
+// ===== FITS HEADER DEFINITIONS =====
+// Common astronomical image metadata keywords with human-readable descriptions
 const COMMON_FITS_HEADERS = [
     { keyword: 'AIRMASS', description: 'Airmass at observation' },
     { keyword: 'APERTURE', description: 'Aperture diameter' },

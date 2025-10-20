@@ -1,26 +1,49 @@
+/**
+ * AstroImages - Astronomical Image Viewer
+ * Main process for Electron application
+ * 
+ * This application specializes in viewing astronomical images, particularly FITS files,
+ * with features like histogram stretching, image caching, and coordinate correction.
+ */
+
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { createCanvas } = require('canvas');
 
-// Image cache to avoid reprocessing
-const imageCache = new Map();
+// ===== IMAGE CACHING SYSTEM =====
+// Implements smart caching to avoid reprocessing the same FITS files
+const imageCache = new Map(); // In-memory cache tracking
 const MAX_CACHE_SIZE = 50; // Maximum number of cached images
-const CACHE_DIR = path.join(app.getPath('userData'), 'image-cache');
+const CACHE_DIR = path.join(app.getPath('userData'), 'image-cache'); // Persistent disk cache
 
-// Ensure cache directory exists
+// Ensure cache directory exists on startup
 if (!fs.existsSync(CACHE_DIR)) {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
-// Cache helper functions
+// ===== CACHE HELPER FUNCTIONS =====
+
+/**
+ * Generate a unique cache key based on file properties and processing options
+ * @param {string} filePath - Path to the image file
+ * @param {boolean} applyStretch - Whether histogram stretching is applied
+ * @param {boolean} isThumb - Whether this is for a thumbnail (default: false)
+ * @returns {string} MD5 hash to use as cache key
+ */
 function getCacheKey(filePath, applyStretch, isThumb = false) {
     const stats = fs.statSync(filePath);
     const data = `${filePath}-${stats.mtime.getTime()}-${stats.size}-${applyStretch}-${isThumb ? 'thumb' : 'full'}`;
     return crypto.createHash('md5').update(data).digest('hex');
 }
 
+/**
+ * Generate a thumbnail from a full-size canvas
+ * @param {Canvas} canvas - Source canvas to create thumbnail from
+ * @param {number} maxSize - Maximum width/height for thumbnail (default: 400px)
+ * @returns {Canvas} Scaled thumbnail canvas
+ */
 function generateThumbnail(canvas, maxSize = 400) {
     const { width, height } = canvas;
     if (width <= maxSize && height <= maxSize) {
@@ -42,6 +65,11 @@ function generateThumbnail(canvas, maxSize = 400) {
     return thumbCanvas;
 }
 
+/**
+ * Retrieve a cached image from disk storage
+ * @param {string} cacheKey - Cache key to look up
+ * @returns {string|null} Base64 data URL of cached image, or null if not found
+ */
 function getCachedImage(cacheKey) {
     const cachePath = path.join(CACHE_DIR, `${cacheKey}.png`);
     if (fs.existsSync(cachePath)) {
@@ -51,6 +79,11 @@ function getCachedImage(cacheKey) {
     return null;
 }
 
+/**
+ * Store a processed image in both memory and disk cache
+ * @param {string} cacheKey - Unique key for this image
+ * @param {string} imageData - Base64 data URL of the image
+ */
 function setCachedImage(cacheKey, imageData) {
     // Remove old cache entries if we're at the limit
     if (imageCache.size >= MAX_CACHE_SIZE) {
@@ -71,17 +104,26 @@ function setCachedImage(cacheKey, imageData) {
     imageCache.set(cacheKey, true);
 }
 
-let mainWindow;
-let currentWatcher = null; // File system watcher
+// ===== GLOBAL APPLICATION STATE =====
+let mainWindow; // Main application window
+let currentWatcher = null; // File system watcher for directory changes
 
-// Simple FITS header parser
+// ===== FITS FILE PROCESSING =====
+
+/**
+ * Parse FITS (Flexible Image Transport System) file headers
+ * FITS is the standard format for astronomical images
+ * 
+ * @param {Buffer} buffer - Raw file buffer
+ * @returns {Object} Parsed header keywords and values, plus _headerSize property
+ */
 function parseFitsHeader(buffer) {
-    const blockSize = 2880; // FITS header is in 2880-byte blocks
+    const blockSize = 2880; // FITS standard: header blocks are exactly 2880 bytes
     let headerSize = blockSize;
     let foundEnd = false;
 
-    // Search for END keyword in more blocks (up to 50 blocks = ~144KB of header)
-    // This handles files with very large headers or multiple HDU sections
+    // Search for END keyword in multiple blocks (up to 50 blocks = ~144KB of header)
+    // This handles files with very large headers or multiple HDU (Header Data Unit) sections
     for (let offset = 0; offset < Math.min(buffer.length, blockSize * 50); offset += blockSize) {
         const block = buffer.slice(offset, offset + blockSize).toString('ascii');
         if (block.includes('END ')) {
@@ -97,26 +139,29 @@ function parseFitsHeader(buffer) {
         headerSize = Math.min(buffer.length, blockSize * 50);
     }
 
+    // Extract header text and split into 80-character lines (FITS standard)
     const headerText = buffer.slice(0, headerSize).toString('ascii');
     const lines = headerText.match(/.{80}/g) || [];
 
-    const header = { _headerSize: headerSize };
+    const header = { _headerSize: headerSize }; // Include header size for data extraction
 
+    // Parse each 80-character line for keyword-value pairs
     for (const line of lines) {
-        if (line.startsWith('END ')) continue; // Don't break, look for additional sections
+        if (line.startsWith('END ')) continue; // Skip END markers, look for additional sections
 
-        // More flexible regex for FITS keywords:
-        // - Case insensitive matching
-        // - Allow more characters in keywords (some software uses non-standard keywords)
-        // - Handle both = and : separators (some software uses colons)
+        // Flexible regex for FITS keywords to handle various software implementations:
+        // - Case insensitive matching for compatibility
+        // - Extended character set in keywords (some software uses non-standard keywords)
+        // - Handle both = and : separators (some software uses colons instead of equals)
         const match = line.match(/^([A-Za-z0-9_-]{1,8})\s*[=:]\s*([^/]*)/);
         if (match) {
-            const key = match[1].trim().toUpperCase(); // Normalize to uppercase
+            const key = match[1].trim().toUpperCase(); // Normalize to uppercase for consistency
             let value = match[2].trim();
 
-            // Handle quoted string values more robustly
+            // Parse different value types according to FITS standards
             if (value.startsWith("'")) {
-                // Find the closing quote, handling potential single quotes in the string
+                // Handle quoted string values (FITS standard for text)
+                // Find the closing quote, handling potential single quotes within the string
                 let closingQuoteIndex = -1;
                 for (let i = value.length - 1; i >= 1; i--) {
                     if (value[i] === "'") {
@@ -127,65 +172,77 @@ function parseFitsHeader(buffer) {
                 if (closingQuoteIndex > 0) {
                     value = value.slice(1, closingQuoteIndex).trim();
                 } else {
-                    value = value.slice(1).trim();
+                    value = value.slice(1).trim(); // Handle malformed quotes
                 }
             } else if (value === 'T') {
-                value = true;
+                value = true; // FITS boolean TRUE
             } else if (value === 'F') {
-                value = false;
+                value = false; // FITS boolean FALSE
             } else if (!isNaN(value) && value !== '' && !/^[TF]$/.test(value)) {
-                // Parse numeric values, but be more careful about what we convert
+                // Parse numeric values (integers and floats)
                 const num = parseFloat(value);
                 if (!isNaN(num) && isFinite(num)) {
                     value = num;
                 }
             }
-            // Keep as string for everything else
+            // Keep as string for everything else (undefined keywords, complex values, etc.)
 
             // Only store if we don't already have this keyword (first occurrence wins)
+            // This handles multi-HDU files where keywords might be duplicated
             if (!header.hasOwnProperty(key)) {
                 header[key] = value;
             }
         }
     }
 
-    // Log some debug information about what we found
+    // Log debug information about parsing results
     const keywords = Object.keys(header).filter(k => k !== '_headerSize');
     console.log(`FITS parsing found ${keywords.length} keywords in ${headerSize} bytes`);
 
     return header;
 }
 
-// Histogram stretching function for FITS images
+// ===== IMAGE PROCESSING FUNCTIONS =====
+
+/**
+ * Apply histogram stretching to enhance image contrast
+ * This is crucial for astronomical images which often have very wide dynamic ranges
+ * 
+ * @param {ImageData} imageData - Canvas ImageData object to process
+ * @param {Object} stretchParams - Stretching parameters
+ * @param {number} stretchParams.lowPercentile - Lower percentile cutoff (default: 1)
+ * @param {number} stretchParams.highPercentile - Upper percentile cutoff (default: 99)
+ * @returns {ImageData} Modified ImageData with stretched histogram
+ */
 function applyHistogramStretch(imageData, stretchParams = { lowPercentile: 1, highPercentile: 99 }) {
     const { data, width, height } = imageData;
     const { lowPercentile, highPercentile } = stretchParams;
 
-    // Extract grayscale values (assuming RGBA format)
+    // Extract grayscale values from RGBA pixel data
     const grayValues = [];
     for (let i = 0; i < data.length; i += 4) {
-        // Convert RGB to grayscale (using luminance formula)
+        // Convert RGB to grayscale using standard luminance formula (ITU-R BT.709)
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
         grayValues.push(gray);
     }
 
-    // Sort values to find percentiles
+    // Calculate percentile-based min/max values for robust stretching
     const sortedValues = [...grayValues].sort((a, b) => a - b);
     const lowIndex = Math.floor(sortedValues.length * (lowPercentile / 100));
     const highIndex = Math.floor(sortedValues.length * (highPercentile / 100));
 
-    const minVal = sortedValues[lowIndex];
-    const maxVal = sortedValues[highIndex];
+    const minVal = sortedValues[lowIndex];  // Lower cutoff (removes darkest pixels)
+    const maxVal = sortedValues[highIndex]; // Upper cutoff (removes brightest pixels)
     const range = maxVal - minVal;
 
-    // Apply stretching to the image data
+    // Apply linear stretching transformation to each pixel
     for (let i = 0; i < data.length; i += 4) {
-        // Get original RGB values
+        // Process each color channel independently
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Apply stretch to each channel
+        // Apply linear stretch: (value - min) / range * 255, clamped to [0, 255]
         const stretchedR = Math.min(255, Math.max(0, ((r - minVal) / range) * 255));
         const stretchedG = Math.min(255, Math.max(0, ((g - minVal) / range) * 255));
         const stretchedB = Math.min(255, Math.max(0, ((b - minVal) / range) * 255));
@@ -199,6 +256,12 @@ function applyHistogramStretch(imageData, stretchParams = { lowPercentile: 1, hi
     return imageData;
 }
 
+// ===== APPLICATION MENU SYSTEM =====
+
+/**
+ * Create the application menu system
+ * Includes file operations, view controls, and developer tools
+ */
 function createMenu() {
     const template = [
         {
@@ -208,6 +271,7 @@ function createMenu() {
                     label: 'Open Folder...',
                     accelerator: 'CmdOrCtrl+O',
                     click: async () => {
+                        // Show folder selection dialog
                         const result = await dialog.showOpenDialog(mainWindow, {
                             properties: ['openDirectory']
                         });
@@ -330,7 +394,12 @@ function createMenu() {
     Menu.setApplicationMenu(menu);
 }
 
-// Window state management
+// ===== WINDOW STATE MANAGEMENT =====
+// Persist window size, position, and state across application restarts
+
+/**
+ * Save current window state to disk for restoration on next startup
+ */
 function saveWindowState() {
     if (!mainWindow) return;
 
@@ -354,6 +423,10 @@ function saveWindowState() {
     }
 }
 
+/**
+ * Load previously saved window state from disk
+ * @returns {Object} Window state object with position, size, and maximized state
+ */
 function loadWindowState() {
     try {
         const userDataPath = app.getPath('userData');
@@ -405,6 +478,9 @@ function loadWindowState() {
     };
 }
 
+/**
+ * Create the main application window with restored state
+ */
 function createWindow() {
     const windowState = loadWindowState();
 
@@ -488,7 +564,13 @@ app.on('activate', () => {
     }
 });
 
-// IPC handlers
+// ===== IPC (Inter-Process Communication) HANDLERS =====
+// These functions handle communication between the main process and renderer process
+
+/**
+ * Handle directory selection dialog
+ * @returns {string|null} Selected directory path or null if cancelled
+ */
 ipcMain.handle('select-directory', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openDirectory']
@@ -706,9 +788,15 @@ ipcMain.handle('check-directory-exists', async (event, directoryPath) => {
     }
 });
 
+/**
+ * Process a FITS file into a displayable image format
+ * Handles the complex task of parsing FITS binary data and converting to PNG
+ * @param {string} filePath - Path to the FITS file
+ * @returns {string} Base64 data URL of the processed image
+ */
 ipcMain.handle('process-fits-file', async (event, filePath) => {
     try {
-        // Check cache first
+        // Check cache first to avoid reprocessing
         const cacheKey = getCacheKey(filePath, false);
         const cachedImage = getCachedImage(cacheKey);
         if (cachedImage) {
@@ -874,7 +962,13 @@ ipcMain.handle('update-window-title', async (event, directoryPath) => {
     }
 });
 
-// Process FITS file with optional histogram stretching
+/**
+ * Process FITS file with optional histogram stretching for enhanced contrast
+ * This is the main image processing function for astronomical images
+ * @param {string} filePath - Path to the FITS file
+ * @param {boolean} applyStretch - Whether to apply histogram stretching
+ * @returns {string} Base64 data URL of the processed image
+ */
 ipcMain.handle('process-fits-file-stretched', async (event, filePath, applyStretch = false) => {
     try {
         // Check cache first
@@ -940,14 +1034,15 @@ ipcMain.handle('process-fits-file-stretched', async (event, filePath, applyStret
             throw new Error(`Insufficient data in FITS file. Expected: ${expectedDataSize}, Got: ${dataBuffer.length}`);
         }
 
-        // Parse data based on BITPIX using DataView for proper byte order handling
+        // Parse binary pixel data based on BITPIX value
+        // FITS uses big-endian byte order, so we must specify false for little-endian systems
         const dataView = new DataView(dataBuffer.buffer, dataBuffer.byteOffset);
         const data = new Array(numPixels);
 
-        // Debug: Try to detect the layout issue
+        // Debug: Check for potential data layout issues
         let potentialOffset = 0;
         if (dataBuffer.length > expectedDataSize) {
-            // Check if there might be additional padding or offset
+            // Some FITS files have additional padding or metadata after pixel data
             const extraBytes = dataBuffer.length - expectedDataSize;
             console.log(`Extra bytes in data buffer: ${extraBytes}`);
         }
@@ -1013,9 +1108,12 @@ ipcMain.handle('process-fits-file-stretched', async (event, filePath, applyStret
         // Apply scaling to convert to 0-255 range
         // Address the "right 20% on left" issue by trying different data arrangements
 
+        // ===== COORDINATE CORRECTION =====
+        // Many FITS files have a specific layout issue where image sections appear shifted
+        // This correction addresses the "75% of left side belongs on right" issue
         console.log('Applying FITS data with 75% left-to-right shift correction');
 
-        // 75% of what we see on left belongs on right, so shift everything right by 75% (or left by 25%)
+        // Calculate shift amount: 75% of image width
         const shiftAmount = Math.floor(width * 0.75);
         console.log(`Shifting right by 75% (${shiftAmount} pixels)`);
 

@@ -1,31 +1,47 @@
+/**
+ * AstroImages - Preload Script
+ * 
+ * This script runs in the renderer process but has access to Node.js APIs.
+ * It provides a secure bridge between the main process and renderer process,
+ * exposing only specific IPC functions needed by the UI.
+ * 
+ * Security: Uses contextBridge to safely expose APIs without giving
+ * the renderer process full access to Node.js or Electron APIs.
+ */
+
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Expose secure API to the renderer process through window.electronAPI
 contextBridge.exposeInMainWorld('electronAPI', {
+    // ===== FILE SYSTEM OPERATIONS =====
     selectDirectory: () => ipcRenderer.invoke('select-directory'),
     readDirectory: (path) => ipcRenderer.invoke('read-directory', path),
     getFilePath: (filePath) => ipcRenderer.invoke('get-file-path', filePath),
+    checkDirectoryExists: (directoryPath) => ipcRenderer.invoke('check-directory-exists', directoryPath),
+
+    // ===== IMAGE PROCESSING =====
     processFitsFile: (filePath) => ipcRenderer.invoke('process-fits-file', filePath),
     processFitsFileStretched: (filePath, applyStretch) => ipcRenderer.invoke('process-fits-file-stretched', filePath, applyStretch),
     getFitsThumbnail: (filePath, applyStretch) => ipcRenderer.invoke('get-fits-thumbnail', filePath, applyStretch),
-    checkDirectoryExists: (directoryPath) => ipcRenderer.invoke('check-directory-exists', directoryPath),
 
-    // Move dialog functionality
+    // ===== FILE MANAGEMENT =====
     selectMoveDestination: (defaultPath) => ipcRenderer.invoke('select-move-destination', defaultPath),
     moveFiles: (filePaths, destinationPath) => ipcRenderer.invoke('move-files', filePaths, destinationPath),
     moveFilesToTrash: (filePaths) => ipcRenderer.invoke('move-files-to-trash', filePaths),
     updateMenuState: (hasSelection) => ipcRenderer.send('update-menu-state', hasSelection),
 
-    // Directory watcher functionality
+    // ===== DIRECTORY MONITORING =====
     startWatchingDirectory: (directoryPath) => ipcRenderer.invoke('start-watching-directory', directoryPath),
     stopWatchingDirectory: () => ipcRenderer.invoke('stop-watching-directory'),
 
-    // FITS header functionality
+    // ===== FITS METADATA =====
     getFitsHeaders: (filePath) => ipcRenderer.invoke('get-fits-headers', filePath),
 
-    // Window title functionality
+    // ===== UI MANAGEMENT =====
     updateWindowTitle: (directoryPath) => ipcRenderer.invoke('update-window-title', directoryPath),
 
-    // Menu-triggered events
+    // ===== EVENT LISTENERS =====
+    // Register callbacks for events from the main process
     onFolderSelected: (callback) => {
         ipcRenderer.on('folder-selected', (event, folderPath) => callback(folderPath));
     },
