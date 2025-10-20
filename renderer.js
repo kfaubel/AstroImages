@@ -327,6 +327,13 @@ document.addEventListener('mouseup', () => {
 
         // Save the sidebar width to localStorage
         localStorage.setItem('sidebarWidth', sidebar.style.width);
+        
+        // Trigger image resize if in fit-to-window mode and image is loaded
+        if (isFitToWindow && imageDisplay.src && imageDisplay.style.display !== 'none') {
+            setTimeout(() => {
+                zoomFit();
+            }, 50); // Small delay to allow DOM to update
+        }
     }
 });
 
@@ -1085,10 +1092,7 @@ async function renderFileList(autoSelectFirst = false) {
 
         // Filename cell
         html += `<td class="file-cell file-cell-filename">`;
-        html += `<div class="tooltip">`;
         html += `<span class="file-name file-name-truncated">${file.name}</span>`;
-        html += `<div class="tooltip-text">${file.name}</div>`;
-        html += `</div>`;
         html += `</td>`;
 
         // Keyword value cells
@@ -1230,15 +1234,7 @@ async function displayImage(file) {
             try {
                 const applyStretch = autoStretchCheckbox.checked;
 
-                // Try to load thumbnail first for faster preview
-                const thumbnail = await window.electronAPI.getFitsThumbnail(file.path, applyStretch);
-                if (thumbnail) {
-                    // Show thumbnail immediately
-                    imageDisplay.src = thumbnail;
-                    showLoading('Loading full resolution...');
-                }
-
-                // Then load full resolution
+                // Load full resolution directly
                 imageSrc = await window.electronAPI.processFitsFileStretched(file.path, applyStretch);
                 console.log('FITS processing completed successfully with stretch:', applyStretch);
             } catch (error) {
@@ -1408,6 +1404,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    // Add ResizeObserver to detect image pane geometry changes
+    const resizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+            if (entry.target === mainContent && isFitToWindow && imageDisplay.src && imageDisplay.style.display !== 'none') {
+                // Debounce the resize to avoid excessive calls
+                clearTimeout(resizeObserver.timeoutId);
+                resizeObserver.timeoutId = setTimeout(() => {
+                    zoomFit();
+                }, 100);
+            }
+        }
+    });
+    
+    // Observe the main content area for size changes
+    resizeObserver.observe(mainContent);
 });
 
 // Zoom control functions

@@ -349,6 +349,7 @@ body {
     flex-direction: column;
     background-color: #fafafa;
     min-width: 300px;
+    position: relative;
 }
 
 .image-container {
@@ -1051,7 +1052,7 @@ body {
 
 /* Loading Overlay */
 .loading-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
