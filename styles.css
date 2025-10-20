@@ -17,9 +17,9 @@ body {
 }
 
 .sidebar {
-    width: 350px;
+    width: 50vw; /* Start at 50% of viewport width */
     min-width: 250px;
-    max-width: 70vw;
+    max-width: 80vw;
     background-color: #ffffff;
     border-right: 1px solid #e0e0e0;
     display: flex;
@@ -803,7 +803,7 @@ body {
     background-color: #f8f9fa;
     border-bottom: 2px solid #e0e0e0;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 10px;
     color: #666;
     text-transform: uppercase;
     position: sticky;
@@ -823,7 +823,7 @@ body {
     background-color: #f8f9fa;
     border-bottom: 2px solid #e0e0e0;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 10px;
     color: #666;
     text-transform: uppercase;
     position: sticky;
@@ -884,9 +884,23 @@ body {
 }
 
 .file-header-filename {
-    width: 100%;
-    min-width: 150px;
+    width: auto;
+    min-width: 100px;
+    max-width: 300px;
     padding-right: 24px; /* Extra space for sort indicator */
+}
+
+.file-table {
+    width: 100%;
+    table-layout: auto; /* Allow columns to size based on content */
+    white-space: nowrap; /* Prevent text wrapping in cells */
+}
+
+.file-table th,
+.file-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
 }
 
 .file-header-keyword {
@@ -903,7 +917,6 @@ body {
     width: 70px;
     min-width: 60px;
     max-width: 100px;
-    font-size: 11px;
     background-color: #e6f3ff; /* Slightly darker blue for header */
     border-left: 2px solid #6a5acd;
 }
@@ -921,6 +934,17 @@ body {
 .file-row.selected {
     background-color: #e3f2fd;
     border-left: 3px solid #007acc;
+}
+
+.file-row.active {
+    background-color: #fff3cd;
+    border-left: 3px solid #ffc107;
+    font-weight: 500;
+}
+
+.file-row.active.selected {
+    background-color: #e8f4fd;
+    border-left: 3px solid #28a745;
 }
 
 .file-cell {
@@ -996,6 +1020,25 @@ body {
 .fits-value {
     color: #333;
     font-size: 14px;
+}
+
+.fits-loading {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    animation: pulse 1.5s infinite;
+}
+
+.fits-error {
+    color: #dc3545;
+    font-size: 12px;
+    font-style: italic;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 /* Tooltip Styles */

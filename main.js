@@ -210,7 +210,7 @@ function parseFitsHeader(buffer) {
 
     // Log debug information about parsing results
     const keywords = Object.keys(header).filter(k => k !== '_headerSize');
-    console.log(`FITS parsing found ${keywords.length} keywords in ${headerSize} bytes`);
+    //console.log(`FITS parsing found ${keywords.length} keywords in ${headerSize} bytes`);
 
     return header;
 }
@@ -518,7 +518,25 @@ function createWindow() {
 
     mainWindow = new BrowserWindow(windowOptions);
 
+    // // Open DevTools for debugging
+    // mainWindow.webContents.openDevTools();
+
     mainWindow.loadFile('index.html');
+
+    // Log any loading errors
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+        console.error('Failed to load page:', errorCode, errorDescription, validatedURL);
+    });
+
+    // Log when DOM is ready
+    mainWindow.webContents.on('dom-ready', () => {
+        console.log('DOM ready');
+    });
+
+    // Log when page finishes loading
+    mainWindow.webContents.on('did-finish-load', () => {
+        console.log('Page finished loading');
+    });
 
     // Restore maximized state
     if (windowState.isMaximized) {
@@ -539,6 +557,12 @@ function createWindow() {
     // Save window state before closing
     mainWindow.on('close', () => {
         saveWindowState();
+    });
+
+    // Ensure app quits when window is closed
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+        app.quit();
     });
 
     // Create menu
@@ -755,12 +779,12 @@ ipcMain.handle('get-fits-headers', async (event, filePath) => {
         const header = parseFitsHeader(buffer);
 
         // Log the parsed headers for debugging
-        console.log(`FITS headers for ${path.basename(filePath)}:`, Object.keys(header));
-        if (header.FILTER !== undefined) {
-            console.log(`  FILTER: "${header.FILTER}"`);
-        } else {
-            console.log('  FILTER: not found');
-        }
+        // console.log(`FITS headers for ${path.basename(filePath)}:`, Object.keys(header));
+        // if (header.FILTER !== undefined) {
+        //     console.log(`  FILTER: "${header.FILTER}"`);
+        // } else {
+        //     console.log('  FILTER: not found');
+        // }
 
         // Remove the internal _headerSize property
         delete header._headerSize;

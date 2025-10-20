@@ -25,10 +25,11 @@
     },
     "files": [
       "main.js",
-      "renderer.js",
+      "src/**/*",
       "preload.js",
       "index.html",
       "styles.css",
+      "fits-worker.js",
       "node_modules/**/*"
     ],
     "win": {

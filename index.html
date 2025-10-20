@@ -14,7 +14,7 @@
             </div>
             
             <!-- Playback Controls -->
-            <div class="playback-controls" id="playback-controls" style="display: none;">
+            <div class="playback-controls" id="playback-controls">
                 <button id="move-selected-btn" class="move-selected-btn" title="Move selected files" disabled>
                     Move selected...
                 </button>
@@ -217,6 +217,36 @@
         </div>
     </div>
 
+    <script>
+        console.log('Basic JavaScript is working');
+        document.body.style.backgroundColor = '#f0f0f0'; // Quick visual test
+        
+        // Test module loading
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.error, e.filename, e.lineno);
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('Unhandled promise rejection:', e.reason);
+        });
+    </script>
+    <!-- Use simple test script first, then try ES6 modules -->
+    <!-- <script src="test-renderer.js"></script> -->
     <script src="renderer.js"></script>
+    <!-- ES6 modules disabled for now
+    <script type="module">
+        console.log('ES6 module support detected, attempting to load main module...');
+        try {
+            import('./src/renderer/main.js').then(module => {
+                console.log('Main module loaded successfully:', module);
+            }).catch(error => {
+                console.error('Failed to load main module:', error);
+                console.error('Module loading error details:', error.message, error.stack);
+            });
+        } catch (error) {
+            console.error('Import error:', error);
+        }
+    </script>
+    -->
 </body>
 </html>
