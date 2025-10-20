@@ -120,22 +120,35 @@ let currentWatcher = null; // File system watcher for directory changes
 function parseFitsHeader(buffer) {
     const blockSize = 2880; // FITS standard: header blocks are exactly 2880 bytes
     let headerSize = blockSize;
-    let foundEnd = false;
+    let foundFinalEnd = false;
 
-    // Search for END keyword in multiple blocks (up to 50 blocks = ~144KB of header)
-    // This handles files with very large headers or multiple HDU (Header Data Unit) sections
+    // Search through multiple blocks to find the final END keyword
+    // This handles files with extended headers or multiple HDU (Header Data Unit) sections
+    // Continue reading until we find an END keyword followed by padding or reach max blocks
     for (let offset = 0; offset < Math.min(buffer.length, blockSize * 50); offset += blockSize) {
         const block = buffer.slice(offset, offset + blockSize).toString('ascii');
-        if (block.includes('END ')) {
-            headerSize = offset + blockSize;
-            foundEnd = true;
+        headerSize = offset + blockSize;
+        
+        // Check if this block contains END followed by spaces (indicating final header end)
+        const endMatch = block.match(/END\s{77}/);
+        if (endMatch) {
+            foundFinalEnd = true;
             break;
         }
-        headerSize = offset + blockSize;
+        
+        // Also break if we find END near the end of a block with significant padding
+        if (block.includes('END ')) {
+            const endIndex = block.indexOf('END ');
+            const remainingChars = block.length - endIndex - 80; // 80 chars per FITS line
+            if (remainingChars < 160) { // Less than 2 FITS lines remaining
+                foundFinalEnd = true;
+                break;
+            }
+        }
     }
 
-    if (!foundEnd) {
-        console.warn('END keyword not found in FITS header, using available data');
+    if (!foundFinalEnd) {
+        console.warn('Final END keyword not found in FITS header, using available data');
         headerSize = Math.min(buffer.length, blockSize * 50);
     }
 
@@ -543,6 +556,9 @@ function createWindow() {
         }
     });
 }
+
+// Disable hardware acceleration to prevent GPU process errors
+app.disableHardwareAcceleration();
 
 app.whenReady().then(createWindow);
 

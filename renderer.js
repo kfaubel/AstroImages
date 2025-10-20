@@ -41,54 +41,73 @@ const COMMON_FITS_HEADERS = [
     { keyword: 'AIRMASS', description: 'Airmass at observation' },
     { keyword: 'APERTURE', description: 'Aperture diameter' },
     { keyword: 'BINNING', description: 'Binning factor' },
+    { keyword: 'BITPIX', description: 'Bits per pixel' },
+    { keyword: 'BZERO', description: 'Zero offset for data values' },
     { keyword: 'CALSTAT', description: 'Calibration status' },
     { keyword: 'CAMERA', description: 'Camera model' },
+    { keyword: 'CAMERAID', description: 'Camera identifier' },
     { keyword: 'CCD-TEMP', description: 'CCD temperature' },
     { keyword: 'CCDTEMP', description: 'CCD temperature (alternative)' },
+    { keyword: 'CENTALT', description: 'Central altitude' },
+    { keyword: 'CENTAZ', description: 'Central azimuth' },
     { keyword: 'DATAMAX', description: 'Maximum data value' },
     { keyword: 'DATAMIN', description: 'Minimum data value' },
+    { keyword: 'DATE-AVG', description: 'Average date of observation' },
+    { keyword: 'DATE-LOC', description: 'Local date of observation' },
     { keyword: 'DATE-OBS', description: 'Date of observation' },
     { keyword: 'DEC', description: 'Declination' },
+    { keyword: 'EGAIN', description: 'Effective gain' },
     { keyword: 'EXPTIME', description: 'Exposure time in seconds' },
     { keyword: 'EXPOSURE', description: 'Exposure time in seconds (alternative)' },
+    { keyword: 'EXTEND', description: 'FITS extension indicator' },
     { keyword: 'FILTER', description: 'Filter used (common extension)' },
     { keyword: 'FILTNAM', description: 'Filter name (alternative)' },
     { keyword: 'FILTPOS', description: 'Filter position/number' },
     { keyword: 'FOCALLEN', description: 'Focal length' },
     { keyword: 'FOCPOS', description: 'Focuser position' },
+    { keyword: 'FOCRATIO', description: 'Focal ratio (f-stop)' },
     { keyword: 'FOCUSER', description: 'Focuser position (alternative)' },
     { keyword: 'GAIN', description: 'Detector gain' },
     { keyword: 'IMAGETYP', description: 'Type of image (Light, Dark, Flat, etc.)' },
     { keyword: 'INSTRUME', description: 'Instrument name' },
+    { keyword: 'NAXIS', description: 'Number of axes' },
+    { keyword: 'NAXIS1', description: 'Length of first axis' },
+    { keyword: 'NAXIS2', description: 'Length of second axis' },
     { keyword: 'OBJECT', description: 'Object/target name' },
     { keyword: 'OBJCTDEC', description: 'Object center DEC' },
     { keyword: 'OBJCTRA', description: 'Object center RA' },
     { keyword: 'OBSERVER', description: 'Observer name' },
+    { keyword: 'OFFSET', description: 'Offset/bias level' },
     { keyword: 'PEDESTAL', description: 'Pedestal/bias level' },
+    { keyword: 'PIERSIDE', description: 'Pier side (East/West)' },
     { keyword: 'PROGRAM', description: 'Acquisition program' },
     { keyword: 'RA', description: 'Right Ascension' },
     { keyword: 'READNOIS', description: 'Read noise' },
     { keyword: 'SET-TEMP', description: 'Set temperature' },
     { keyword: 'SETTEMP', description: 'Set temperature (alternative)' },
+    { keyword: 'SIMPLE', description: 'Simple FITS format indicator' },
+    { keyword: 'SITEELEV', description: 'Site elevation' },
+    { keyword: 'SITELAT', description: 'Site latitude' },
     { keyword: 'SWCREATE', description: 'Software used to create file' },
     { keyword: 'TELESCOP', description: 'Telescope name' },
     { keyword: 'TEMPERAT', description: 'Temperature' },
     { keyword: 'TIME-OBS', description: 'Time of observation' },
+    { keyword: 'USBLIMIT', description: 'USB bandwidth limit' },
     { keyword: 'XBINNING', description: 'X-axis binning' },
-    { keyword: 'YBINNING', description: 'Y-axis binning' }
+    { keyword: 'XPIXSZ', description: 'X pixel size in microns' },
+    { keyword: 'YBINNING', description: 'Y-axis binning' },
+    { keyword: 'YPIXSZ', description: 'Y pixel size in microns' }
 ];
 
 // DOM elements
 const fileListDiv = document.getElementById('file-list');
 const imageContainer = document.getElementById('image-container');
 const imageDisplay = document.getElementById('image-display');
-const imageInfo = document.getElementById('image-info');
-const imageName = document.getElementById('image-name');
-const imageSize = document.getElementById('image-size');
 const noImageDiv = document.querySelector('.no-image');
 
 // Playback control elements
 const playbackControls = document.getElementById('playback-controls');
+const moveSelectedBtn = document.getElementById('move-selected-btn');
 const gotoFirstBtn = document.getElementById('goto-first');
 const gotoPreviousBtn = document.getElementById('goto-previous');
 const playPauseBtn = document.getElementById('play-pause');
@@ -191,6 +210,9 @@ cancelFitsHeadersBtn.addEventListener('click', closeFitsHeadersDialog);
 customHeaderInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addCustomFitsHeader();
 });
+
+// Move selected button event listener
+moveSelectedBtn.addEventListener('click', showMoveDialog);
 
 // Playback control event listeners
 gotoFirstBtn.addEventListener('click', gotoFirstImage);
@@ -389,6 +411,9 @@ function getSelectedFiles() {
 function updateSelectionInfo() {
     const count = selectedFiles.size;
 
+    // Update move selected button state
+    moveSelectedBtn.disabled = count === 0;
+
     // Update menu state (selection info UI was removed)
     window.electronAPI.updateMenuState(count > 0);
 }
@@ -554,13 +579,23 @@ function parseFilename(filename) {
     const tokens = baseName.split('_');
     const parsed = {};
 
+    console.log('DEBUG: Parsing filename:', filename);
+    console.log('DEBUG: Base name:', baseName);
+    console.log('DEBUG: Tokens:', tokens);
+    console.log('DEBUG: Available keywords:', keywords);
+
     for (let i = 0; i < tokens.length - 1; i++) {
-        const token = tokens[i].toLowerCase();
+        const token = tokens[i];
+        console.log(`DEBUG: Checking token ${i}: "${token}"`);
         if (keywords.includes(token)) {
             parsed[token] = tokens[i + 1];
+            console.log(`DEBUG: Match found! ${token} = ${tokens[i + 1]}`);
+        } else {
+            console.log(`DEBUG: No match for token "${token}"`);
         }
     }
 
+    console.log('DEBUG: Final parsed result:', parsed);
     return parsed;
 }
 
@@ -617,7 +652,7 @@ function closeKeywordDialog() {
 }
 
 function addKeyword() {
-    const keyword = keywordInput.value.trim().toLowerCase();
+    const keyword = keywordInput.value.trim();
     if (!keyword) return;
 
     if (keywords.includes(keyword)) {
@@ -667,9 +702,14 @@ function saveKeywords() {
 
 function loadKeywords() {
     const saved = localStorage.getItem('filenameKeywords');
+    console.log('DEBUG: loadKeywords - localStorage value:', saved);
     if (saved) {
         keywords = JSON.parse(saved);
+        console.log('DEBUG: loadKeywords - parsed keywords:', keywords);
+    } else {
+        console.log('DEBUG: loadKeywords - no saved keywords found');
     }
+    console.log('DEBUG: loadKeywords - final keywords array:', keywords);
 }
 
 // FITS headers dialog functions
@@ -984,6 +1024,8 @@ async function loadFiles() {
 }
 
 async function renderFileList(autoSelectFirst = false) {
+    console.log('DEBUG: renderFileList called with keywords:', keywords);
+    
     if (currentFiles.length === 0) {
         renderEmptyFileList();
         return;
@@ -1001,55 +1043,59 @@ async function renderFileList(autoSelectFirst = false) {
         };
     }));
 
-    // Create table structure with fixed header
+    // Create proper HTML table structure for perfect column alignment
     let html = '<div class="file-list-container">';
-
-    // Create fixed header outside scrollable area
-    html += '<div class="file-header-fixed">';
-
+    html += '<table class="file-list-table">';
+    
+    // Create table header
+    html += '<thead class="file-header-fixed">';
+    html += '<tr>';
+    
     // Checkbox column header
-    html += '<div class="file-header-cell file-header-checkbox">';
+    html += '<th class="file-header-cell file-header-checkbox">';
     html += '<input type="checkbox" id="select-all-checkbox" class="select-all-checkbox" onchange="toggleSelectAll()">';
-    html += '</div>';
+    html += '</th>';
 
-    html += '<div class="file-header-cell file-header-filename sortable" data-sort-column="filename">Filename</div>';
+    html += '<th class="file-header-cell file-header-filename sortable" data-sort-column="filename">Filename</th>';
 
     // Add keyword columns
     keywords.forEach(keyword => {
-        html += `<div class="file-header-cell file-header-keyword sortable" data-sort-column="${keyword}">${keyword.charAt(0).toUpperCase() + keyword.slice(1)}</div>`;
+        html += `<th class="file-header-cell file-header-keyword sortable" data-sort-column="${keyword}">${keyword}</th>`;
     });
 
     // Add FITS header columns
     fitsHeaders.forEach(header => {
-        html += `<div class="file-header-cell file-header-fits sortable" data-sort-column="fits-${header}" title="FITS Header: ${header}">${header}</div>`;
+        html += `<th class="file-header-cell file-header-fits sortable" data-sort-column="fits-${header}" title="FITS Header: ${header}">${header}</th>`;
     });
 
-    html += '</div>';
+    html += '</tr>';
+    html += '</thead>';
 
-    // Create scrollable file list area
-    html += '<div class="file-list-scrollable">';
+    // Create table body with scrollable file rows
+    html += '<tbody class="file-list-scrollable">';
 
     // Create file rows
     fileData.forEach(({ file, index, parsed, fitsHeaderData }) => {
-        html += `<div class="file-row" data-index="${index}" data-file-index="${index}">`;
+        html += `<tr class="file-row" data-index="${index}" data-file-index="${index}">`;
 
         // Checkbox cell
-        html += '<div class="file-cell file-cell-checkbox">';
+        html += '<td class="file-cell file-cell-checkbox">';
         html += `<input type="checkbox" class="file-checkbox" ${selectedFiles.has(index) ? 'checked' : ''} onchange="toggleFileSelection(${index}, event)">`;
-        html += '</div>';
+        html += '</td>';
 
         // Filename cell
-        html += `<div class="file-cell file-cell-filename">`;
+        html += `<td class="file-cell file-cell-filename">`;
         html += `<div class="tooltip">`;
         html += `<span class="file-name file-name-truncated">${file.name}</span>`;
         html += `<div class="tooltip-text">${file.name}</div>`;
         html += `</div>`;
-        html += `</div>`;
+        html += `</td>`;
 
         // Keyword value cells
         keywords.forEach(keyword => {
             const value = parsed[keyword] || '';
-            html += `<div class="file-cell file-cell-keyword">`;
+            console.log(`DEBUG: Rendering keyword "${keyword}" with value "${value}" for file ${file.name}`);
+            html += `<td class="file-cell file-cell-keyword">`;
             if (value) {
                 if (value.length > 8) {
                     html += `<div class="tooltip">`;
@@ -1059,15 +1105,17 @@ async function renderFileList(autoSelectFirst = false) {
                 } else {
                     html += `<span class="keyword-value">${value}</span>`;
                 }
+            } else {
+                console.log(`DEBUG: No value found for keyword "${keyword}"`);
             }
-            html += `</div>`;
+            html += `</td>`;
         });
 
         // FITS header value cells
         fitsHeaders.forEach(header => {
             const value = fitsHeaderData[header] || '';
             const displayValue = String(value).slice(0, 15); // Limit display length
-            html += `<div class="file-cell file-cell-fits">`;
+            html += `<td class="file-cell file-cell-fits">`;
             if (value) {
                 if (String(value).length > 15) {
                     html += `<div class="tooltip">`;
@@ -1078,13 +1126,14 @@ async function renderFileList(autoSelectFirst = false) {
                     html += `<span class="fits-value">${displayValue}</span>`;
                 }
             }
-            html += `</div>`;
+            html += `</td>`;
         });
 
-        html += '</div>';
+        html += '</tr>';
     });
 
-    html += '</div>'; // Close file-list-scrollable
+    html += '</tbody>';
+    html += '</table>';
     html += '</div>'; // Close file-list-container
 
     fileListDiv.innerHTML = html;
@@ -1234,14 +1283,6 @@ async function displayImage(file) {
             applyAutoStretch(autoStretchCheckbox.checked);
         }, 50);
 
-        // Show image info
-        imageName.textContent = file.name;
-
-        // Get file size - this won't work in renderer process, so we'll estimate
-        imageSize.textContent = file.isFits ? 'FITS Image' : '';
-
-        imageInfo.style.display = 'flex';
-
         // Handle image load error (backup)
         imageDisplay.onerror = () => {
             hideImage();
@@ -1268,7 +1309,6 @@ async function displayImage(file) {
 
 function hideImage() {
     imageDisplay.style.display = 'none';
-    imageInfo.style.display = 'none';
     noImageDiv.style.display = 'block';
 
     // Hide zoom controls

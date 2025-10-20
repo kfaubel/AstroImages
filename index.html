@@ -9,40 +9,45 @@
 <body>
     <div class="container">
         <div class="sidebar" id="sidebar">
-            <!-- Playback Controls -->
-            <div class="playback-controls" id="playback-controls" style="display: none;">
-                <button id="goto-first" class="playback-btn" title="Go to first image">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7 6C6.45 6 6 6.45 6 7V17C6 17.55 6.45 18 7 18S8 17.55 8 17V7C8 6.45 7.55 6 7 6M17 18L9.5 12L17 6V18Z"/>
-                    </svg>
-                </button>
-                <button id="goto-previous" class="playback-btn" title="Previous image">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M15.41 16.58L10.83 12L15.41 7.41L14 6L8 12L14 18L15.41 16.58Z"/>
-                    </svg>
-                </button>
-                <button id="play-pause" class="playback-btn play-btn" title="Play slideshow">
-                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 5V19L19 12"/>
-                    </svg>
-                    <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-                        <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z"/>
-                    </svg>
-                </button>
-                <button id="goto-next" class="playback-btn" title="Next image">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.58Z"/>
-                    </svg>
-                </button>
-                <button id="goto-last" class="playback-btn" title="Go to last image">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17 6C17.55 6 18 6.45 18 7V17C18 17.55 17.55 18 17 18S16 17.55 16 17V7C16 6.45 16.45 6 17 6M7 6V18L14.5 12L7 6Z"/>
-                    </svg>
-                </button>
-            </div>
-            
             <div class="file-list" id="file-list">
                 <div class="no-files">Select a folder to view images</div>
+            </div>
+            
+            <!-- Playback Controls -->
+            <div class="playback-controls" id="playback-controls" style="display: none;">
+                <button id="move-selected-btn" class="move-selected-btn" title="Move selected files" disabled>
+                    Move selected...
+                </button>
+                <div class="playback-buttons-group">
+                    <button id="goto-first" class="playback-btn" title="Go to first image">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 6C6.45 6 6 6.45 6 7V17C6 17.55 6.45 18 7 18S8 17.55 8 17V7C8 6.45 7.55 6 7 6M17 18L9.5 12L17 6V18Z"/>
+                        </svg>
+                    </button>
+                    <button id="goto-previous" class="playback-btn" title="Previous image">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.41 16.58L10.83 12L15.41 7.41L14 6L8 12L14 18L15.41 16.58Z"/>
+                        </svg>
+                    </button>
+                    <button id="play-pause" class="playback-btn play-btn" title="Play slideshow">
+                        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5V19L19 12"/>
+                        </svg>
+                        <svg class="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                            <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z"/>
+                        </svg>
+                    </button>
+                    <button id="goto-next" class="playback-btn" title="Next image">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.58Z"/>
+                        </svg>
+                    </button>
+                    <button id="goto-last" class="playback-btn" title="Go to last image">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17 6C17.55 6 18 6.45 18 7V17C18 17.55 17.55 18 17 18S16 17.55 16 17V7C16 6.45 16.45 6 17 6M7 6V18L14.5 12L7 6Z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -85,10 +90,6 @@
                 </div>
                 <img id="image-display" class="image-display" style="display: none;">
             </div>
-            <div class="image-info" id="image-info" style="display: none;">
-                <span class="image-name" id="image-name"></span>
-                <span class="image-size" id="image-size"></span>
-            </div>
         </div>
     </div>
 
@@ -100,12 +101,12 @@
                 <button id="close-dialog" class="close-btn">&times;</button>
             </div>
             <div class="dialog-content">
-                <p>Define keywords that appear in filenames. The token following each keyword will be extracted as a value.</p>
-                <p><strong>Example:</strong> "sample_001_date_2023-10-19_type_raw.fits" with keyword "date" would extract "2023-10-19"</p>
+                <p>Define keywords that appear in filenames. Keywords and values are separated by '_'s.</p>
+                <p><strong>Example:</strong> "image_RMS_0.56_Stars_4126_0055.fits" with keyword "RMS" and "Stars" will display 0.56 and 4162</p>
                 
                 <div class="keyword-input-section">
                     <div class="input-group">
-                        <input type="text" id="keyword-input" placeholder="Enter keyword (e.g., 'date', 'sample', 'type')">
+                        <input type="text" id="keyword-input" placeholder="Enter keyword (e.g., 'RMS', 'HFR', 'Stars')">
                         <button id="add-keyword" class="btn-secondary">Add Keyword</button>
                     </div>
                 </div>
