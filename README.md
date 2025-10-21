@@ -1,53 +1,39 @@
-# Image Viewer - Electron App
+# Astro Images 
 
-A simple two-pane image viewer built with Electron that allows you to browse folders and view images.
+A simple image viewer built with Electron that allows you to browse folders, view images review metadata and then move images to be processed or ignored.
 
-## Features
+There are other tools for reviewing FITS files including ASIFitsView and Pixinsight tools like Blink and SubFramSelector.  These are good but if you want to quickly review a folder of images and FITS files with a simple interface, this app aims to fill that niche. 
 
-- **Two-pane layout**: File browser on the left, image viewer on the right
-- **Current directory**: Directory path displayed in the application title bar
-- **File selection**: Checkbox column allows selecting one or multiple files for batch operations
-- **File management**: Move selected files to other folders or trash with File → Move Selected...
-- **Auto-refresh**: Automatically detects and updates when files are added, removed, or modified in the current folder
-- **Menu system**: File menu with Open Folder option, Options menu for configuration, and keyboard shortcuts
-- **Title bar display**: Current directory full path shown in application title bar
-- **Resizable panes**: Drag the divider to adjust the width of the file list panel
-- **Folder selection**: Use File → Open Folder... to choose a directory
-- **Image filtering**: Shows image files and FITS files (jpg, jpeg, png, gif, bmp, webp, svg, fits, fit, fts)
-- **FITS file support**: Automatically processes and displays FITS files used in astronomy and scientific imaging
-- **Filename parsing**: Configure keywords to extract values from structured filenames
-- **FITS header display**: Show FITS header values as columns for astronomical image metadata
-- **Keyword columns**: Display extracted values in organized columns for easy sorting and identification
-- **Column sorting**: Click any column header to sort files by that attribute (with filename as secondary sort)
-- **Click to view**: Click any image file in the list to display it
-- **Playback controls**: Navigation buttons above file list for automated slideshow functionality
-  - Go to first/last image
-  - Previous/next image navigation
-  - Auto-slideshow with 2-second timing per image (waits for each image to fully load before starting timer)
-  - Play/pause toggle with visual feedback
-- **Zoom controls**: Image zoom functionality with buttons above image viewer and View menu options
-  - Default view: Images automatically fit to available space (no scrollbars)
-  - Zoom In/Out (10% to 500% range)
-  - Actual Size (1:1 / 100%)
-  - Fit to Window (scale to fit container)
-  - Mouse wheel zoom (Ctrl + wheel)
-  - Image panning when zoomed in (click and drag)
-  - Keyboard shortcuts: Ctrl+Plus, Ctrl+Minus, Ctrl+0, Ctrl+F
-- **Keyboard navigation**: Use arrow keys to navigate between images
-- **Visual indicators**: FITS files are marked with special icons and badges
-- **Image information**: Shows file name and type
-- **Responsive design**: Clean, modern interface
-- **Persistent settings**: Sidebar width, keywords, and last opened directory are saved between sessions
-- **Smart tooltips**: Hover over filenames or long keyword values to see the full text
-- **Optimized layout**: Keyword columns are kept narrow to maximize filename visibility
+Particularly useful for astrophotographers who use NINA.  If NINA is configured to save metadata in the filename, this app can parse that information and display it in columns for easy review.
 
-## Installation
+Consider a NINA image file path format like: 
+```
+$$SEQUENCETITLE$$\NIGHT_$$DATEMINUS12$$\$$IMAGETYPE$$\$$DATETIME$$_$$FILTER$$_RMS_$$RMS$$_HFR_$$HFR$$_Stars_$$STARCOUNT$$_$$GAIN$$_$$EXPOSURETIME$$s_$$SENSORTEMP$$C_$$FRAMENR$$
+```
+An example file path might be:
+```
+...\Tadpole Nebula\NIGHT_2023-10-19\Light\2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits
+
+```
+A review of the tracking RMS, star HFR and the star count can provide a quick assessment of image quality.  This app can parse those values from the filename and display them in columns for easy sorting and identification of images to keep or discard.
+
+This app also provides a way to view FITS headers so that they can also be sorted and reviewed along with the filename parsed keywords.
+
+It would be nice if this data were available to Windows Explorer so that columns could added and sorted but unfortunately that is not possible.
+
+## Notes
+- This application is currently in **Beta**
+- This application is currently only available for Windows
+- There is no warranty and there are surely bugs
+- This applicaiton is not (yet) digitally signed
+ 
+## Development Installation or if you want to build from source
 
 1. Make sure you have Node.js installed
 2. Clone or download this project
 3. Open terminal in the project directory
 4. Run: `npm install`
-
+5. Run: `npm start` to launch the app
 ## Usage
 
 ### Development Mode
@@ -56,15 +42,16 @@ npm run dev
 ```
 This runs the app with developer tools enabled.
 
-### Production Mode
-```bash
-npm start
-```
+# Development
+npm start                 # Start the app in development mode
 
-### Building for Distribution
-```bash
-npm run build
-```
+# Packaging  
+npm run package          # Create executable package
+npm run make             # Create distributable installers
+npm run make:win         # Create Windows installer (current platform)
+
+# Publishing (when ready)
+npm run publish          # Publish to GitHub releases
 
 ## How to Use
 
@@ -97,23 +84,6 @@ The application provides file management capabilities for selected files:
 
 - **Move to folder**: Select files and use File → Move Selected... to move them to another directory
 - **Move to trash**: Use the move dialog to send files to the system trash/recycle bin
-- **Smart validation**: Prevents overwriting files that already exist in the destination
-- **Progress feedback**: Shows detailed results of move operations including any errors
-- **Menu integration**: Move Selected menu item is only enabled when files are selected
-
-### Auto-Refresh Monitoring
-
-The application automatically monitors the current folder for changes:
-
-- **Real-time updates**: File list refreshes automatically when files are added, removed, or renamed
-- **Smart filtering**: Only responds to changes affecting image files (jpg, png, fits, etc.)
-- **Background monitoring**: Uses efficient file system watchers with minimal performance impact
-- **Error handling**: Gracefully handles watcher errors and network drive disconnections
-- **Automatic cleanup**: Properly stops monitoring when switching folders or closing the application
-
-### Menu System
-
-The application features a comprehensive menu system:
 
 **File Menu:**
 - Open Folder... (Ctrl+O / Cmd+O): Select a directory to browse
@@ -137,63 +107,20 @@ The application features a comprehensive menu system:
 - **Ctrl+Q** (Cmd+Q on macOS): Exit application
 - **↑/↓ Arrow Keys**: Navigate between images in the list
 
-## Persistent State
 
-The application automatically saves and restores:
-- **Last Directory**: Your most recently opened folder is restored on startup
-- **Keyword Configuration**: Your defined keywords persist between sessions
-- **Sidebar Width**: Your preferred file list panel width is remembered
-- **Smart Restoration**: If the last directory no longer exists, the app gracefully falls back to the folder selection screen
-
-## Interface Features
-
-### Resizable Panes
-- **Drag to resize**: Grab the vertical divider between the panes and drag to adjust width
-- **Minimum widths**: File list has a minimum width of 250px, image pane minimum of 300px
-- **Maximum width**: File list can expand up to 70% of the window width
-- **Persistent sizing**: Your preferred width is saved and restored when you restart the app
-
-### Column Sorting
-- **Click headers**: Click any column header to sort by that attribute
-- **Sort indicators**: Headers show arrows indicating current sort direction (↑ ascending, ↓ descending)
-- **Toggle direction**: Click the same header again to reverse the sort order
-- **Secondary sorting**: Files with identical primary sort values are sorted by filename
-- **Smart sorting**: Text values are sorted alphabetically, empty values appear last
 
 ## Filename Parsing Feature
 
 The application can parse structured filenames to extract meaningful information:
 
-### Setting Up Keywords
+### Setting Up Filename Keywords
 1. Go to Options → Custom Keywords...
-2. Add keywords that appear in your filenames (e.g., "date", "sample", "type")
+2. Add keywords that appear in your filenames (e.g., "RMS", "HFR", "Stars")
 3. Test with example filenames to see how parsing works
 4. Save your configuration
 
-### Filename Structure
-The parser expects filenames with tokens separated by underscores (`_`):
-- `sample_001_date_2023-10-19_type_raw.fits`
-- `experiment_A_temp_25C_time_1200.jpg`
-- `subject_P01_session_1_task_rest.png`
-
-### How It Works
-- Keywords are case-insensitive when matching
-- The token immediately following a keyword becomes its value
-- Multiple keywords can be extracted from a single filename
-- Values are displayed in organized columns
-
-### Examples
-```
-Filename: "sample_001_date_2023-10-19_type_raw.fits"
-Keywords: ["sample", "date", "type"]
-Result:
-  sample: 001
-  date: 2023-10-19  
-  type: raw
-```
 
 ## FITS Header Display
-
 For astronomical imaging workflows, the application can display FITS header values as columns:
 
 ### Setting Up FITS Headers
@@ -202,18 +129,6 @@ For astronomical imaging workflows, the application can display FITS header valu
 3. Add custom headers by typing the keyword name
 4. Save your configuration to see the headers as columns
 
-### Common FITS Headers Supported
-- **OBJECT**: Target/object name
-- **EXPTIME/EXPOSURE**: Exposure time in seconds
-- **FILTER**: Filter wheel position or filter name
-- **DATE-OBS**: Date of observation
-- **TELESCOP**: Telescope name
-- **INSTRUME**: Instrument/camera name
-- **IMAGETYP**: Image type (Light, Dark, Flat, Bias)
-- **GAIN**: Detector gain setting
-- **CCD-TEMP**: CCD/sensor temperature
-- **BINNING**: Pixel binning factor
-- And many more standard astronomical headers...
 
 ### How It Works
 - Only FITS files will display values in FITS header columns
@@ -232,18 +147,7 @@ For astronomical imaging workflows, the application can display FITS header valu
 - SVG (.svg)
 - **FITS (.fits, .fit, .fts)** - Flexible Image Transport System files commonly used in astronomy and scientific imaging
 
-## Project Structure
 
-```
-AstroImages/
-├── main.js          # Main Electron process
-├── preload.js       # Preload script for secure IPC
-├── index.html       # Main HTML structure
-├── styles.css       # Application styles
-├── renderer.js      # Renderer process logic
-├── package.json     # Project configuration
-└── README.md        # This file
-```
 
 ## FITS File Support
 

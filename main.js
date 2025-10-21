@@ -6,6 +6,11 @@
  * with features like histogram stretching, image caching, and coordinate correction.
  */
 
+// Handle Squirrel events for Windows installer
+if (require('electron-squirrel-startup')) {
+    app.quit();
+}
+
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');

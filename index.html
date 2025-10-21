@@ -341,6 +341,112 @@
                     The application automatically handles coordinate correction for FITS files and provides advanced caching 
                     for improved performance with large astronomical datasets.</p>
                 </div>
+                <div class="help-section">
+                    <h4>FITS Headers</h4>
+                    
+                    <h5>Basic FITS Structure Headers:</h5>
+                    <ul>
+                        <li><strong>SIMPLE</strong> - Simple FITS format indicator</li>
+                        <li><strong>BITPIX</strong> - Bits per pixel</li>
+                        <li><strong>NAXIS</strong> - Number of axes</li>
+                        <li><strong>NAXIS1</strong> - Length of first axis (width)</li>
+                        <li><strong>NAXIS2</strong> - Length of second axis (height)</li>
+                        <li><strong>EXTEND</strong> - FITS extension indicator</li>
+                    </ul>
+                    
+                    <h5>Image Data Headers:</h5>
+                    <ul>
+                        <li><strong>BZERO</strong> - Zero offset for data values</li>
+                        <li><strong>DATAMAX</strong> - Maximum data value</li>
+                        <li><strong>DATAMIN</strong> - Minimum data value</li>
+                        <li><strong>OFFSET</strong> - Offset/bias level</li>
+                        <li><strong>PEDESTAL</strong> - Pedestal/bias level</li>
+                    </ul>
+                    
+                    <h5>Observation Headers:</h5>
+                    <ul>
+                        <li><strong>DATE-OBS</strong> - Date of observation</li>
+                        <li><strong>DATE-AVG</strong> - Average date of observation</li>
+                        <li><strong>DATE-LOC</strong> - Local date of observation</li>
+                        <li><strong>TIME-OBS</strong> - Time of observation</li>
+                        <li><strong>OBJECT</strong> - Object/target name</li>
+                        <li><strong>IMAGETYP</strong> - Type of image (Light, Dark, Flat, etc.)</li>
+                        <li><strong>EXPTIME</strong> - Exposure time in seconds</li>
+                        <li><strong>EXPOSURE</strong> - Exposure time in seconds (alternative)</li>
+                    </ul>
+                    
+                    <h5>Telescope & Instrument Headers:</h5>
+                    <ul>
+                        <li><strong>TELESCOP</strong> - Telescope name</li>
+                        <li><strong>INSTRUME</strong> - Instrument name</li>
+                        <li><strong>CAMERA</strong> - Camera model</li>
+                        <li><strong>CAMERAID</strong> - Camera identifier</li>
+                        <li><strong>APERTURE</strong> - Aperture diameter</li>
+                        <li><strong>FOCALLEN</strong> - Focal length</li>
+                        <li><strong>FOCRATIO</strong> - Focal ratio (f-stop)</li>
+                    </ul>
+                    
+                    <h5>Camera Settings Headers:</h5>
+                    <ul>
+                        <li><strong>GAIN</strong> - Detector gain</li>
+                        <li><strong>EGAIN</strong> - Effective gain</li>
+                        <li><strong>READNOIS</strong> - Read noise</li>
+                        <li><strong>BINNING</strong> - Binning factor</li>
+                        <li><strong>XBINNING</strong> - X-axis binning</li>
+                        <li><strong>YBINNING</strong> - Y-axis binning</li>
+                        <li><strong>XPIXSZ</strong> - X pixel size in microns</li>
+                        <li><strong>YPIXSZ</strong> - Y pixel size in microns</li>
+                    </ul>
+                    
+                    <h5>Temperature Headers:</h5>
+                    <ul>
+                        <li><strong>CCD-TEMP</strong> - CCD temperature</li>
+                        <li><strong>CCDTEMP</strong> - CCD temperature (alternative)</li>
+                        <li><strong>SET-TEMP</strong> - Set temperature</li>
+                        <li><strong>SETTEMP</strong> - Set temperature (alternative)</li>
+                        <li><strong>TEMPERAT</strong> - Temperature</li>
+                    </ul>
+                    
+                    <h5>Positioning & Coordinates Headers:</h5>
+                    <ul>
+                        <li><strong>RA</strong> - Right Ascension</li>
+                        <li><strong>DEC</strong> - Declination</li>
+                        <li><strong>OBJCTRA</strong> - Object center RA</li>
+                        <li><strong>OBJCTDEC</strong> - Object center DEC</li>
+                        <li><strong>AIRMASS</strong> - Airmass at observation</li>
+                        <li><strong>CENTALT</strong> - Central altitude</li>
+                        <li><strong>CENTAZ</strong> - Central azimuth</li>
+                        <li><strong>PIERSIDE</strong> - Pier side (East/West)</li>
+                    </ul>
+                    
+                    <h5>Filter Headers:</h5>
+                    <ul>
+                        <li><strong>FILTER</strong> - Filter used</li>
+                        <li><strong>FILTNAM</strong> - Filter name (alternative)</li>
+                        <li><strong>FILTPOS</strong> - Filter position/number</li>
+                    </ul>
+                    
+                    <h5>Site Information Headers:</h5>
+                    <ul>
+                        <li><strong>SITELAT</strong> - Site latitude</li>
+                        <li><strong>SITEELEV</strong> - Site elevation</li>
+                        <li><strong>OBSERVER</strong> - Observer name</li>
+                    </ul>
+                    
+                    <h5>Equipment Headers:</h5>
+                    <ul>
+                        <li><strong>FOCPOS</strong> - Focuser position</li>
+                        <li><strong>FOCUSER</strong> - Focuser position (alternative)</li>
+                        <li><strong>USBLIMIT</strong> - USB bandwidth limit</li>
+                    </ul>
+                    
+                    <h5>Software & Processing Headers:</h5>
+                    <ul>
+                        <li><strong>PROGRAM</strong> - Acquisition program</li>
+                        <li><strong>SWCREATE</strong> - Software used to create file</li>
+                        <li><strong>CALSTAT</strong> - Calibration status</li>
+                    </ul>
+                </div>
             </div>
             <div class="dialog-footer">
                 <button id="close-help-btn" class="btn-primary">Close</button>
