@@ -1,0 +1,77 @@
+<Window x:Class="AstroImages.Wpf.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AstroImages" Height="480" Width="650"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        Icon="icon.ico"
+        ResizeMode="NoResize"
+        Background="#003351"
+        AllowsTransparency="False">
+    <Grid Background="#003351">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Splash Image (no frame, seamless integration) -->
+        <Image Grid.Row="0" Source="splash.png" Stretch="Uniform" Margin="30,30,30,20"/>
+        
+        <!-- Application Title and Info -->
+        <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="30,15">
+            <TextBlock Text="AstroImages" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" 
+                       Foreground="White" FontFamily="Segoe UI Light"/>
+            <TextBlock Text="Astronomical Image Viewer" FontSize="16" HorizontalAlignment="Center" 
+                       Foreground="#E3F2FD" Margin="0,5,0,0" FontFamily="Segoe UI"/>
+            <TextBlock Text="Version 2.0" FontSize="13" HorizontalAlignment="Center" 
+                       Foreground="#BBDEFB" Margin="0,8,0,0" FontFamily="Segoe UI"/>
+        </StackPanel>
+        
+        <!-- Copyright -->
+        <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Center" Margin="30,10">
+            <TextBlock FontSize="11" HorizontalAlignment="Center" Foreground="#C5CAE9" 
+                       Margin="0,4,0,0" FontFamily="Segoe UI">
+                <Run Text="Copyright © "/>
+                <Run x:Name="CopyrightYear"/>
+                <Run Text=" Ken Faubel. All rights reserved."/>
+            </TextBlock>
+        </StackPanel>
+        
+        <!-- Controls -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="30,15,30,25">
+            <CheckBox Name="DontShowAgainCheckBox" Content="Skip showing this at startup" 
+                      VerticalAlignment="Center" Margin="0,0,25,0" Foreground="White" 
+                      FontFamily="Segoe UI" FontSize="12"/>
+            <Button Name="OkButton" Content="OK" Width="90" Height="35" Click="OkButton_Click" 
+                    IsDefault="True" Background="#3f51b5" Foreground="White" BorderThickness="0" 
+                    FontFamily="Segoe UI" FontSize="13" FontWeight="Medium" Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#3f51b5"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            CornerRadius="4" Padding="8,4">
+                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                        VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#5c6bc0"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter Property="Background" Value="#303f9f"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

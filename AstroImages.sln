@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33026.260
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstroImages.Core", "AstroImages.Core\AstroImages.Core.csproj", "{A1D9C465-9D0F-4C12-9E4D-B1C25F6F3B4F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstroImages.Utils", "AstroImages.Utils\AstroImages.Utils.csproj", "{B2E6B3A0-9E0B-4C10-8D45-A2C96C1B3C4B}"
+EndProject
+Project("{60dc8134-eba5-43b8-bcc9-bb4bc16c2548}") = "AstroImages.Wpf", "AstroImages.Wpf\AstroImages.Wpf.csproj", "{C3D7A2F3-0B8C-4C3C-9D3F-6E5C3A2B2E6F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1D9C465-9D0F-4C12-9E4D-B1C25F6F3B4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1D9C465-9D0F-4C12-9E4D-B1C25F6F3B4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2E6B3A0-9E0B-4C10-8D45-A2C96C1B3C4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2E6B3A0-9E0B-4C10-8D45-A2C96C1B3C4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3D7A2F3-0B8C-4C3C-9D3F-6E5C3A2B2E6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3D7A2F3-0B8C-4C3C-9D3F-6E5C3A2B2E6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+EndGlobal

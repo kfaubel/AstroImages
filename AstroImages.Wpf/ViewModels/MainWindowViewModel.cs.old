@@ -1,0 +1,251 @@
+// These using statements import the namespaces we need for this class
+using System.Collections.ObjectModel;  // For ObservableCollection<T> - a collection that notifies UI of changes
+using AstroImages.Wpf.Models;          // For our data models like FileItem
+using AstroImages.Wpf.Services;        // For service classes that handle business logic
+using System.ComponentModel;           // For INotifyPropertyChanged interface used in data binding
+
+namespace AstroImages.Wpf.ViewModels
+{
+    /// <summary>
+    /// MainWindowViewModel is the ViewModel in the MVVM (Model-View-ViewModel) architectural pattern.
+    /// 
+    /// MVVM Pattern Explanation:
+    /// - Model: Data and business logic (FileItem, services)
+    /// - View: User interface (MainWindow.xaml)
+    /// - ViewModel: Bridge between Model and View, handles UI logic and data binding
+    /// 
+    /// This class implements INotifyPropertyChanged, which is essential for WPF data binding.
+    /// When properties change, the interface allows the UI to automatically update.
+    /// </summary>
+    public class MainWindowViewModel : INotifyPropertyChanged
+    {
+        /// <summary>
+        /// Collection of files currently loaded in the application.
+        /// 
+        /// ObservableCollection is special because it automatically notifies the UI when:
+        /// - Items are added (Files.Add())
+        /// - Items are removed (Files.Remove() or Files.Clear())
+        /// - The collection is replaced entirely
+        /// 
+        /// This enables automatic UI updates when the file list changes.
+        /// The ListView in MainWindow.xaml is bound to this property.
+        /// 
+        /// The "{ get; }" syntax creates a read-only property - external code can't replace
+        /// the collection itself, but can still add/remove items from it.
+        /// 
+        /// The "= new..." part initializes the collection immediately when the class is created.
+        /// </summary>
+        public ObservableCollection<FileItem> Files { get; } = new ObservableCollection<FileItem>();
+
+        /// <summary>
+        /// Event required by the INotifyPropertyChanged interface.
+        /// 
+        /// This event is fired whenever a property value changes, which tells WPF to update
+        /// any UI elements that are bound to that property. For example, if we had a property
+        /// for selected file count, we would fire this event when the count changes.
+        /// 
+        /// The "?" means this event can be null (no subscribers). This is common for events.
+        /// 
+        /// Note: This simple version doesn't actually use this event because it only has
+        /// the Files collection property, which handles its own change notifications.
+        /// </summary>
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        #region Dependency Injection Fields
+        // These are "dependency injection" fields. Instead of creating these services directly
+        // in this class (which would make testing hard), they are "injected" through the constructor.
+        // This is a key principle of good software design called "dependency inversion."
+        
+        // The "private readonly" combination means:
+        // - private: Only this class can access these fields
+        // - readonly: They can only be set in the constructor, never changed afterward
+        
+        // The underscore prefix (_) is a C# naming convention for private fields
+        
+        /// <summary>
+        /// Service that handles file system operations like reading directories and file information.
+        /// By using a service instead of direct file I/O, we keep the ViewModel focused on UI logic
+        /// and make the code more testable (we can mock the service for unit tests).
+        /// </summary>
+        private readonly FileManagementService _fileManagementService;
+        
+        /// <summary>
+        /// Service that extracts metadata from filenames and FITS file headers.
+        /// This handles the complex logic of parsing structured filenames (like those from NINA)
+        /// and reading FITS file headers for astronomical metadata.
+        /// </summary>
+        private readonly KeywordExtractionService _keywordExtractionService;
+        
+        /// <summary>
+        /// Application configuration object that stores user preferences and settings.
+        /// This includes things like which custom keywords to parse, which FITS headers to display,
+        /// and the last opened directory. The configuration persists between application runs.
+        /// </summary>
+        private readonly AppConfig _appConfig;
+        #endregion
+
+        #region Commands
+        // Commands are the MVVM way of handling user actions (button clicks, menu selections, etc.)
+        // They implement the ICommand interface, which WPF can bind to UI elements.
+        // 
+        // Benefits of using commands:
+        // - UI elements can automatically enable/disable based on application state
+        // - Actions are defined in the ViewModel, keeping UI logic separate from the View
+        // - Commands can be triggered from multiple UI elements (buttons, menus, keyboard shortcuts)
+        // - Easy to unit test since they're just method calls
+        
+        /// <summary>
+        /// Command that loads files from a specified directory.
+        /// This is typically bound to a menu item or button in the UI.
+        /// The command expects a string parameter containing the directory path.
+        /// </summary>
+        public RelayCommand LoadFilesCommand { get; }
+        
+        /// <summary>
+        /// Command that refreshes the custom keywords for all currently loaded files.
+        /// This is useful when the user changes the custom keyword configuration -
+        /// they can refresh the display without reloading all the files.
+        /// </summary>
+        public RelayCommand RefreshCustomKeywordsCommand { get; }
+        
+        /// <summary>
+        /// Command that refreshes the FITS keywords for all currently loaded files.
+        /// Similar to RefreshCustomKeywordsCommand, but for FITS header metadata.
+        /// This re-reads the FITS files to extract updated header information.
+        /// </summary>
+        public RelayCommand RefreshFitsKeywordsCommand { get; }
+        #endregion
+
+        #region Constructor
+        /// <summary>
+        /// Constructor that receives dependencies through Dependency Injection.
+        /// 
+        /// Dependency Injection (DI) is a design pattern where instead of creating our own dependencies,
+        /// they are provided (injected) from outside. This makes the code:
+        /// - More testable (we can inject mock services for unit tests)
+        /// - More flexible (different implementations can be injected)
+        /// - More maintainable (loose coupling between components)
+        /// 
+        /// The DI container (configured in App.xaml.cs) automatically creates these services
+        /// and passes them to this constructor when creating a MainWindowViewModel instance.
+        /// </summary>
+        /// <param name="fileManagementService">Service for file system operations</param>
+        /// <param name="keywordExtractionService">Service for extracting metadata from files</param>
+        /// <param name="appConfig">Application configuration settings</param>
+        public MainWindowViewModel(FileManagementService fileManagementService, KeywordExtractionService keywordExtractionService, AppConfig appConfig)
+        {
+            // Store the injected dependencies in private fields for later use
+            // This is the "injection" part - we receive the dependencies and store them
+            _fileManagementService = fileManagementService;
+            _keywordExtractionService = keywordExtractionService;
+            _appConfig = appConfig;
+
+            // Initialize commands using RelayCommand
+            // Commands use lambda expressions (=>) for concise function definitions
+            
+            // LoadFilesCommand expects a parameter (the directory path)
+            LoadFilesCommand = new RelayCommand(param =>
+            {
+                // Pattern matching: check if param is a string and not empty
+                // The "is" keyword performs type checking and assigns the value if it matches
+                if (param is string dir && !string.IsNullOrEmpty(dir))
+                {
+                    LoadFiles(dir);  // Call our LoadFiles method with the directory
+                }
+            });
+
+            // These commands don't need parameters, so we use underscore (_) to indicate "ignored parameter"
+            // The lambda "_ => method()" means "take any parameter, ignore it, and call method()"
+            RefreshCustomKeywordsCommand = new RelayCommand(_ => RefreshFileListKeywords());
+            RefreshFitsKeywordsCommand = new RelayCommand(_ => RefreshFileListFitsKeywords());
+        }
+        #endregion
+
+        #region Public Methods
+        /// <summary>
+        /// Loads all supported files from the specified directory and populates the Files collection.
+        /// 
+        /// This method demonstrates the Service Layer pattern - instead of doing file I/O directly,
+        /// we delegate to specialized services that handle specific responsibilities:
+        /// - FileManagementService: Handles file system operations
+        /// - KeywordExtractionService: Extracts metadata from files
+        /// 
+        /// The method follows these steps:
+        /// 1. Clear existing files from the UI
+        /// 2. Get file information from the file system
+        /// 3. Extract metadata (custom keywords and FITS headers) for each file
+        /// 4. Add files to the observable collection (which automatically updates the UI)
+        /// </summary>
+        /// <param name="directoryPath">Path to the directory containing files to load</param>
+        public void LoadFiles(string directoryPath)
+        {
+            // Clear the observable collection, which automatically removes items from the UI
+            Files.Clear();
+            
+            // Use the file management service to get basic file information
+            // This service handles filtering for supported file types (FITS, JPEG, PNG, etc.)
+            var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
+            
+            // Process each file to extract metadata
+            foreach (var fileItem in fileItems)
+            {
+                // Extract both custom keywords (from filename) and FITS keywords (from file headers)
+                // This populates the metadata that will be displayed in the UI columns
+                _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
+                
+                // Add to observable collection - this automatically triggers UI update
+                Files.Add(fileItem);
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the custom keywords for all files in the current list.
+        /// 
+        /// This method is called when the user changes the custom keyword configuration.
+        /// Instead of reloading all files from disk, we just re-parse the filenames
+        /// with the updated keyword definitions.
+        /// 
+        /// Custom keywords are extracted from structured filenames. For example:
+        /// "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits"
+        /// might extract: RMS=0.75, HFR=2.26, Stars=2029, etc.
+        /// </summary>
+        public void RefreshFileListKeywords()
+        {
+            // Loop through all currently loaded files
+            foreach (var fileItem in Files)
+            {
+                // Re-extract custom keywords using the current configuration
+                // This updates the CustomKeywords dictionary for each file
+                fileItem.CustomKeywords = _keywordExtractionService.ExtractCustomKeywordsFromFilename(fileItem.Name, _appConfig.CustomKeywords);
+            }
+            // Note: Because FileItem properties notify of changes, the UI will automatically update
+        }
+
+        /// <summary>
+        /// Refreshes the FITS keywords for all files in the current list.
+        /// 
+        /// This method is called when the user changes which FITS headers they want to display.
+        /// It re-reads the FITS file headers for all loaded files and extracts the requested
+        /// header values.
+        /// 
+        /// FITS keywords come from the file headers and contain metadata like:
+        /// - OBJECT: Name of the astronomical target
+        /// - EXPTIME: Exposure duration in seconds
+        /// - FILTER: Filter used for the image
+        /// - GAIN, OFFSET: Camera settings
+        /// - And many others depending on the equipment and software used
+        /// </summary>
+        public void RefreshFileListFitsKeywords()
+        {
+            // Loop through all currently loaded files
+            foreach (var fileItem in Files)
+            {
+                // Re-extract FITS keywords using the current configuration
+                // This reads the file headers and populates the FitsKeywords dictionary
+                fileItem.FitsKeywords = _keywordExtractionService.ExtractFitsKeywords(fileItem.Path, _appConfig.FitsKeywords);
+            }
+            // Note: The UI will automatically update when the FileItem properties change
+        }
+        #endregion
+    } // End of MainWindowViewModel class
+} // End of AstroImages.Wpf.ViewModels namespace

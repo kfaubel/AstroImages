@@ -1,0 +1,85 @@
+<Window x:Class="AstroImages.Wpf.CustomKeywordsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Custom Keywords Configuration" Height="400" Width="500"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" 
+        Icon="icon.ico">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Instructions -->
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,10">
+            <Run Text="Configure keyword tokens to extract from filenames. For a filename like "/>
+            <Run Text="'image_RMS_0.44_HFR_1.12_Stars_1234_0001.fits'" FontWeight="Bold"/>
+            <Run Text=", adding 'RMS' and 'Stars' as keywords will extract values '0.44' and '1234' respectively."/>
+        </TextBlock>
+        
+        <!-- Keyword List -->
+        <GroupBox Grid.Row="1" Header="Custom Keywords" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <ListBox Name="KeywordListBox" Grid.Row="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2,0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="25"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" 
+                                          Text="{Binding}" 
+                                          FontFamily="Consolas" 
+                                          FontSize="13"
+                                          VerticalAlignment="Center"
+                                          Margin="5,0,0,0"/>
+                                <Button Grid.Column="1" 
+                                        Content="✕" 
+                                        Width="20" 
+                                        Height="20" 
+                                        Background="Red" 
+                                        Foreground="White" 
+                                        FontWeight="Bold"
+                                        FontSize="12"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        ToolTip="Remove this keyword"
+                                        Click="RemoveKeyword_Click"
+                                        Tag="{Binding}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Grid>
+        </GroupBox>
+        
+        <!-- Add Keyword Input -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="New keyword:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBox Name="NewKeywordTextBox" Width="200" Margin="0,0,10,0"/>
+            <Button Name="AddButton" Content="Add" Width="50" Click="AddKeyword_Click"/>
+        </StackPanel>
+        
+        <!-- Dialog Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Name="OkButton" Content="OK" Width="75" Margin="0,0,10,0" IsDefault="True" Click="Ok_Click"/>
+            <Button Name="CancelButton" Content="Cancel" Width="75" IsCancel="True" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

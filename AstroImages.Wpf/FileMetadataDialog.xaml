@@ -1,0 +1,154 @@
+<Window x:Class="AstroImages.Wpf.FileMetadataDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="File Metadata" Height="600" Width="800"
+        MinHeight="400" MinWidth="600"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Icon="icon.ico">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header with file info -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock x:Name="FileNameTextBlock" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+            <TextBlock x:Name="FilePathTextBlock" FontSize="12" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+            <TextBlock x:Name="FileSizeTextBlock" FontSize="12" Foreground="Gray" Margin="0,2,0,0"/>
+        </StackPanel>
+        
+        <!-- Tabbed content for different metadata types -->
+        <TabControl Grid.Row="1" x:Name="MetadataTabControl">
+            <!-- FITS Headers Tab -->
+            <TabItem x:Name="FitsHeadersTab" Header="FITS Headers" Visibility="Collapsed">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Search box for FITS headers -->
+                    <Border Grid.Row="0" Background="#F5F5F5" Padding="5" Margin="0,0,0,5">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBox x:Name="FitsSearchBox" Width="200" TextChanged="FitsSearchBox_TextChanged" 
+                                     ToolTip="Type to filter FITS headers"/>
+                            <TextBlock x:Name="FitsCountLabel" VerticalAlignment="Center" Margin="10,0,0,0" 
+                                       Foreground="Gray" Text="0 headers"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- FITS Headers List -->
+                    <ListView x:Name="FitsHeadersListView" Grid.Row="1" FontFamily="Consolas" FontSize="11">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Keyword" Width="120" DisplayMemberBinding="{Binding Key}"/>
+                                <GridViewColumn Header="Value" Width="200" DisplayMemberBinding="{Binding Value}"/>
+                                <GridViewColumn Header="Type" Width="80" DisplayMemberBinding="{Binding Type}"/>
+                                <GridViewColumn Header="Comment" Width="300" DisplayMemberBinding="{Binding Comment}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+            
+            <!-- File Properties Tab -->
+            <TabItem Header="File Properties">
+                <ScrollViewer>
+                    <StackPanel Margin="5">
+                        <TextBlock FontWeight="Bold" Margin="0,0,0,10">Basic Properties</TextBlock>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="File Name:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="PropFileName" TextWrapping="Wrap"/>
+                            
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Full Path:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PropFullPath" TextWrapping="Wrap"/>
+                            
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="File Size:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PropFileSize"/>
+                            
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Created:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PropCreated"/>
+                            
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Modified:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="PropModified"/>
+                            
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="File Type:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" x:Name="PropFileType"/>
+                        </Grid>
+                        
+                        <!-- Image Properties Section (only for images) -->
+                        <StackPanel x:Name="ImagePropertiesSection" Margin="0,20,0,0" Visibility="Collapsed">
+                            <TextBlock FontWeight="Bold" Margin="0,0,0,10">Image Properties</TextBlock>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Dimensions:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="PropDimensions"/>
+                                
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Pixel Format:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PropPixelFormat"/>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="DPI:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PropDPI"/>
+                                
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Color Depth:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PropColorDepth"/>
+                                
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Has Alpha:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="PropHasAlpha"/>
+                            </Grid>
+                        </StackPanel>
+                        
+                        <!-- Custom Keywords Section -->
+                        <StackPanel x:Name="CustomKeywordsSection" Margin="0,20,0,0" Visibility="Collapsed">
+                            <TextBlock FontWeight="Bold" Margin="0,0,0,10">Custom Keywords (from filename)</TextBlock>
+                            <ListView x:Name="CustomKeywordsListView" MaxHeight="150">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Keyword" Width="120" DisplayMemberBinding="{Binding Key}"/>
+                                        <GridViewColumn Header="Value" Width="200" DisplayMemberBinding="{Binding Value}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+        
+        <!-- Button row -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Export to Text..." Width="120" Margin="0,0,10,0" Click="ExportButton_Click" 
+                    ToolTip="Export all metadata to a text file"/>
+            <Button Content="Close" Width="80" IsDefault="True" Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
