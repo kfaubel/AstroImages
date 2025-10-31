@@ -4,21 +4,15 @@ A modern WPF application for browsing and reviewing astronomical images and FITS
 
 ## Key Features
 
-- **Dual-pane interface**: File list with image preview
-
 - **Multi-format support**: FITS, XISF, JPEG, PNG, BMP, TIFF, GIF, and WebP files
 - **FITS file support**: Native parsing and display of astronomical FITS files
 - **XISF file support**: Full support for PixInsight's XISF format with metadata extraction
 - **Filename parsing**: Extract metadata from structured filenames (perfect for NINA users)
 - **FITS header display**: View and sort by FITS header keywords and XISF properties
-- **File metadata viewer**: Click the 📋 button on any row to view comprehensive file metadata, headers, and image properties
-- **Image navigation**: Keyboard shortcuts and slideshow mode
-- **Zoom controls**: Fit-to-window, actual size, and custom zoom levels
+- **File metadata viewer**: Click the (i) button on any row to view comprehensive file metadata, headers, and image properties
 - **File sorting**: Select and move multiple files to another folder or the trash
-- **Configuration persistence**: Remembers your settings and last folder
-- **Help system**: Built-in documentation and splash screen
 
-### Perfect for NINA Users
+### Support for NINA Users
 
 If you use NINA (N.I.N.A. - Nighttime Imaging 'N' Astronomy) with structured specified filenames like:
 ```
@@ -30,6 +24,21 @@ That generates filenames such as:
 ```
 
 This app can parse RMS, HFR, star count, and other quality metrics directly from the filename for quick quality assessment.
+
+---
+
+## Installation
+
+### System Requirements
+- **Windows 10/11** (64-bit)
+- **.NET 8 Desktop Runtime** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0) (choose "Desktop Runtime")
+
+### Quick Install
+1. **Download** the latest release ZIP from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
+2. **Extract** all files to a folder of your choice
+3. **Run** `AstroImages.exe`
+
+*First-time users: If you don't have .NET 8 Desktop Runtime, Windows will prompt you to install it automatically.*
 
 ---
 
@@ -109,21 +118,6 @@ This application follows the **MVVM (Model-View-ViewModel)** pattern with **Depe
 - **Views**: XAML files (`MainWindow.xaml`, etc.)
 - **ViewModels**: UI logic and binding (`MainWindowViewModel`)
 - **Services**: Business logic (file management, configuration, dialogs)
-
----
-
-## Installation
-
-### System Requirements
-- **Windows 10/11** (64-bit)
-- **.NET 8 Desktop Runtime** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0) (choose "Desktop Runtime")
-
-### Quick Install
-1. **Download** the latest release ZIP from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
-2. **Extract** all files to a folder of your choice
-3. **Run** `AstroImages.exe`
-
-*First-time users: If you don't have .NET 8 Desktop Runtime, Windows will prompt you to install it automatically.*
 
 ---
 
