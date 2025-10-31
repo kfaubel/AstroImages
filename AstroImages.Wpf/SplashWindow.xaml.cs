@@ -28,6 +28,13 @@ namespace AstroImages.Wpf
             
             // Set the current year for the copyright notice
             CopyrightYear.Text = DateTime.Now.Year.ToString();
+            
+            // Set the version dynamically from assembly information
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            if (version != null)
+            {
+                VersionTextBlock.Text = $"Version {version.Major}.{version.Minor}.{version.Build}";
+            }
         }
 
         /// <summary>

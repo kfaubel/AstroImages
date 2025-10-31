@@ -1,4 +1,6 @@
 using System.Windows;
+using System.IO;
+using AstroImages.Wpf.Services;
 
 namespace AstroImages.Wpf
 {
@@ -9,6 +11,27 @@ namespace AstroImages.Wpf
     /// </summary>
     public partial class App : System.Windows.Application
     {
+
+        /// <summary>
+        /// Constructor - sets up global exception handling
+        /// </summary>
+        public App()
+        {
+            // Handle unhandled exceptions
+            this.DispatcherUnhandledException += (sender, e) =>
+            {
+                try
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Unhandled Exception:\n\nMessage: {e.Exception.Message}\n\nStack Trace: {e.Exception.StackTrace}",
+                        "AstroImages - Unhandled Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                catch { }
+                e.Handled = true;
+            };
+        }
 
         /// <summary>
         /// OnStartup is called when the application starts up.
@@ -35,6 +58,9 @@ namespace AstroImages.Wpf
 
                 // Load application configuration to check splash screen preference
                 var config = AppConfig.Load();
+                
+                // Check for updates asynchronously (non-blocking)
+                _ = CheckForUpdatesAsync(config, win);
                 
                 // Show splash screen as a modal dialog if enabled in configuration
                 if (config.ShowSplashScreen)
@@ -71,8 +97,85 @@ namespace AstroImages.Wpf
             {
                 // If anything goes wrong during startup, show an error and exit gracefully
                 // $"{ex}" is string interpolation - puts the exception details in the message
-                System.Windows.MessageBox.Show($"Startup Exception: {ex}", "App Startup Error");
+                try
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Startup Exception:\n\nMessage: {ex.Message}\n\nStack Trace: {ex.StackTrace}\n\nInner Exception: {ex.InnerException?.Message ?? "None"}", 
+                        "AstroImages - App Startup Error", 
+                        MessageBoxButton.OK, 
+                        MessageBoxImage.Error);
+                }
+                catch
+                {
+                    // If even MessageBox fails, write to console and try to create a log file
+                    Console.WriteLine($"Fatal startup error: {ex}");
+                    try
+                    {
+                        var logFile = Path.Combine(Path.GetTempPath(), "AstroImages_Error.log");
+                        File.WriteAllText(logFile, $"AstroImages Startup Error: {DateTime.Now}\n\n{ex}");
+                        Console.WriteLine($"Error details written to: {logFile}");
+                    }
+                    catch { }
+                }
                 Environment.Exit(1); // Exit with error code 1
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously check for updates from GitHub releases
+        /// </summary>
+        private async Task CheckForUpdatesAsync(AppConfig config, Window mainWindow)
+        {
+            try
+            {
+                // Only check if enabled and not checked recently (within 24 hours)
+                if (!config.CheckForUpdates) return;
+                
+                var now = DateTime.Now;
+                if (config.LastUpdateCheck.HasValue && 
+                    now - config.LastUpdateCheck.Value < TimeSpan.FromHours(24))
+                {
+                    return; // Already checked recently
+                }
+
+                // Create update service with repository information
+                using var updateService = new UpdateService(config.UpdateRepoOwner, config.UpdateRepoName);
+                
+                // Check for updates (this is async and won't block startup)
+                var updateInfo = await updateService.CheckForUpdatesAsync();
+                
+                if (updateInfo != null)
+                {
+                        // Update found - show dialog on UI thread
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var updateDialog = new UpdateDialog(updateInfo, updateService);
+                        updateDialog.Owner = mainWindow;
+                        
+                        var result = updateDialog.ShowDialog();
+                        
+                        // Update config based on user's choice
+                        if (updateDialog.DisableUpdateChecks)
+                        {
+                            config.CheckForUpdates = false;
+                        }
+                        
+                        // Record that we checked for updates
+                        config.LastUpdateCheck = now;
+                        config.Save();
+                    });
+                }
+                else
+                {
+                    // No update available - just record the check time
+                    config.LastUpdateCheck = now;
+                    config.Save();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't let update check failures crash the app
+                System.Diagnostics.Debug.WriteLine($"Update check failed: {ex.Message}");
             }
         }
     }

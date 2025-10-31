@@ -57,6 +57,37 @@ namespace AstroImages.Wpf.ViewModels
                 }
             }
         }
+
+        private bool _autoStretch = true;  // Default to enabled
+        
+        /// <summary>
+        /// Controls whether FITS and XISF images should be automatically stretched to enhance visibility.
+        /// When enabled, applies histogram stretching and gamma correction to astronomical images.
+        /// When disabled, shows raw pixel values without enhancement.
+        /// </summary>
+        public bool AutoStretch
+        {
+            get => _autoStretch;
+            set
+            {
+                if (_autoStretch != value)
+                {
+                    _autoStretch = value;
+                    // Save to configuration
+                    _appConfig.AutoStretch = value;
+                    _appConfig.Save();
+                    OnPropertyChanged(nameof(AutoStretch));
+                    // Trigger image refresh when stretching mode changes
+                    AutoStretchChanged?.Invoke();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Event that notifies the View when auto-stretch setting changes.
+        /// The View can use this to refresh the current image with the new setting.
+        /// </summary>
+        public event Action? AutoStretchChanged;
         /// <summary>
         /// Current zoom level for the image (1.0 = 100%, 2.0 = 200%, etc.)
         /// When this changes, we also notify ZoomDisplayText since it depends on ZoomLevel.
@@ -315,6 +346,9 @@ namespace AstroImages.Wpf.ViewModels
             _keywordExtractionService = keywordExtractionService;
             _appConfig = appConfig;
             _folderDialogService = folderDialogService;
+            
+            // Initialize AutoStretch from configuration
+            _autoStretch = _appConfig.AutoStretch;
             
             // Use null-coalescing operator (??) to provide default implementations if none injected
             // This provides fallback behavior while still supporting dependency injection

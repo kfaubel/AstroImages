@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Publish
+      run: dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
+      
+    - name: Create ZIP package
+      run: |
+        cd publish
+        # Remove debug files
+        Remove-Item *.pdb
+        # Create release package
+        Compress-Archive -Path * -DestinationPath ../AstroImages-win-x64.zip
+        cd ..
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: AstroImages-win-x64.zip
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+        name: AstroImages ${{ github.ref_name }}
+        body: |
+          ## AstroImages ${{ github.ref_name }}
+          
+          ### System Requirements
+          - Windows 10/11 (64-bit)
+          - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
+          
+          ### Installation
+          1. Download `AstroImages-win-x64.zip`
+          2. Extract all files to a folder
+          3. Run `AstroImages.exe`
+          
+          ### What's New
+          See the automatically generated release notes below.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

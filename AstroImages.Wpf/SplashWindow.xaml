@@ -21,12 +21,22 @@
         
         <!-- Application Title and Info -->
         <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="30,15">
-            <TextBlock Text="AstroImages" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" 
-                       Foreground="White" FontFamily="Segoe UI Light"/>
+            <!-- Title with Beta indicator -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="AstroImages" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" 
+                           Foreground="White" FontFamily="Segoe UI Light" VerticalAlignment="Center"/>
+                <Border Background="#DC143C" CornerRadius="4" Margin="15,0,0,0" Padding="8,4" VerticalAlignment="Center">
+                    <TextBlock Text="BETA" FontSize="14" FontWeight="Bold" Foreground="White" 
+                               FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                </Border>
+            </StackPanel>
             <TextBlock Text="Astronomical Image Viewer" FontSize="16" HorizontalAlignment="Center" 
                        Foreground="#E3F2FD" Margin="0,5,0,0" FontFamily="Segoe UI"/>
-            <TextBlock Text="Version 2.0" FontSize="13" HorizontalAlignment="Center" 
+            <TextBlock x:Name="VersionTextBlock" Text="Version 2.0" FontSize="13" HorizontalAlignment="Center" 
                        Foreground="#BBDEFB" Margin="0,8,0,0" FontFamily="Segoe UI"/>
+            <!-- Additional Beta warning -->
+            <TextBlock Text="⚠ This is beta software - please report any issues" FontSize="11" HorizontalAlignment="Center" 
+                       Foreground="#FF6B6B" Margin="0,8,0,0" FontFamily="Segoe UI" FontStyle="Italic"/>
         </StackPanel>
         
         <!-- Copyright -->

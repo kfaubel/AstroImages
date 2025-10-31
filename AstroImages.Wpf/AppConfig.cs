@@ -75,6 +75,36 @@ namespace AstroImages.Wpf
         public bool ShowSplashScreen { get; set; } = true;
 
         /// <summary>
+        /// Whether to automatically check for updates on startup.
+        /// Default is true (check for updates). Set to false to disable.
+        /// </summary>
+        public bool CheckForUpdates { get; set; } = true;
+
+        /// <summary>
+        /// Last time an update check was performed.
+        /// Used to avoid checking too frequently (e.g., once per day).
+        /// </summary>
+        public DateTime? LastUpdateCheck { get; set; } = null;
+
+        /// <summary>
+        /// GitHub repository owner for update checks.
+        /// Change this to your GitHub username when publishing.
+        /// </summary>
+        public string UpdateRepoOwner { get; set; } = "kfaubel";
+
+        /// <summary>
+        /// GitHub repository name for update checks.
+        /// Change this to your repository name when publishing.
+        /// </summary>
+        public string UpdateRepoName { get; set; } = "AstroImages";
+
+        /// <summary>
+        /// Whether to automatically stretch FITS and XISF images to enhance visibility.
+        /// Default is true (apply stretching). When disabled, shows raw pixel values.
+        /// </summary>
+        public bool AutoStretch { get; set; } = true;
+
+        /// <summary>
         /// Static field containing the full path where the configuration file is stored.
         /// Uses the user's AppData folder which is standard for application settings on Windows.
         /// Example path: C:\Users\[username]\AppData\Roaming\AstroImages\app-config.json

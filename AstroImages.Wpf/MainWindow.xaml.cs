@@ -104,6 +104,9 @@ namespace AstroImages.Wpf
             
             // Wire up files loaded event to auto-resize columns
             _viewModel.FilesLoaded += () => _listViewColumnService?.AutoResizeColumns();
+            
+            // Wire up auto-stretch changed event to refresh current image
+            _viewModel.AutoStretchChanged += () => UpdateImageDisplay();
 
             // Load last directory if available
             if (!string.IsNullOrEmpty(config.LastOpenDirectory) && System.IO.Directory.Exists(config.LastOpenDirectory))
@@ -154,17 +157,6 @@ namespace AstroImages.Wpf
             // Show loading cursor when user selects a file
             this.Cursor = System.Windows.Input.Cursors.Wait;
             
-            // Debug output for file selection
-            if (_viewModel != null && _viewModel.SelectedIndex >= 0 && _viewModel.SelectedIndex < _viewModel.Files.Count)
-            {
-                var selectedFile = _viewModel.Files[_viewModel.SelectedIndex];
-                Console.WriteLine($"[FileSelection] Selected file: {selectedFile.Name} (Path: {selectedFile.Path})");
-            }
-            else
-            {
-                Console.WriteLine($"[FileSelection] No valid file selected (SelectedIndex: {_viewModel?.SelectedIndex ?? -1})");
-            }
-            
             UpdateImageDisplay();
             if (_viewModel != null && _viewModel.FitMode)
                 CenterImageInScrollViewer();
@@ -199,18 +191,16 @@ namespace AstroImages.Wpf
 
             // Get the currently selected file from the ViewModel's Files collection
             var file = _viewModel.Files[_viewModel.SelectedIndex];
-            Console.WriteLine($"[UpdateImageDisplay] Attempting to display: {file.Name} (Path: {file.Path})");
             
             // Verify the file still exists on disk (user might have moved/deleted it)
             if (System.IO.File.Exists(file.Path))
             {
                 // Use our custom FITS renderer to load and process the image
                 // This handles both FITS files and standard image formats (JPEG, PNG, etc.)
-                var image = FitsImageRenderer.RenderFitsFile(file.Path);
+                var image = FitsImageRenderer.RenderFitsFile(file.Path, _viewModel.AutoStretch);
                 
                 if (image != null)
                 {
-                    Console.WriteLine($"[DEBUG] Successfully rendered image: {file.Path} - Size: {image.PixelWidth}x{image.PixelHeight}");
                     // Successfully loaded the image - now display it
                     
                     // Set the image source to our loaded bitmap
@@ -241,15 +231,10 @@ namespace AstroImages.Wpf
                     }), System.Windows.Threading.DispatcherPriority.Loaded);
                     
                     return;
-                    // Force layout update to ensure ScrollViewer is sized
-                    //this.UpdateLayout();
                     
                 }
             }
-            else
-            {
-                Console.WriteLine($"[DEBUG] Failed to render image: {file.Path}");
-            }
+            
             // If failed to load
             DisplayImage.Source = null;
             ImageScrollViewer.Visibility = Visibility.Collapsed;
@@ -577,6 +562,68 @@ namespace AstroImages.Wpf
             
             // Show as modal dialog
             aboutWindow.ShowDialog();
+        }
+
+        /// <summary>
+        /// Event handler for Help > Check for Updates menu item.
+        /// Manually checks for updates from GitHub releases.
+        /// </summary>
+        /// <param name="sender">The menu item that was clicked</param>
+        /// <param name="e">Event arguments for the click event</param>
+        private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Show working cursor
+                this.Cursor = System.Windows.Input.Cursors.Wait;
+                
+                var config = AppConfig.Load();
+                
+                // Create update service
+                using var updateService = new Services.UpdateService(config.UpdateRepoOwner, config.UpdateRepoName);
+                
+                // Check for updates
+                var updateInfo = await updateService.CheckForUpdatesAsync();
+                
+                if (updateInfo != null)
+                {
+                    // Update available - show dialog
+                    var updateDialog = new UpdateDialog(updateInfo, updateService);
+                    updateDialog.Owner = this;
+                    
+                    var result = updateDialog.ShowDialog();
+                    
+                    // Update config if user changed preferences
+                    if (updateDialog.DisableUpdateChecks)
+                    {
+                        config.CheckForUpdates = false;
+                        config.Save();
+                    }
+                }
+                else
+                {
+                    // No update available - inform user
+                    System.Windows.MessageBox.Show(
+                        "You are running the latest version of AstroImages.",
+                        "No Updates Available",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle errors gracefully
+                System.Windows.MessageBox.Show(
+                    $"Unable to check for updates: {ex.Message}",
+                    "Update Check Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            finally
+            {
+                // Restore normal cursor
+                this.Cursor = System.Windows.Input.Cursors.Arrow;
+            }
         }
 
         #region Window State Management

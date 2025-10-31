@@ -21,6 +21,8 @@
                 <MenuItem Header="FITS keywords" Command="{Binding ShowFitsKeywordsDialogCommand}" />
             </MenuItem>
             <MenuItem Header="Help">
+                <MenuItem Header="Check for Updates" Click="CheckForUpdates_Click" />
+                <Separator />
                 <MenuItem Header="Documentation" Click="Documentation_Click" />
                 <MenuItem Header="About" Click="About_Click" />
             </MenuItem>
@@ -134,6 +136,10 @@
                     <Button Content="1:1" Width="50" Margin="4" Command="{Binding ZoomActualCommand}" />
                     <Button Content="Fit" Width="50" Margin="4" Command="{Binding FitToWindowCommand}" />
                     <TextBlock Text="{Binding ZoomDisplayText}" VerticalAlignment="Center" Margin="8"/>
+                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
+                    <CheckBox Name="AutoStretchCheckBox" Content="Auto stretch" IsChecked="{Binding AutoStretch}" 
+                              VerticalAlignment="Center" Margin="8,0" 
+                              ToolTip="Automatically stretch FITS and XISF images to enhance visibility"/>
                 </StackPanel>
 
                 <Grid Grid.Row="1">

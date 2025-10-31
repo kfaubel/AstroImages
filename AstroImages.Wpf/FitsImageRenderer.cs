@@ -31,23 +31,23 @@ namespace AstroImages.Wpf
     {
         private static readonly ConcurrentDictionary<string, XisfHeaderCache> _xisfCache = new();
         
-        public static BitmapSource? RenderFitsFile(string filePath)
+        public static BitmapSource? RenderFitsFile(string filePath, bool autoStretch = true)
         {
             try
             {
                 // Check if it's an XISF file first
                 if (XisfUtilities.IsXisfFile(filePath))
                 {
-                    return RenderXisfFile(filePath);
+                    return RenderXisfFile(filePath, autoStretch);
                 }
                 
                 // Check if it's a FITS file
                 if (FitsUtilities.IsFitsFile(filePath))
                 {
-                    return RenderFitsFileInternal(filePath);
+                    return RenderFitsFileInternal(filePath, autoStretch);
                 }
                 
-                // Try to render as standard image format
+                // Try to render as standard image format (stretching doesn't apply to standard images)
                 return RenderStandardImage(filePath);
             }
             catch (Exception ex)
@@ -63,8 +63,6 @@ namespace AstroImages.Wpf
         {
             try
             {
-                Console.WriteLine($"[FitsImageRenderer] Loading standard image: {System.IO.Path.GetFileName(filePath)}");
-                
                 // Try multiple approaches for loading standard images
                 BitmapSource bitmap;
                 
@@ -81,8 +79,6 @@ namespace AstroImages.Wpf
                 }
                 catch (Exception ex1)
                 {
-                    Console.WriteLine($"[FitsImageRenderer] BitmapImage approach failed: {ex1.Message}");
-                    
                     // Second approach: Load from stream
                     using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
                     {
@@ -98,12 +94,10 @@ namespace AstroImages.Wpf
                 
                 if (bitmap != null)
                 {
-                    Console.WriteLine($"[FitsImageRenderer] Successfully loaded {System.IO.Path.GetFileName(filePath)}: {bitmap.PixelWidth}x{bitmap.PixelHeight}, Format: {bitmap.Format}");
-                    
                     // Check if the image has transparency or unusual format that might cause display issues
                     if (bitmap.Format == PixelFormats.Pbgra32 || bitmap.Format == PixelFormats.Prgba64)
                     {
-                        Console.WriteLine($"[FitsImageRenderer] Image has transparency/alpha channel");
+                        // Image has transparency/alpha channel
                     }
                     
                     // Sample a few pixels to see if there's actual image data (before format conversion)
@@ -128,25 +122,17 @@ namespace AstroImages.Wpf
                                     break;
                                 }
                             }
-                            Console.WriteLine($"[FitsImageRenderer] Pixel data check: {(hasData ? "Has non-zero pixel values" : "All sampled pixels are near-zero (image may be black)")}");
-                            
-                            // Show first few pixel values for debugging
-                            if (pixels.Length >= 12)
-                            {
-                                Console.WriteLine($"[FitsImageRenderer] First 3 pixels: RGB({pixels[2]},{pixels[1]},{pixels[0]}) RGB({pixels[6]},{pixels[5]},{pixels[4]}) RGB({pixels[10]},{pixels[9]},{pixels[8]})");
-                            }
+                            // Pixel data validation completed
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[FitsImageRenderer] Error sampling pixel data: {ex.Message}");
+                        // Error sampling pixel data - continue with conversion
                     }
                     
                     // Convert problematic formats to ensure proper display
                     if (bitmap.Format == PixelFormats.Bgr32)
                     {
-                        Console.WriteLine($"[FitsImageRenderer] Converting from Bgr32 to Bgra32 using WriteableBitmap");
-                        
                         // Create a new WriteableBitmap with the correct format
                         var writeableBitmap = new WriteableBitmap(bitmap.PixelWidth, bitmap.PixelHeight, 96, 96, PixelFormats.Bgra32, null);
                         
@@ -172,7 +158,6 @@ namespace AstroImages.Wpf
                         writeableBitmap.WritePixels(new Int32Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight), newPixels, stride, 0);
                         writeableBitmap.Freeze();
                         bitmap = writeableBitmap;
-                        Console.WriteLine($"[FitsImageRenderer] Converted to format: {bitmap.Format}");
                     }
                     
                     return bitmap;
@@ -182,12 +167,12 @@ namespace AstroImages.Wpf
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[FitsImageRenderer] Failed to load standard image {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
+                // Failed to load standard image
                 return null;
             }
         }
 
-        private static BitmapSource? RenderFitsFileInternal(string filePath)
+        private static BitmapSource? RenderFitsFileInternal(string filePath, bool autoStretch = true)
         {
             try
             {
@@ -211,8 +196,8 @@ namespace AstroImages.Wpf
                 // Calculate basic statistics for debugging
                 var stats = FitsUtilities.CalculateImageStatistics(pixels);
                 
-                // Apply enhanced stretching algorithm
-                var scaledPixels = ApplyAutoStretch(pixels, width, height);
+                // Apply stretching algorithm if enabled, otherwise use raw pixel values
+                var scaledPixels = autoStretch ? ApplyAutoStretch(pixels, width, height) : pixels;
 
                 // Check for potential issues and provide informative messages
                 if (Math.Abs(stats["Max"] - stats["Min"]) < 0.001)
@@ -353,7 +338,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Render XISF file to BitmapSource with optimized performance
         /// </summary>
-        private static BitmapSource? RenderXisfFile(string filePath)
+        private static BitmapSource? RenderXisfFile(string filePath, bool autoStretch = true)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
@@ -379,7 +364,7 @@ namespace AstroImages.Wpf
                     var rgbRenderStart = stopwatch.ElapsedMilliseconds;
                     try
                     {
-                        var rgbPixels = RenderXisfRgbOptimized(cache);
+                        var rgbPixels = RenderXisfRgbOptimized(cache, autoStretch);
                         Console.WriteLine($"[FitsImageRenderer] Optimized RGB processing took {stopwatch.ElapsedMilliseconds - rgbRenderStart}ms");
 
                         if (rgbPixels != null && rgbPixels.Length > 0)
@@ -405,7 +390,7 @@ namespace AstroImages.Wpf
                 // Single channel or fallback - use optimized grayscale rendering
                 Console.WriteLine($"[FitsImageRenderer] Using optimized grayscale rendering for XISF file");
                 var grayscaleStart = stopwatch.ElapsedMilliseconds;
-                var pixels = RenderXisfGrayscaleOptimized(cache);
+                var pixels = RenderXisfGrayscaleOptimized(cache, autoStretch);
                 Console.WriteLine($"[FitsImageRenderer] Optimized grayscale processing took {stopwatch.ElapsedMilliseconds - grayscaleStart}ms");
 
                 if (pixels == null || pixels.Length == 0)
@@ -581,7 +566,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized RGB rendering with single-pass statistics and parallel processing for performance
         /// </summary>
-        private static byte[]? RenderXisfRgbOptimized(XisfHeaderCache cache)
+        private static byte[]? RenderXisfRgbOptimized(XisfHeaderCache cache, bool autoStretch = true)
         {
             if (cache.FileBytes == null || cache.Channels < 3)
                 return null;
@@ -596,15 +581,15 @@ namespace AstroImages.Wpf
                 
                 if (cache.SampleFormat.Equals("Float32", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessFloat32RgbOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, rgbPixels);
+                    ProcessFloat32RgbOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, rgbPixels, autoStretch);
                 }
                 else if (cache.SampleFormat.Equals("UInt16", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessUInt16RgbOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, rgbPixels);
+                    ProcessUInt16RgbOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, rgbPixels, autoStretch);
                 }
                 else if (cache.SampleFormat.Equals("UInt8", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessUInt8RgbOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, rgbPixels);
+                    ProcessUInt8RgbOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, rgbPixels, autoStretch);
                 }
                 else
                 {
@@ -624,7 +609,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized grayscale rendering with parallel processing
         /// </summary>
-        private static byte[]? RenderXisfGrayscaleOptimized(XisfHeaderCache cache)
+        private static byte[]? RenderXisfGrayscaleOptimized(XisfHeaderCache cache, bool autoStretch = true)
         {
             if (cache.FileBytes == null)
                 return null;
@@ -639,15 +624,15 @@ namespace AstroImages.Wpf
                 
                 if (cache.SampleFormat.Equals("Float32", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessFloat32GrayscaleOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, pixels);
+                    ProcessFloat32GrayscaleOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, pixels, autoStretch);
                 }
                 else if (cache.SampleFormat.Equals("UInt16", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessUInt16GrayscaleOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, pixels);
+                    ProcessUInt16GrayscaleOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, pixels, autoStretch);
                 }
                 else if (cache.SampleFormat.Equals("UInt8", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessUInt8GrayscaleOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, pixels);
+                    ProcessUInt8GrayscaleOptimized(cache.FileBytes, (int)cache.ImagePosition, cache.Width, cache.Height, cache.Channels, pixels, autoStretch);
                 }
                 else
                 {
@@ -667,7 +652,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized Float32 RGB processing with single-pass statistics and parallel processing
         /// </summary>
-        private static void ProcessFloat32RgbOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] rgbPixels)
+        private static void ProcessFloat32RgbOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] rgbPixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             int pixelsPerChannel = totalPixels;
@@ -712,10 +697,19 @@ namespace AstroImages.Wpf
                         float value = BitConverter.ToSingle(buffer, channelOffset);
                         if (float.IsFinite(value))
                         {
-                            float range = channelStats[c].max - channelStats[c].min;
-                            byte scaledValue = range > 0 
-                                ? (byte)Math.Clamp((int)((value - channelStats[c].min) * 255.0f / range), 0, 255)
-                                : (byte)Math.Clamp(channelStats[c].min, 0, 255);
+                            byte scaledValue;
+                            if (autoStretch)
+                            {
+                                float range = channelStats[c].max - channelStats[c].min;
+                                scaledValue = range > 0 
+                                    ? (byte)Math.Clamp((int)((value - channelStats[c].min) * 255.0f / range), 0, 255)
+                                    : (byte)Math.Clamp(channelStats[c].min, 0, 255);
+                            }
+                            else
+                            {
+                                // No stretching - use raw values, clamped to 0-255 range
+                                scaledValue = (byte)Math.Clamp((int)(value * 255.0f), 0, 255);
+                            }
                                 
                             if (c == 0) r = scaledValue;      // Red
                             else if (c == 1) g = scaledValue; // Green
@@ -735,7 +729,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized UInt16 RGB processing with parallel processing
         /// </summary>
-        private static void ProcessUInt16RgbOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] rgbPixels)
+        private static void ProcessUInt16RgbOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] rgbPixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             int pixelsPerChannel = totalPixels;
@@ -771,10 +765,19 @@ namespace AstroImages.Wpf
                     if (channelOffset + 1 < buffer.Length)
                     {
                         ushort value = BitConverter.ToUInt16(buffer, channelOffset);
-                        ushort range = (ushort)(channelStats[c].max - channelStats[c].min);
-                        byte scaledValue = range > 0 
-                            ? (byte)((value - channelStats[c].min) * 255 / range)
-                            : (byte)(channelStats[c].min >> 8);
+                        byte scaledValue;
+                        if (autoStretch)
+                        {
+                            ushort range = (ushort)(channelStats[c].max - channelStats[c].min);
+                            scaledValue = range > 0 
+                                ? (byte)((value - channelStats[c].min) * 255 / range)
+                                : (byte)(channelStats[c].min >> 8);
+                        }
+                        else
+                        {
+                            // No stretching - just convert from 16-bit to 8-bit by dividing by 256
+                            scaledValue = (byte)(value >> 8);
+                        }
                             
                         if (c == 0) r = scaledValue;
                         else if (c == 1) g = scaledValue;
@@ -792,7 +795,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized UInt8 RGB processing with parallel processing
         /// </summary>
-        private static void ProcessUInt8RgbOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] rgbPixels)
+        private static void ProcessUInt8RgbOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] rgbPixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             int pixelsPerChannel = totalPixels;
@@ -823,23 +826,23 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized Float32 grayscale processing with parallel processing
         /// </summary>
-        private static void ProcessFloat32GrayscaleOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels)
+        private static void ProcessFloat32GrayscaleOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             
             if (channels == 1)
             {
                 // Single channel - direct processing
-                ProcessFloat32SingleChannel(buffer, offset, totalPixels, pixels);
+                ProcessFloat32SingleChannel(buffer, offset, totalPixels, pixels, autoStretch);
             }
             else
             {
                 // Multi-channel - luminance weighted average
-                ProcessFloat32MultiChannelLuminance(buffer, offset, width, height, channels, pixels);
+                ProcessFloat32MultiChannelLuminance(buffer, offset, width, height, channels, pixels, autoStretch);
             }
         }
         
-        private static void ProcessFloat32SingleChannel(byte[] buffer, int offset, int totalPixels, byte[] pixels)
+        private static void ProcessFloat32SingleChannel(byte[] buffer, int offset, int totalPixels, byte[] pixels, bool autoStretch = true)
         {
             float min = float.MaxValue, max = float.MinValue;
             
@@ -862,15 +865,23 @@ namespace AstroImages.Wpf
                     float value = BitConverter.ToSingle(buffer, offset + i * 4);
                     if (float.IsFinite(value))
                     {
-                        pixels[i] = range > 0 
-                            ? (byte)Math.Clamp((int)((value - min) * 255.0f / range), 0, 255)
-                            : (byte)Math.Clamp(min, 0, 255);
+                        if (autoStretch)
+                        {
+                            pixels[i] = range > 0 
+                                ? (byte)Math.Clamp((int)((value - min) * 255.0f / range), 0, 255)
+                                : (byte)Math.Clamp(min, 0, 255);
+                        }
+                        else
+                        {
+                            // No stretching - use raw values, clamped to 0-255 range
+                            pixels[i] = (byte)Math.Clamp((int)(value * 255.0f), 0, 255);
+                        }
                     }
                 }
             });
         }
         
-        private static void ProcessFloat32MultiChannelLuminance(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels)
+        private static void ProcessFloat32MultiChannelLuminance(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             int pixelsPerChannel = totalPixels;
@@ -917,16 +928,24 @@ namespace AstroImages.Wpf
             float range = max - min;
             Parallel.For(0, totalPixels, i =>
             {
-                pixels[i] = range > 0 
-                    ? (byte)Math.Clamp((int)((luminanceValues[i] - min) * 255.0f / range), 0, 255)
-                    : (byte)Math.Clamp(min, 0, 255);
+                if (autoStretch)
+                {
+                    pixels[i] = range > 0 
+                        ? (byte)Math.Clamp((int)((luminanceValues[i] - min) * 255.0f / range), 0, 255)
+                        : (byte)Math.Clamp(min, 0, 255);
+                }
+                else
+                {
+                    // No stretching - use raw luminance values, clamped to 0-255 range
+                    pixels[i] = (byte)Math.Clamp((int)(luminanceValues[i] * 255.0f), 0, 255);
+                }
             });
         }
         
         /// <summary>
         /// Optimized UInt16 grayscale processing with parallel processing
         /// </summary>
-        private static void ProcessUInt16GrayscaleOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels)
+        private static void ProcessUInt16GrayscaleOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             
@@ -948,9 +967,17 @@ namespace AstroImages.Wpf
                     if (offset + i * 2 + 1 < buffer.Length)
                     {
                         ushort value = BitConverter.ToUInt16(buffer, offset + i * 2);
-                        pixels[i] = range > 0 
-                            ? (byte)((value - min) * 255 / range)
-                            : (byte)(min >> 8);
+                        if (autoStretch)
+                        {
+                            pixels[i] = range > 0 
+                                ? (byte)((value - min) * 255 / range)
+                                : (byte)(min >> 8);
+                        }
+                        else
+                        {
+                            // No stretching - just convert from 16-bit to 8-bit by dividing by 256
+                            pixels[i] = (byte)(value >> 8);
+                        }
                     }
                 });
             }
@@ -985,7 +1012,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Optimized UInt8 grayscale processing with parallel processing
         /// </summary>
-        private static void ProcessUInt8GrayscaleOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels)
+        private static void ProcessUInt8GrayscaleOptimized(byte[] buffer, int offset, int width, int height, int channels, byte[] pixels, bool autoStretch = true)
         {
             int totalPixels = width * height;
             

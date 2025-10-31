@@ -8,6 +8,17 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>AstroImages</AssemblyName>
+    
+    <!-- Version Information -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyTitle>AstroImages</AssemblyTitle>
+    <AssemblyDescription>Astronomical Image Viewer for FITS and standard image formats</AssemblyDescription>
+    <AssemblyCompany>Ken Faubel</AssemblyCompany>
+    <AssemblyProduct>AstroImages</AssemblyProduct>
+    <AssemblyCopyright>Copyright © 2025 Ken Faubel. All rights reserved.</AssemblyCopyright>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstroImages.Core\AstroImages.Core.csproj" />
@@ -17,6 +28,7 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
     <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
   
   <ItemGroup>
