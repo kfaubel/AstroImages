@@ -77,7 +77,7 @@ namespace AstroImages.Wpf
                     bitmapImage.Freeze(); // Make it thread-safe and immutable
                     bitmap = bitmapImage;
                 }
-                catch (Exception ex1)
+                catch (Exception)
                 {
                     // Second approach: Load from stream
                     using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
@@ -112,20 +112,19 @@ namespace AstroImages.Wpf
                             bitmap.CopyPixels(new Int32Rect(0, 0, bitmap.PixelWidth, 1), pixels, stride, 0);
                             
                             // Check first few pixels for non-zero values
-                            bool hasData = false;
                             int pixelsToCheck = Math.Min(10, bitmap.PixelWidth);
                             for (int i = 0; i < pixelsToCheck * bytesPerPixel; i += bytesPerPixel)
                             {
                                 if (pixels[i] > 5 || pixels[i + 1] > 5 || pixels[i + 2] > 5) // B, G, R channels
                                 {
-                                    hasData = true;
+                                    // Found non-zero pixel data
                                     break;
                                 }
                             }
                             // Pixel data validation completed
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // Error sampling pixel data - continue with conversion
                     }
@@ -165,7 +164,7 @@ namespace AstroImages.Wpf
                 
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Failed to load standard image
                 return null;

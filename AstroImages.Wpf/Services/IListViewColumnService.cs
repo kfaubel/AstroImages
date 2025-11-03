@@ -4,5 +4,10 @@ namespace AstroImages.Wpf.Services
     {
         void UpdateListViewColumns();
         void AutoResizeColumns();
+        void UpdateFileColumnWidth();
+        void ResetAllColumnWidths();
+        void RecalculateColumnWidthsFromData();
+        double CalculateTotalColumnsWidth();
+        void AdjustSplitterForOptimalWidth();
     }
 }

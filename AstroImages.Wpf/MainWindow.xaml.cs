@@ -1,6 +1,8 @@
 using System.Windows;
+using System.Linq;
 using AstroImages.Wpf.ViewModels;
 using AstroImages.Wpf.Services;
+using AstroImages.Wpf.Models;
 using System.Windows.Media;
 
 namespace AstroImages.Wpf
@@ -688,6 +690,15 @@ namespace AstroImages.Wpf
                 config.WindowHeight = this.Height;
                 config.Save();
             }
+            
+            // Update the File column width to be responsive to window width
+            _listViewColumnService?.UpdateFileColumnWidth();
+            
+            // Adjust splitter position when window resizes (with small delay for layout)
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() =>
+            {
+                _listViewColumnService?.AdjustSplitterForOptimalWidth();
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         /// <summary>

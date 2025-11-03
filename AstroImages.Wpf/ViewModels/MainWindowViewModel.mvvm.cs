@@ -8,9 +8,12 @@
 using AstroImages.Wpf.Models;
 using AstroImages.Wpf.Services;
 using System;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows.Data;
+using System.Globalization;
 
 namespace AstroImages.Wpf.ViewModels
 {
@@ -185,6 +188,9 @@ namespace AstroImages.Wpf.ViewModels
                 Files.Add(fileItem);  // Adding to ObservableCollection triggers UI update
             }
 
+            // Set default sort by filename
+            SortByColumn("File");
+            
             // Notify the View that files have been loaded so it can update the UI
             FilesLoaded?.Invoke();
         }
@@ -276,6 +282,135 @@ namespace AstroImages.Wpf.ViewModels
         /// when the file list changes. The collection is bound to the ListView in the UI.
         /// </summary>
         public ObservableCollection<FileItem> Files { get; } = new ObservableCollection<FileItem>();
+        
+        /// <summary>
+        /// Current sort column for tracking sort state
+        /// </summary>
+        private string _currentSortColumn = "Name";
+        
+        /// <summary>
+        /// Current sort direction for tracking sort state
+        /// </summary>
+        private ListSortDirection _currentSortDirection = ListSortDirection.Ascending;
+        
+        /// <summary>
+        /// Gets the count of files for command CanExecute evaluation
+        /// </summary>
+        public int FileCount => Files.Count;
+        
+        /// <summary>
+        /// Sorts the file collection by the specified column.
+        /// Automatically detects numeric vs text sorting and handles sort direction toggling.
+        /// </summary>
+        /// <param name="columnName">The property name or header text to sort by</param>
+        public void SortByColumn(string columnName)
+        {
+            if (string.IsNullOrEmpty(columnName) || Files.Count == 0) return;
+            
+            // Toggle sort direction if clicking the same column
+            if (_currentSortColumn == columnName)
+            {
+                _currentSortDirection = _currentSortDirection == ListSortDirection.Ascending 
+                    ? ListSortDirection.Descending 
+                    : ListSortDirection.Ascending;
+            }
+            else
+            {
+                _currentSortColumn = columnName;
+                _currentSortDirection = ListSortDirection.Ascending;
+            }
+            
+            // Create a sorted list based on the column
+            var sortedFiles = SortFilesByColumn(Files.ToList(), columnName, _currentSortDirection);
+            
+            // Clear and repopulate the ObservableCollection to maintain the same references
+            // but in sorted order. This preserves selection and other UI state.
+            for (int i = 0; i < sortedFiles.Count; i++)
+            {
+                var currentIndex = Files.IndexOf(sortedFiles[i]);
+                if (currentIndex != i && currentIndex != -1)
+                {
+                    Files.Move(currentIndex, i);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Sorts a list of FileItem objects by the specified column
+        /// </summary>
+        private List<FileItem> SortFilesByColumn(List<FileItem> files, string columnName, ListSortDirection direction)
+        {
+            return columnName switch
+            {
+                "File" => direction == ListSortDirection.Ascending 
+                    ? files.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList()
+                    : files.OrderByDescending(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList(),
+                    
+                "Size" => direction == ListSortDirection.Ascending 
+                    ? files.OrderBy(f => f.Size).ToList()
+                    : files.OrderByDescending(f => f.Size).ToList(),
+                    
+                _ when _appConfig.CustomKeywords.Contains(columnName) =>
+                    SortByDictionaryValue(files, f => f.CustomKeywords, columnName, direction),
+                    
+                _ when _appConfig.FitsKeywords.Contains(columnName) =>
+                    SortByDictionaryValue(files, f => f.FitsKeywords, columnName, direction),
+                    
+                _ => files // No sorting for unknown columns
+            };
+        }
+        
+        /// <summary>
+        /// Sorts files by a dictionary value, with smart numeric/text detection
+        /// </summary>
+        private List<FileItem> SortByDictionaryValue(List<FileItem> files, 
+            Func<FileItem, Dictionary<string, string>> getDictionary, 
+            string key, 
+            ListSortDirection direction)
+        {
+            // Get all non-null values to determine if they're numeric
+            var values = files
+                .Select(f => getDictionary(f).TryGetValue(key, out string? value) ? value : null)
+                .Where(v => !string.IsNullOrEmpty(v))
+                .ToList();
+                
+            bool isNumeric = values.Count > 0 && values.All(v => double.TryParse(v, out _));
+            
+            if (isNumeric)
+            {
+                // Numeric sorting
+                return direction == ListSortDirection.Ascending
+                    ? files.OrderBy(f => 
+                        {
+                            var dict = getDictionary(f);
+                            if (dict.TryGetValue(key, out string? value) && double.TryParse(value, out double num))
+                                return num;
+                            return double.MaxValue; // Put non-numeric values at the end
+                        }).ToList()
+                    : files.OrderByDescending(f => 
+                        {
+                            var dict = getDictionary(f);
+                            if (dict.TryGetValue(key, out string? value) && double.TryParse(value, out double num))
+                                return num;
+                            return double.MinValue; // Put non-numeric values at the end
+                        }).ToList();
+            }
+            else
+            {
+                // Text sorting
+                return direction == ListSortDirection.Ascending
+                    ? files.OrderBy(f => 
+                        {
+                            var dict = getDictionary(f);
+                            return dict.TryGetValue(key, out string? value) ? value ?? "" : "";
+                        }, StringComparer.OrdinalIgnoreCase).ToList()
+                    : files.OrderByDescending(f => 
+                        {
+                            var dict = getDictionary(f);
+                            return dict.TryGetValue(key, out string? value) ? value ?? "" : "";
+                        }, StringComparer.OrdinalIgnoreCase).ToList();
+            }
+        }
 
         /// <summary>
         /// Event required by INotifyPropertyChanged interface. This is how WPF knows
@@ -384,11 +519,11 @@ namespace AstroImages.Wpf.ViewModels
             // Navigation commands with CanExecute predicates
             // The second parameter to RelayCommand is a "CanExecute" function that determines
             // when the command should be enabled. These are disabled when no files are loaded.
-            GotoFirstCommand = new RelayCommand(_ => GotoFirst(), _ => Files.Count > 0);
-            GotoPreviousCommand = new RelayCommand(_ => GotoPrevious(), _ => Files.Count > 0);
-            PlayPauseCommand = new RelayCommand(_ => TogglePlayPause(), _ => Files.Count > 0);
-            GotoNextCommand = new RelayCommand(_ => GotoNext(), _ => Files.Count > 0);
-            GotoLastCommand = new RelayCommand(_ => GotoLast(), _ => Files.Count > 0);
+            GotoFirstCommand = new RelayCommand(_ => GotoFirst(), _ => FileCount > 0);
+            GotoPreviousCommand = new RelayCommand(_ => GotoPrevious(), _ => FileCount > 0);
+            PlayPauseCommand = new RelayCommand(_ => TogglePlayPause(), _ => FileCount > 0);
+            GotoNextCommand = new RelayCommand(_ => GotoNext(), _ => FileCount > 0);
+            GotoLastCommand = new RelayCommand(_ => GotoLast(), _ => FileCount > 0);
             
             // Zoom commands with inline logic using Math.Min/Max to constrain values
             ZoomInCommand = new RelayCommand(_ => ZoomLevel = Math.Min(ZoomLevel * 1.25, 5.0));  // Max 500%
@@ -462,23 +597,23 @@ namespace AstroImages.Wpf.ViewModels
 
         private void GotoFirst()
         {
-            if (Files.Count > 0)
+            if (FileCount > 0)
                 SelectedIndex = 0;
         }
 
         private void GotoPrevious()
         {
-            if (Files.Count == 0) return;
+            if (FileCount == 0) return;
             if (SelectedIndex <= 0)
-                SelectedIndex = Files.Count - 1;
+                SelectedIndex = FileCount - 1;
             else
                 SelectedIndex--;
         }
 
         private void GotoNext()
         {
-            if (Files.Count == 0) return;
-            if (SelectedIndex >= Files.Count - 1)
+            if (FileCount == 0) return;
+            if (SelectedIndex >= FileCount - 1)
                 SelectedIndex = 0;
             else
                 SelectedIndex++;
@@ -492,8 +627,8 @@ namespace AstroImages.Wpf.ViewModels
 
         private void GotoLast()
         {
-            if (Files.Count > 0)
-                SelectedIndex = Files.Count - 1;
+            if (FileCount > 0)
+                SelectedIndex = FileCount - 1;
         }
 
         private void TogglePlayPause()
@@ -696,6 +831,63 @@ namespace AstroImages.Wpf.ViewModels
             {
                 OnPropertyChanged(nameof(HasSelectedFiles));
             }
+        }
+    }
+    
+    /// <summary>
+    /// Custom comparer for sorting dictionary-based columns (Custom Keywords and FITS Keywords)
+    /// </summary>
+    public class DictionarySortComparer : IComparer
+    {
+        private readonly string _columnName;
+        private readonly ListSortDirection _direction;
+        private readonly AppConfig _appConfig;
+        
+        public DictionarySortComparer(string columnName, ListSortDirection direction, AppConfig appConfig)
+        {
+            _columnName = columnName;
+            _direction = direction;
+            _appConfig = appConfig;
+        }
+        
+        public int Compare(object? x, object? y)
+        {
+            if (x is not FileItem fileX || y is not FileItem fileY)
+                return 0;
+                
+            string? valueX = GetColumnValue(fileX);
+            string? valueY = GetColumnValue(fileY);
+            
+            // Handle nulls - put them at the end
+            if (string.IsNullOrEmpty(valueX) && string.IsNullOrEmpty(valueY)) return 0;
+            if (string.IsNullOrEmpty(valueX)) return _direction == ListSortDirection.Ascending ? 1 : -1;
+            if (string.IsNullOrEmpty(valueY)) return _direction == ListSortDirection.Ascending ? -1 : 1;
+            
+            // Try numeric comparison first
+            if (double.TryParse(valueX, out double numX) && double.TryParse(valueY, out double numY))
+            {
+                int result = numX.CompareTo(numY);
+                return _direction == ListSortDirection.Ascending ? result : -result;
+            }
+            
+            // Fall back to string comparison
+            int stringResult = string.Compare(valueX, valueY, StringComparison.OrdinalIgnoreCase);
+            return _direction == ListSortDirection.Ascending ? stringResult : -stringResult;
+        }
+        
+        private string? GetColumnValue(FileItem fileItem)
+        {
+            if (_appConfig.CustomKeywords.Contains(_columnName))
+            {
+                return fileItem.CustomKeywords.TryGetValue(_columnName, out string? customValue) ? customValue : null;
+            }
+            
+            if (_appConfig.FitsKeywords.Contains(_columnName))
+            {
+                return fileItem.FitsKeywords.TryGetValue(_columnName, out string? fitsValue) ? fitsValue : null;
+            }
+            
+            return null;
         }
     }
 }
