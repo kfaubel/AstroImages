@@ -4,7 +4,7 @@ namespace AstroImages.Wpf
 {
     /// <summary>
     /// Dialog window for configuring general application options and preferences.
-    /// This is a modal dialog that allows users to change settings like column visibility.
+    /// This is a modal dialog that allows users to change settings like column visibility and theme.
     /// 
     /// Key WPF Dialog Concepts:
     /// - Inherits from Window but used as a dialog (modal popup)
@@ -22,6 +22,11 @@ namespace AstroImages.Wpf
         public bool ShowSizeColumn { get; set; }
 
         /// <summary>
+        /// Property to track the selected theme mode (Auto, Light, or Dark).
+        /// </summary>
+        public ThemeMode SelectedTheme { get; set; }
+
+        /// <summary>
         /// Default constructor - creates the dialog with default settings.
         /// This constructor is required for XAML support and is called by other constructors.
         /// 
@@ -36,7 +41,7 @@ namespace AstroImages.Wpf
         }
 
         /// <summary>
-        /// Constructor that initializes the dialog with a specific ShowSizeColumn value.
+        /// Constructor that initializes the dialog with current settings.
         /// This is typically used when the dialog is opened from the main application
         /// to show the current setting state.
         /// 
@@ -45,14 +50,19 @@ namespace AstroImages.Wpf
         /// This ensures InitializeComponent() is always called first.
         /// </summary>
         /// <param name="showSizeColumn">Current value of the ShowSizeColumn setting</param>
-        public GeneralOptionsDialog(bool showSizeColumn) : this()
+        /// <param name="theme">Current theme mode setting</param>
+        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme) : this()
         {
-            // Store the initial value in our property
+            // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
+            SelectedTheme = theme;
             
             // Set the checkbox state to match the current setting
             // ShowSizeColumnCheckBox is a UI control defined in the XAML file
             ShowSizeColumnCheckBox.IsChecked = showSizeColumn;
+            
+            // Set the theme combo box selection
+            ThemeComboBox.SelectedIndex = (int)theme;
         }
 
         /// <summary>
@@ -72,6 +82,9 @@ namespace AstroImages.Wpf
             // The ?? operator means "if left side is null, use right side"
             // IsChecked is nullable bool (bool?) so it can be true, false, or null
             ShowSizeColumn = ShowSizeColumnCheckBox.IsChecked ?? false;
+            
+            // Read the selected theme from the combo box
+            SelectedTheme = (ThemeMode)(ThemeComboBox.SelectedIndex);
             
             // Set DialogResult to true to indicate user clicked OK
             // This is how modal dialogs communicate their outcome to the caller

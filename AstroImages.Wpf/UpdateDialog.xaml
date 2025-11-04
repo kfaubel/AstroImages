@@ -5,7 +5,8 @@
         WindowStartupLocation="CenterOwner"
         Icon="icon.ico"
         ResizeMode="NoResize"
-        Background="#F5F5F5">
+        Background="{DynamicResource ThemeWindowBackground}"
+        Foreground="{DynamicResource ThemeForeground}">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

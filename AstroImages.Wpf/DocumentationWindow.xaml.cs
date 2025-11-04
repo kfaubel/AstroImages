@@ -130,7 +130,11 @@ namespace AstroImages.Wpf
                         // Start code block
                         inCodeBlock = true;
                         codeBlock = new Paragraph();
-                        codeBlock.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248));
+                        // Use theme resource for code block background
+                        if (System.Windows.Application.Current.TryFindResource("ThemeCodeBlockBackground") is System.Windows.Media.Brush codeBlockBg)
+                        {
+                            codeBlock.Background = codeBlockBg;
+                        }
                         codeBlock.Margin = new Thickness(10, 5, 10, 5);
                         codeBlock.Padding = new Thickness(10);
                         codeBlock.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
@@ -278,9 +282,13 @@ namespace AstroImages.Wpf
                     var codeRun = new Run(codeText)
                     {
                         FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace"),
-                        Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)),
                         FontSize = 11
                     };
+                    // Use theme resource for inline code background
+                    if (System.Windows.Application.Current.TryFindResource("ThemeCodeBlockBackground") is System.Windows.Media.Brush inlineCodeBg)
+                    {
+                        codeRun.Background = inlineCodeBg;
+                    }
                     paragraph.Inlines.Add(codeRun);
                 }
                 else

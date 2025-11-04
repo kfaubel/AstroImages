@@ -4,14 +4,14 @@ namespace AstroImages.Wpf.Services
 {
     public class GeneralOptionsDialogService : IGeneralOptionsDialogService
     {
-        public bool? ShowGeneralOptionsDialog(bool currentShowSizeColumn)
+        public (bool? showSizeColumn, ThemeMode? theme) ShowGeneralOptionsDialog(bool currentShowSizeColumn, ThemeMode currentTheme)
         {
-            var dialog = new GeneralOptionsDialog(currentShowSizeColumn);
+            var dialog = new GeneralOptionsDialog(currentShowSizeColumn, currentTheme);
             if (dialog.ShowDialog() == true)
             {
-                return dialog.ShowSizeColumn;
+                return (dialog.ShowSizeColumn, dialog.SelectedTheme);
             }
-            return null;
+            return (null, null);
         }
     }
 }

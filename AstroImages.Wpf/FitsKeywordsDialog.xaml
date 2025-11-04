@@ -6,7 +6,9 @@
         Width="400"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize" 
-        Icon="icon.ico">
+        Icon="icon.ico"
+        Background="{DynamicResource ThemeWindowBackground}"
+        Foreground="{DynamicResource ThemeForeground}">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

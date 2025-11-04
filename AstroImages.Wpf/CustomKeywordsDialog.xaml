@@ -3,7 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Custom Keywords Configuration" Height="400" Width="500"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" 
-        Icon="icon.ico">
+        Icon="icon.ico"
+        Background="{DynamicResource ThemeWindowBackground}"
+        Foreground="{DynamicResource ThemeForeground}">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -27,7 +29,10 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <ListBox Name="KeywordListBox" Grid.Row="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox Name="KeywordListBox" Grid.Row="0" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         Background="{DynamicResource ThemeListViewBackground}"
+                         Foreground="{DynamicResource ThemeForeground}"
+                         BorderBrush="{DynamicResource ThemeBorderBrush}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="0,2,0,2">
@@ -45,8 +50,6 @@
                                         Content="✕" 
                                         Width="20" 
                                         Height="20" 
-                                        Background="Red" 
-                                        Foreground="White" 
                                         FontWeight="Bold"
                                         FontSize="12"
                                         BorderThickness="0"
@@ -55,7 +58,19 @@
                                         Click="RemoveKeyword_Click"
                                         Tag="{Binding}"
                                         HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"/>
+                                        VerticalAlignment="Center">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#DC143C"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#FF0000"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

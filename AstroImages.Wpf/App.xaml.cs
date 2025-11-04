@@ -46,6 +46,9 @@ namespace AstroImages.Wpf
                 // Always call the base class method first - this initializes the WPF framework
                 base.OnStartup(e);
                 
+                // Initialize the theme service before creating any windows
+                ThemeService.Initialize();
+                
                 // Create the main application window first
                 // The window will apply saved position/size settings from config automatically
                 var win = new MainWindow();

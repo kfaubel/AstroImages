@@ -4,6 +4,27 @@ using System.IO;
 namespace AstroImages.Wpf
 {
     /// <summary>
+    /// Theme mode enumeration for selecting light, dark, or auto theme
+    /// </summary>
+    public enum ThemeMode
+    {
+        /// <summary>
+        /// Automatically detect theme from OS settings
+        /// </summary>
+        Auto = 0,
+        
+        /// <summary>
+        /// Force light theme
+        /// </summary>
+        Light = 1,
+        
+        /// <summary>
+        /// Force dark theme
+        /// </summary>
+        Dark = 2
+    }
+
+    /// <summary>
     /// Application configuration class that stores user preferences and settings.
     /// This class can be serialized to/from JSON to persist settings between application runs.
     /// Uses properties with automatic getters/setters for easy JSON serialization.
@@ -103,6 +124,12 @@ namespace AstroImages.Wpf
         /// Default is true (apply stretching). When disabled, shows raw pixel values.
         /// </summary>
         public bool AutoStretch { get; set; } = true;
+
+        /// <summary>
+        /// Theme mode selection (Auto, Light, or Dark).
+        /// Default is Auto, which follows the OS theme preference.
+        /// </summary>
+        public ThemeMode Theme { get; set; } = ThemeMode.Auto;
 
         /// <summary>
         /// Static field containing the full path where the configuration file is stored.

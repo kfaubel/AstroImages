@@ -4,7 +4,9 @@
         Title="Move Selected Files" Height="300" Width="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize" 
-        Icon="icon.ico">
+        Icon="icon.ico"
+        Background="{DynamicResource ThemeWindowBackground}"
+        Foreground="{DynamicResource ThemeForeground}">
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

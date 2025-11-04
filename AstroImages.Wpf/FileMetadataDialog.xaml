@@ -5,7 +5,9 @@
         MinHeight="400" MinWidth="600"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Icon="icon.ico">
+        Icon="icon.ico"
+        Background="{DynamicResource ThemeWindowBackground}"
+        Foreground="{DynamicResource ThemeForeground}">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

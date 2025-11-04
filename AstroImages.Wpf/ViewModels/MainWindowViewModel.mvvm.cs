@@ -692,10 +692,18 @@ namespace AstroImages.Wpf.ViewModels
         }
         private void ShowGeneralOptionsDialog()
         {
-            var result = _generalOptionsDialogService.ShowGeneralOptionsDialog(_appConfig.ShowSizeColumn);
-            if (result.HasValue)
+            var result = _generalOptionsDialogService.ShowGeneralOptionsDialog(_appConfig.ShowSizeColumn, _appConfig.Theme);
+            if (result.showSizeColumn.HasValue)
             {
-                _appConfig.ShowSizeColumn = result.Value;
+                _appConfig.ShowSizeColumn = result.showSizeColumn.Value;
+                
+                if (result.theme.HasValue)
+                {
+                    _appConfig.Theme = result.theme.Value;
+                    // Apply the new theme
+                    ThemeService.SetThemeMode(result.theme.Value);
+                }
+                
                 _appConfig.Save();
                 _listViewColumnService.UpdateListViewColumns();
                 // Auto-resize columns after configuration change

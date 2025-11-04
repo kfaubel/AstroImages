@@ -93,7 +93,10 @@ namespace AstroImages.Wpf.Services
             buttonFactory.SetValue(System.Windows.Controls.Button.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
             buttonFactory.SetValue(System.Windows.Controls.Button.FontSizeProperty, 14.0);
             buttonFactory.SetValue(System.Windows.Controls.Button.FontWeightProperty, System.Windows.FontWeights.Bold);
-            buttonFactory.SetValue(System.Windows.Controls.Button.ForegroundProperty, System.Windows.Media.Brushes.DarkBlue);
+            // Use theme resource for button foreground color
+            var buttonForeground = System.Windows.Application.Current.TryFindResource("ThemeAccentBlue") as System.Windows.Media.Brush
+                ?? System.Windows.Media.Brushes.DarkBlue; // Fallback
+            buttonFactory.SetValue(System.Windows.Controls.Button.ForegroundProperty, buttonForeground);
             buttonFactory.SetValue(System.Windows.Controls.Button.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
             buttonFactory.SetValue(System.Windows.Controls.Button.BorderBrushProperty, System.Windows.Media.Brushes.Transparent);
             buttonFactory.SetValue(System.Windows.Controls.Button.BorderThicknessProperty, new System.Windows.Thickness(0));

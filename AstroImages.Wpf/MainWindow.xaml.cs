@@ -62,11 +62,11 @@ namespace AstroImages.Wpf
             // Shows FITS keywords configuration dialog
             var fitsKeywordsDialogService = new FitsKeywordsDialogService();
 
-            // Create colored brushes for styling the ListView columns
-            // RGB values: Red=0, Green=128, Blue=0 for green
-            var greenBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 128, 0));
-            // RGB values: Red=0, Green=0, Blue=192 for blue
-            var blueBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 0, 192));
+            // Create colored brushes for styling the ListView columns from theme resources
+            var greenBrush = (System.Windows.Application.Current.TryFindResource("ThemeAccentGreen") as System.Windows.Media.Brush) 
+                ?? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 128, 0)); // Fallback
+            var blueBrush = (System.Windows.Application.Current.TryFindResource("ThemeAccentBlue") as System.Windows.Media.Brush)
+                ?? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 0, 192)); // Fallback
             
             // Service that manages ListView columns (adding, removing, styling)
             // Needs reference to the actual ListView control from XAML
