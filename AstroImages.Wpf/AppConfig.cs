@@ -132,6 +132,18 @@ namespace AstroImages.Wpf
         public ThemeMode Theme { get; set; } = ThemeMode.Auto;
 
         /// <summary>
+        /// Whether to show the full screen help dialog when entering full screen mode.
+        /// Default is true (show help). Set to false to skip the help dialog.
+        /// </summary>
+        public bool ShowFullScreenHelp { get; set; } = true;
+
+        /// <summary>
+        /// Time in seconds to pause between images when playing through the list.
+        /// Default is 1.0 second. Supported values: 0.25, 0.5, 1.0, 1.5, 2.0, 4.0, 8.0
+        /// </summary>
+        public double PlayPauseInterval { get; set; } = 1.0;
+
+        /// <summary>
         /// Static field containing the full path where the configuration file is stored.
         /// Uses the user's AppData folder which is standard for application settings on Windows.
         /// Example path: C:\Users\[username]\AppData\Roaming\AstroImages\app-config.json

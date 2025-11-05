@@ -628,6 +628,18 @@ namespace AstroImages.Wpf
             }
         }
 
+        /// <summary>
+        /// Event handler for File > Exit menu item.
+        /// Closes the application.
+        /// </summary>
+        /// <param name="sender">The menu item that was clicked</param>
+        /// <param name="e">Event arguments for the click event</param>
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            // Close the main window, which will trigger the Closing event and save state
+            this.Close();
+        }
+
         #region Window State Management
         /// <summary>
         /// Restores the window position, size, and state from the saved configuration.

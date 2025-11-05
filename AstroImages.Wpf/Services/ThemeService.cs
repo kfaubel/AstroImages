@@ -164,6 +164,10 @@ namespace AstroImages.Wpf.Services
 
             // Image viewer area background
             app.Resources["ThemeImageAreaBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 50, 50));          // #323232 (gray for dark mode)
+
+            // ScrollBar colors
+            app.Resources["ThemeScrollBarBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 45));          // #2D2D2D
+            app.Resources["ThemeScrollBarThumb"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 100));            // #646464
         }
 
         /// <summary>
@@ -216,6 +220,10 @@ namespace AstroImages.Wpf.Services
 
             // Image viewer area background
             app.Resources["ThemeImageAreaBackground"] = new SolidColorBrush(System.Windows.Media.Colors.White);                      // White for light mode
+
+            // ScrollBar colors
+            app.Resources["ThemeScrollBarBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));      // #F0F0F0
+            app.Resources["ThemeScrollBarThumb"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(160, 160, 160));           // #A0A0A0
         }
     }
 }

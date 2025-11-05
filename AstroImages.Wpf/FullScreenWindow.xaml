@@ -1,0 +1,44 @@
+<Window x:Class="AstroImages.Wpf.FullScreenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Full Screen" 
+        WindowStyle="None"
+        WindowState="Maximized"
+        Background="#FF2D2D30"
+        Topmost="True"
+        KeyDown="Window_KeyDown"
+        MouseWheel="Window_MouseWheel"
+        Loaded="Window_Loaded">
+    <Grid>
+        <ScrollViewer x:Name="ImageScrollViewer"
+                     HorizontalScrollBarVisibility="Auto"
+                     VerticalScrollBarVisibility="Auto"
+                     PanningMode="None"
+                     Focusable="False"
+                     PreviewMouseWheel="ImageScrollViewer_PreviewMouseWheel"
+                     PreviewKeyDown="ImageScrollViewer_PreviewKeyDown">
+            <Image x:Name="DisplayImage"
+                   Stretch="None"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   MouseLeftButtonDown="DisplayImage_MouseLeftButtonDown"
+                   MouseLeftButtonUp="DisplayImage_MouseLeftButtonUp"
+                   MouseMove="DisplayImage_MouseMove">
+                <Image.LayoutTransform>
+                    <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
+                </Image.LayoutTransform>
+            </Image>
+        </ScrollViewer>
+        
+        <!-- Image info overlay (filename) -->
+        <TextBlock x:Name="InfoTextBlock"
+                   Text=""
+                   Foreground="White"
+                   Background="#80000000"
+                   Padding="10,5"
+                   FontSize="14"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Top"
+                   Margin="10"/>
+    </Grid>
+</Window>

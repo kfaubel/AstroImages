@@ -9,7 +9,13 @@ namespace AstroImages.Wpf.Services
         /// </summary>
         /// <param name="currentShowSizeColumn">The current ShowSizeColumn value.</param>
         /// <param name="currentTheme">The current theme mode.</param>
-        /// <returns>A tuple with the new ShowSizeColumn value and theme, or null values if cancelled.</returns>
-        (bool? showSizeColumn, ThemeMode? theme) ShowGeneralOptionsDialog(bool currentShowSizeColumn, ThemeMode currentTheme);
+        /// <param name="currentShowFullScreenHelp">The current ShowFullScreenHelp value.</param>
+        /// <param name="currentPlayPauseInterval">The current play pause interval in seconds.</param>
+        /// <returns>A tuple with the new settings, or null values if cancelled.</returns>
+        (bool? showSizeColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval) ShowGeneralOptionsDialog(
+            bool currentShowSizeColumn, 
+            ThemeMode currentTheme, 
+            bool currentShowFullScreenHelp,
+            double currentPlayPauseInterval);
     }
 }

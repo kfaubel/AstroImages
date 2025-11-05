@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 
 namespace AstroImages.Wpf
 {
@@ -27,6 +28,17 @@ namespace AstroImages.Wpf
         public ThemeMode SelectedTheme { get; set; }
 
         /// <summary>
+        /// Property to track whether to show the full screen help dialog.
+        /// </summary>
+        public bool ShowFullScreenHelp { get; set; }
+
+        /// <summary>
+        /// Property to track the pause interval between images during play mode.
+        /// Value is in seconds (e.g., 0.25, 0.5, 1.0, 1.5, 2.0, 4.0, 8.0).
+        /// </summary>
+        public double PlayPauseInterval { get; set; }
+
+        /// <summary>
         /// Default constructor - creates the dialog with default settings.
         /// This constructor is required for XAML support and is called by other constructors.
         /// 
@@ -51,11 +63,15 @@ namespace AstroImages.Wpf
         /// </summary>
         /// <param name="showSizeColumn">Current value of the ShowSizeColumn setting</param>
         /// <param name="theme">Current theme mode setting</param>
-        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme) : this()
+        /// <param name="showFullScreenHelp">Current value of the ShowFullScreenHelp setting</param>
+        /// <param name="playPauseInterval">Current pause interval for play mode in seconds</param>
+        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval) : this()
         {
             // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
             SelectedTheme = theme;
+            ShowFullScreenHelp = showFullScreenHelp;
+            PlayPauseInterval = playPauseInterval;
             
             // Set the checkbox state to match the current setting
             // ShowSizeColumnCheckBox is a UI control defined in the XAML file
@@ -63,6 +79,38 @@ namespace AstroImages.Wpf
             
             // Set the theme combo box selection
             ThemeComboBox.SelectedIndex = (int)theme;
+            
+            // Set the full screen help checkbox
+            ShowFullScreenHelpCheckBox.IsChecked = showFullScreenHelp;
+            
+            // Set the play pause interval combo box
+            SelectPlayPauseInterval(playPauseInterval);
+        }
+
+        /// <summary>
+        /// Helper method to select the correct combo box item based on the interval value.
+        /// </summary>
+        /// <param name="interval">The interval value in seconds</param>
+        private void SelectPlayPauseInterval(double interval)
+        {
+            // Find and select the matching combo box item
+            for (int i = 0; i < PlayPauseIntervalComboBox.Items.Count; i++)
+            {
+                if (PlayPauseIntervalComboBox.Items[i] is ComboBoxItem item)
+                {
+                    if (item.Tag != null && double.TryParse(item.Tag.ToString(), out double tagValue))
+                    {
+                        if (Math.Abs(tagValue - interval) < 0.01) // Use small epsilon for double comparison
+                        {
+                            PlayPauseIntervalComboBox.SelectedIndex = i;
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Default to 1.0 second if no match found
+            PlayPauseIntervalComboBox.SelectedIndex = 2; // 1.0 second is at index 2
         }
 
         /// <summary>
@@ -85,6 +133,21 @@ namespace AstroImages.Wpf
             
             // Read the selected theme from the combo box
             SelectedTheme = (ThemeMode)(ThemeComboBox.SelectedIndex);
+            
+            // Read the full screen help checkbox
+            ShowFullScreenHelp = ShowFullScreenHelpCheckBox.IsChecked ?? true;
+            
+            // Read the play pause interval from combo box
+            if (PlayPauseIntervalComboBox.SelectedItem is ComboBoxItem selectedItem && 
+                selectedItem.Tag != null &&
+                double.TryParse(selectedItem.Tag.ToString(), out double interval))
+            {
+                PlayPauseInterval = interval;
+            }
+            else
+            {
+                PlayPauseInterval = 1.0; // Default to 1 second if parsing fails
+            }
             
             // Set DialogResult to true to indicate user clicked OK
             // This is how modal dialogs communicate their outcome to the caller

@@ -446,6 +446,7 @@ namespace AstroImages.Wpf.ViewModels
         public RelayCommand ShowFitsKeywordsDialogCommand { get; }       // Show FITS keywords configuration
         public RelayCommand ShowFileMetadataCommand { get; }             // Show file metadata dialog
         public RelayCommand MoveSelectedCommand { get; }                 // Move selected files
+        public RelayCommand EnterFullScreenCommand { get; }              // Enter full screen mode
         #endregion
         #region Constructor
         /// <summary>
@@ -515,6 +516,7 @@ namespace AstroImages.Wpf.ViewModels
             ShowFitsKeywordsDialogCommand = new RelayCommand(_ => ShowFitsKeywordsDialog());
             ShowFileMetadataCommand = new RelayCommand(param => ShowFileMetadata(param));
             MoveSelectedCommand = new RelayCommand(_ => MoveSelectedFiles(), _ => HasSelectedFiles);
+            EnterFullScreenCommand = new RelayCommand(_ => EnterFullScreen(), _ => SelectedIndex >= 0 && SelectedIndex < Files.Count);
 
             // Navigation commands with CanExecute predicates
             // The second parameter to RelayCommand is a "CanExecute" function that determines
@@ -692,7 +694,12 @@ namespace AstroImages.Wpf.ViewModels
         }
         private void ShowGeneralOptionsDialog()
         {
-            var result = _generalOptionsDialogService.ShowGeneralOptionsDialog(_appConfig.ShowSizeColumn, _appConfig.Theme);
+            var result = _generalOptionsDialogService.ShowGeneralOptionsDialog(
+                _appConfig.ShowSizeColumn, 
+                _appConfig.Theme, 
+                _appConfig.ShowFullScreenHelp,
+                _appConfig.PlayPauseInterval);
+                
             if (result.showSizeColumn.HasValue)
             {
                 _appConfig.ShowSizeColumn = result.showSizeColumn.Value;
@@ -704,11 +711,33 @@ namespace AstroImages.Wpf.ViewModels
                     ThemeService.SetThemeMode(result.theme.Value);
                 }
                 
+                if (result.showFullScreenHelp.HasValue)
+                {
+                    _appConfig.ShowFullScreenHelp = result.showFullScreenHelp.Value;
+                }
+                
+                if (result.playPauseInterval.HasValue)
+                {
+                    _appConfig.PlayPauseInterval = result.playPauseInterval.Value;
+                }
+                
                 _appConfig.Save();
                 _listViewColumnService.UpdateListViewColumns();
                 // Auto-resize columns after configuration change
                 _listViewColumnService.AutoResizeColumns();
             }
+        }
+
+        private void EnterFullScreen()
+        {
+            if (SelectedIndex < 0 || SelectedIndex >= Files.Count)
+                return;
+
+            var fullScreenWindow = new FullScreenWindow(Files, SelectedIndex, _appConfig);
+            fullScreenWindow.ShowDialog();
+            
+            // Update the selected index to the last viewed image in full screen
+            SelectedIndex = fullScreenWindow.CurrentIndex;
         }
 
         private void ShowCustomKeywordsDialog()

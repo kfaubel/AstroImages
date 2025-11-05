@@ -15,7 +15,12 @@
         <!-- Menu Bar -->
         <Menu Grid.Row="0">
             <MenuItem Header="File">
-                <MenuItem Header="Open Folder" Command="{Binding OpenFolderDialogCommand}" />
+                <MenuItem Header="Open Folder..." Command="{Binding OpenFolderDialogCommand}" />
+                <Separator />
+                <MenuItem Header="Exit" Click="Exit_Click" />
+            </MenuItem>
+            <MenuItem Header="View">
+                <MenuItem Header="Full Screen" Command="{Binding EnterFullScreenCommand}" InputGestureText="F11"/>
             </MenuItem>
             <MenuItem Header="Options">
                 <MenuItem Header="General" Command="{Binding ShowGeneralOptionsDialogCommand}" />
@@ -135,17 +140,23 @@
                 </Grid.RowDefinitions>
 
                 <!-- Image View Controls -->
-                <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Center" Margin="0,8,0,8">
-                    <Button Content="-" Width="40" Margin="4" Command="{Binding ZoomOutCommand}" />
-                    <Button Content="+" Width="40" Margin="4" Command="{Binding ZoomInCommand}" />
-                    <Button Content="1:1" Width="50" Margin="4" Command="{Binding ZoomActualCommand}" />
-                    <Button Content="Fit" Width="50" Margin="4" Command="{Binding FitToWindowCommand}" />
-                    <TextBlock Text="{Binding ZoomDisplayText}" VerticalAlignment="Center" Margin="8"/>
-                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
-                    <CheckBox Name="AutoStretchCheckBox" Content="Auto stretch" IsChecked="{Binding AutoStretch}" 
-                              VerticalAlignment="Center" Margin="8,0" 
-                              ToolTip="Automatically stretch FITS and XISF images to enhance visibility"/>
-                </StackPanel>
+                <Grid Grid.Row="0" Margin="0,8,0,8">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="-" Width="40" Margin="4" Command="{Binding ZoomOutCommand}" />
+                        <Button Content="+" Width="40" Margin="4" Command="{Binding ZoomInCommand}" />
+                        <Button Content="1:1" Width="50" Margin="4" Command="{Binding ZoomActualCommand}" />
+                        <Button Content="Fit" Width="50" Margin="4" Command="{Binding FitToWindowCommand}" />
+                        <TextBlock Text="{Binding ZoomDisplayText}" VerticalAlignment="Center" Margin="8"/>
+                        <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
+                        <CheckBox Name="AutoStretchCheckBox" Content="Auto stretch" IsChecked="{Binding AutoStretch}" 
+                                  VerticalAlignment="Center" Margin="8,0" 
+                                  ToolTip="Automatically stretch FITS and XISF images to enhance visibility"/>
+                    </StackPanel>
+                    <Button Content="Full Screen" Width="90" Margin="8,4" 
+                            HorizontalAlignment="Right"
+                            Command="{Binding EnterFullScreenCommand}"
+                            ToolTip="Enter full screen mode (F11)"/>
+                </Grid>
 
                 <Grid Grid.Row="1">
                     <Border Background="{DynamicResource ThemeImageAreaBackground}" Margin="8" CornerRadius="4">
