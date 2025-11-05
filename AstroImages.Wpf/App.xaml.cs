@@ -68,8 +68,8 @@ namespace AstroImages.Wpf
                 // Show splash screen as a modal dialog if enabled in configuration
                 if (config.ShowSplashScreen)
                 {
-                    // Create the splash screen window
-                    var splash = new SplashWindow();
+                    // Create the splash screen window with current setting
+                    var splash = new SplashWindow(config.ShowSplashScreen);
                     
                     // Set the main window as the "owner" - this makes the splash appear on top
                     // and centers it relative to the main window
@@ -79,13 +79,15 @@ namespace AstroImages.Wpf
                     // Returns true if user clicked OK, false if they cancelled or closed it
                     var result = splash.ShowDialog();
                     
-                    // If user clicked OK and checked "Don't show again"
-                    if (result == true && splash.DontShowAgain)
+                    // If user clicked OK, save the "Don't show again" preference
+                    if (result == true)
                     {
                         try
                         {
-                            // Update configuration to disable splash screen for next time
-                            config.ShowSplashScreen = false;
+                            // Update configuration based on checkbox state
+                            // If checked, disable splash screen for next time
+                            // If unchecked, keep showing it
+                            config.ShowSplashScreen = !splash.DontShowAgain;
                             config.Save();
                         }
                         catch

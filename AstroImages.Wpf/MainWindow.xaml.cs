@@ -553,8 +553,11 @@ namespace AstroImages.Wpf
         /// <param name="e">Event arguments for the click event</param>
         private void About_Click(object sender, RoutedEventArgs e)
         {
+            // Load current config to pass ShowSplashScreen setting
+            var config = AppConfig.Load();
+            
             // Reuse the splash screen window as an "About" dialog
-            var aboutWindow = new SplashWindow();
+            var aboutWindow = new SplashWindow(config.ShowSplashScreen);
             
             // Set this main window as the owner
             aboutWindow.Owner = this;
@@ -563,7 +566,22 @@ namespace AstroImages.Wpf
             aboutWindow.Title = "About AstroImages";
             
             // Show as modal dialog
-            aboutWindow.ShowDialog();
+            var result = aboutWindow.ShowDialog();
+            
+            // If user clicked OK, save the "Don't show again" preference
+            if (result == true)
+            {
+                try
+                {
+                    // Update configuration based on checkbox state
+                    config.ShowSplashScreen = !aboutWindow.DontShowAgain;
+                    config.Save();
+                }
+                catch
+                {
+                    // If we can't save config, just ignore it
+                }
+            }
         }
 
         /// <summary>
