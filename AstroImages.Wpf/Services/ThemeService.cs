@@ -42,7 +42,10 @@ namespace AstroImages.Wpf.Services
         /// <param name="themeMode">The new theme mode to apply</param>
         public static void SetThemeMode(ThemeMode themeMode)
         {
-            if (CurrentThemeMode != themeMode || System.Windows.Application.Current.Resources.Count == 0)
+            // Always apply theme on initialization or when theme changes
+            bool needsInitialization = !System.Windows.Application.Current.Resources.Contains("ThemeWindowBackground");
+            
+            if (CurrentThemeMode != themeMode || needsInitialization)
             {
                 CurrentThemeMode = themeMode;
                 ApplyTheme();
@@ -210,7 +213,7 @@ namespace AstroImages.Wpf.Services
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248));      // #F8F8F8
 
             // Accent colors for file list
-            app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 0, 139));                   // #00008B (dark blue for light mode)
+            app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 115, 207));                  // #0073CF (medium blue for light mode - good contrast)
             app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 128, 0));                  // #008000 (dark green)
 
             // ListView item selection and hover colors

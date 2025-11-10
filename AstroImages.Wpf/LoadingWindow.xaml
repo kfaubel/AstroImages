@@ -1,0 +1,33 @@
+<Window x:Class="AstroImages.Wpf.LoadingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Loading" 
+        Height="120" 
+        Width="350"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource ThemeWindowBackground}"
+        BorderBrush="{DynamicResource ThemeBorderBrush}"
+        BorderThickness="1">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" 
+                   x:Name="MessageText"
+                   Text="Loading images..."
+                   FontSize="14"
+                   HorizontalAlignment="Center"
+                   Foreground="{DynamicResource ThemeForeground}"
+                   Margin="0,0,0,15"/>
+        
+        <ProgressBar Grid.Row="1"
+                     x:Name="LoadProgressBar"
+                     Height="20"
+                     IsIndeterminate="True"
+                     Foreground="{DynamicResource ThemeAccent}"/>
+    </Grid>
+</Window>

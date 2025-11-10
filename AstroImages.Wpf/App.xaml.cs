@@ -64,39 +64,6 @@ namespace AstroImages.Wpf
                 
                 // Check for updates asynchronously (non-blocking)
                 _ = CheckForUpdatesAsync(config, win);
-                
-                // Show splash screen as a modal dialog if enabled in configuration
-                if (config.ShowSplashScreen)
-                {
-                    // Create the splash screen window with current setting
-                    var splash = new SplashWindow(config.ShowSplashScreen);
-                    
-                    // Set the main window as the "owner" - this makes the splash appear on top
-                    // and centers it relative to the main window
-                    splash.Owner = win;
-                    
-                    // ShowDialog() makes it modal - user must interact with splash before continuing
-                    // Returns true if user clicked OK, false if they cancelled or closed it
-                    var result = splash.ShowDialog();
-                    
-                    // If user clicked OK, save the "Don't show again" preference
-                    if (result == true)
-                    {
-                        try
-                        {
-                            // Update configuration based on checkbox state
-                            // If checked, disable splash screen for next time
-                            // If unchecked, keep showing it
-                            config.ShowSplashScreen = !splash.DontShowAgain;
-                            config.Save();
-                        }
-                        catch
-                        {
-                            // If we can't save config, just ignore it
-                            // Don't crash the app over a preference setting
-                        }
-                    }
-                }
             }
             catch (Exception ex)
             {

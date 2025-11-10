@@ -4,6 +4,7 @@ using AstroImages.Wpf.ViewModels;
 using AstroImages.Wpf.Services;
 using AstroImages.Wpf.Models;
 using System.Windows.Media;
+using System.Threading.Tasks;
 
 namespace AstroImages.Wpf
 {
@@ -110,19 +111,15 @@ namespace AstroImages.Wpf
             // Wire up auto-stretch changed event to refresh current image
             _viewModel.AutoStretchChanged += () => UpdateImageDisplay();
 
-            // Load last directory if available
+            // Wire up load files with progress event
+            _viewModel.LoadFilesWithProgressRequested += async (directoryPath) => 
+                await LoadFilesWithProgressAsync(directoryPath, isStartup: false);
+
+            // Load last directory if available - do this asynchronously to show UI quickly
             if (!string.IsNullOrEmpty(config.LastOpenDirectory) && System.IO.Directory.Exists(config.LastOpenDirectory))
             {
-                _viewModel.LoadFilesCommand.Execute(config.LastOpenDirectory);
-                // Select first image if available
-                if (_viewModel.Files.Count > 0)
-                {
-                    _viewModel.SelectedIndex = 0;
-                    // Don't set fit mode here - let UpdateImageDisplay handle it
-                }
-                
-                // Auto-resize columns after loading initial files
-                _listViewColumnService?.AutoResizeColumns();
+                // Start loading files asynchronously after UI is shown
+                Loaded += async (sender, e) => await LoadFilesWithProgressAsync(config.LastOpenDirectory, isStartup: true);
             }
 
             // Wire up file selection to image display
@@ -131,6 +128,105 @@ namespace AstroImages.Wpf
 
             // Handle pane resize for Fit mode
             ImageScrollViewer.SizeChanged += ImageScrollViewer_SizeChanged;
+        }
+
+        /// <summary>
+        /// Loads files from a directory with a progress dialog
+        /// </summary>
+        private async Task LoadFilesWithProgressAsync(string directoryPath, bool isStartup = false)
+        {
+            LoadingWindow? loadingWindow = null;
+            
+            try
+            {
+                // Show loading dialog on UI thread
+                loadingWindow = new LoadingWindow(isStartup ? "Loading images..." : "Loading images in new folder...");
+                loadingWindow.Owner = this;
+                loadingWindow.Show();
+                
+                // Allow UI to update
+                await Task.Delay(50);
+                
+                // Run file loading on background thread
+                await Task.Run(() =>
+                {
+                    if (_viewModel != null)
+                    {
+                        // Use Dispatcher to update UI thread
+                        Dispatcher.Invoke(() =>
+                        {
+                            _viewModel.LoadFiles(directoryPath, (current, total) =>
+                            {
+                                // Update progress bar on UI thread
+                                loadingWindow.UpdateProgress(current, total);
+                                
+                                // Force UI to update by processing events at background priority
+                                Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+                            });
+                        });
+                    }
+                });
+                
+                // Select first image if available (only on startup)
+                if (isStartup && _viewModel != null && _viewModel.Files.Count > 0)
+                {
+                    _viewModel.SelectedIndex = 0;
+                }
+                
+                // Auto-resize columns after loading files
+                _listViewColumnService?.AutoResizeColumns();
+            }
+            finally
+            {
+                // Always close the loading window
+                loadingWindow?.Close();
+                
+                // Show splash screen after initial file load (if enabled and this is startup)
+                if (isStartup)
+                {
+                    ShowSplashScreenIfEnabled();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Shows the splash screen if enabled in configuration
+        /// </summary>
+        private void ShowSplashScreenIfEnabled()
+        {
+            var config = AppConfig.Load();
+            
+            if (config.ShowSplashScreen)
+            {
+                // Create the splash screen window with current setting
+                var splash = new SplashWindow(config.ShowSplashScreen);
+                
+                // Set the main window as the "owner" - this makes the splash appear on top
+                // and centers it relative to the main window
+                splash.Owner = this;
+                
+                // ShowDialog() makes it modal - user must interact with splash before continuing
+                // Returns true if user clicked OK, false if they cancelled or closed it
+                var result = splash.ShowDialog();
+                
+                // If user clicked OK, save the "Don't show again" preference
+                if (result == true)
+                {
+                    try
+                    {
+                        // Update configuration based on checkbox state
+                        // If checked, disable splash screen for next time
+                        // If unchecked, keep showing it
+                        config.ShowSplashScreen = !splash.DontShowAgain;
+                        config.Save();
+                    }
+                    catch
+                    {
+                        // If we can't save config, just ignore it
+                        // Don't crash the app over a preference setting
+                    }
+                }
+            }
         }
 
         private void ImageScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)

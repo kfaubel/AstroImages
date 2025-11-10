@@ -161,7 +161,7 @@ namespace AstroImages.Wpf.ViewModels
         /// we delegate to specialized services that handle the specific tasks.
         /// </summary>
         /// <param name="directoryPath">Path to the directory containing files to load</param>
-        public void LoadFiles(string directoryPath)
+        public void LoadFiles(string directoryPath, Action<int, int>? progressCallback = null)
         {
             // Clear existing files from the observable collection
             // First, unhook event handlers from existing items
@@ -176,6 +176,9 @@ namespace AstroImages.Wpf.ViewModels
             // Use the file management service to get file information
             var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
             
+            int total = fileItems.Count;
+            int current = 0;
+            
             // For each file, extract keywords and add to our collection
             foreach (var fileItem in fileItems)
             {
@@ -186,10 +189,17 @@ namespace AstroImages.Wpf.ViewModels
                 fileItem.PropertyChanged += FileItem_PropertyChanged;
                 
                 Files.Add(fileItem);  // Adding to ObservableCollection triggers UI update
+                
+                // Report progress
+                current++;
+                progressCallback?.Invoke(current, total);
             }
 
             // Set default sort by filename
             SortByColumn("File");
+            
+            // Notify that the file count and selection status has changed
+            OnPropertyChanged(nameof(FileSelectionStatusText));
             
             // Notify the View that files have been loaded so it can update the UI
             FilesLoaded?.Invoke();
@@ -265,6 +275,27 @@ namespace AstroImages.Wpf.ViewModels
         /// Used to enable/disable the Move Selected button.
         /// </summary>
         public bool HasSelectedFiles => Files.Any(f => f.IsSelected);
+
+        /// <summary>
+        /// Gets the file selection status text to display (e.g., "10 of 200 files selected").
+        /// </summary>
+        public string FileSelectionStatusText
+        {
+            get
+            {
+                int selectedCount = Files.Count(f => f.IsSelected);
+                int totalCount = Files.Count;
+                
+                if (selectedCount == 0)
+                {
+                    return $"{totalCount} file{(totalCount != 1 ? "s" : "")}";
+                }
+                else
+                {
+                    return $"{selectedCount} of {totalCount} file{(totalCount != 1 ? "s" : "")} selected";
+                }
+            }
+        }
 
         // Navigation commands - these handle moving through the file list
         public RelayCommand GotoFirstCommand { get; }     // Jump to first file
@@ -584,6 +615,12 @@ namespace AstroImages.Wpf.ViewModels
         public event Action? FilesLoaded;
 
         /// <summary>
+        /// Event that requests the View to load files with a progress dialog.
+        /// The string parameter is the directory path to load.
+        /// </summary>
+        public event Action<string>? LoadFilesWithProgressRequested;
+
+        /// <summary>
         /// Called by the View when an image has finished rendering.
         /// Used for play mode to start the delay after image rendering is complete.
         /// </summary>
@@ -689,7 +726,9 @@ namespace AstroImages.Wpf.ViewModels
             {
                 _appConfig.LastOpenDirectory = selectedFolder;
                 _appConfig.Save();
-                LoadFiles(selectedFolder);
+                
+                // Request the View to load files with a progress dialog
+                LoadFilesWithProgressRequested?.Invoke(selectedFolder);
             }
         }
         private void ShowGeneralOptionsDialog()
@@ -867,6 +906,7 @@ namespace AstroImages.Wpf.ViewModels
             if (e.PropertyName == nameof(FileItem.IsSelected))
             {
                 OnPropertyChanged(nameof(HasSelectedFiles));
+                OnPropertyChanged(nameof(FileSelectionStatusText));
             }
         }
     }
