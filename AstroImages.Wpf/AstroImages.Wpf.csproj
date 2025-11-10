@@ -11,9 +11,9 @@
     <AssemblyName>AstroImages</AssemblyName>
     
     <!-- Version Information -->
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
     <AssemblyTitle>AstroImages</AssemblyTitle>
     <AssemblyDescription>Astronomical Image Viewer for FITS and standard image formats</AssemblyDescription>
     <AssemblyCompany>Ken Faubel</AssemblyCompany>
