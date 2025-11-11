@@ -48,8 +48,8 @@ Write-Host "New version: $newVersion" -ForegroundColor Green
 Write-Host "Tag: $tagName" -ForegroundColor Green
 
 # Ask for confirmation
-$confirm = Read-Host "Continue with release? (y/n)"
-if ($confirm -ne 'y') {
+$confirm = Read-Host "`nContinue with release? (y/n)"
+if ($confirm -ne 'y' -and $confirm -ne 'Y') {
     Write-Host "Release cancelled." -ForegroundColor Yellow
     exit 0
 }
@@ -73,8 +73,8 @@ $otherChanges = $status | Where-Object { $_ -notmatch 'AstroImages.Wpf.csproj' }
 if ($otherChanges) {
     Write-Host "Warning: You have uncommitted changes:" -ForegroundColor Yellow
     Write-Host $otherChanges
-    $confirmCommit = Read-Host "Commit all changes? (y/n)"
-    if ($confirmCommit -eq 'y') {
+    $confirmCommit = Read-Host "`nCommit all changes? (y/n)"
+    if ($confirmCommit -eq 'y' -or $confirmCommit -eq 'Y') {
         git add -A
         git commit -m "Release $newVersion"
     } else {
