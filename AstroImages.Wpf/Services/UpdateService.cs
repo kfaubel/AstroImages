@@ -55,7 +55,7 @@ namespace AstroImages.Wpf.Services
                             LatestVersion = latestVersionString,
                             CurrentVersion = _currentVersion,
                             ReleaseNotes = releaseInfo.body ?? "",
-                            DownloadUrl = releaseInfo.html_url,
+                            DownloadUrl = releaseInfo.html_url ?? "",
                             ReleaseName = releaseInfo.name ?? $"Version {latestVersionString}",
                             PublishedDate = releaseInfo.published_at
                         };

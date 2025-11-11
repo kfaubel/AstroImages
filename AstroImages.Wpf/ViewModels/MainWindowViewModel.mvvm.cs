@@ -36,6 +36,7 @@ namespace AstroImages.Wpf.ViewModels
         // By convention, private fields start with underscore (_) and use camelCase naming.
         private double _zoomLevel = 1.0;       // Current zoom level for image display
         private double _fitScale = 1.0;        // Scale factor when fitting image to window
+        private string _currentDirectory = string.Empty;  // Currently opened folder path
         #endregion
 
         #region Image Display Properties
@@ -163,6 +164,9 @@ namespace AstroImages.Wpf.ViewModels
         /// <param name="directoryPath">Path to the directory containing files to load</param>
         public void LoadFiles(string directoryPath, Action<int, int>? progressCallback = null)
         {
+            // Set the current directory for display in title and status bar
+            CurrentDirectory = directoryPath;
+            
             // Clear existing files from the observable collection
             // First, unhook event handlers from existing items
             foreach (var fileItem in Files)
@@ -209,11 +213,17 @@ namespace AstroImages.Wpf.ViewModels
         /// Refreshes the custom keywords for all files in the current list.
         /// Called when custom keyword configuration changes.
         /// </summary>
-        public void RefreshFileListKeywords()
+        public void RefreshFileListKeywords(Action<int, int>? progressCallback = null)
         {
+            int total = Files.Count;
+            int current = 0;
+            
             foreach (var fileItem in Files)
             {
                 fileItem.CustomKeywords = _keywordExtractionService.ExtractCustomKeywordsFromFilename(fileItem.Name, _appConfig.CustomKeywords);
+                
+                current++;
+                progressCallback?.Invoke(current, total);
             }
         }
 
@@ -221,11 +231,17 @@ namespace AstroImages.Wpf.ViewModels
         /// Refreshes the FITS keywords for all files in the current list.
         /// Called when FITS keyword configuration changes.
         /// </summary>
-        public void RefreshFileListFitsKeywords()
+        public void RefreshFileListFitsKeywords(Action<int, int>? progressCallback = null)
         {
+            int total = Files.Count;
+            int current = 0;
+            
             foreach (var fileItem in Files)
             {
                 fileItem.FitsKeywords = _keywordExtractionService.ExtractFitsKeywords(fileItem.Path, _appConfig.FitsKeywords);
+                
+                current++;
+                progressCallback?.Invoke(current, total);
             }
         }
         #endregion
@@ -295,6 +311,93 @@ namespace AstroImages.Wpf.ViewModels
                     return $"{selectedCount} of {totalCount} file{(totalCount != 1 ? "s" : "")} selected";
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the currently opened directory path.
+        /// This is used for the window title and status bar display.
+        /// </summary>
+        public string CurrentDirectory
+        {
+            get => _currentDirectory;
+            set
+            {
+                if (_currentDirectory != value)
+                {
+                    _currentDirectory = value;
+                    OnPropertyChanged(nameof(CurrentDirectory));
+                    OnPropertyChanged(nameof(WindowTitle));
+                    OnPropertyChanged(nameof(StatusBarText));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Computed property for the window title showing application name and current folder.
+        /// </summary>
+        public string WindowTitle
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(CurrentDirectory))
+                {
+                    return "AstroImages";
+                }
+                
+                // Show just the folder name in the title
+                var folderName = System.IO.Path.GetFileName(CurrentDirectory);
+                return $"AstroImages - {folderName}";
+            }
+        }
+
+        /// <summary>
+        /// Computed property for the status bar showing full path and file statistics.
+        /// </summary>
+        public string StatusBarText
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(CurrentDirectory))
+                {
+                    return "No folder opened";
+                }
+                
+                int selectedCount = Files.Count(f => f.IsSelected);
+                int totalCount = Files.Count;
+                
+                // Calculate total size
+                long totalBytes = 0;
+                foreach (var file in Files)
+                {
+                    if (System.IO.File.Exists(file.Path))
+                    {
+                        totalBytes += new System.IO.FileInfo(file.Path).Length;
+                    }
+                }
+                
+                string sizeText = FormatFileSize(totalBytes);
+                string selectionText = selectedCount > 0 ? $" | {selectedCount} selected" : "";
+                
+                return $"📁 {CurrentDirectory} | {totalCount} file{(totalCount != 1 ? "s" : "")}{selectionText} | {sizeText}";
+            }
+        }
+
+        /// <summary>
+        /// Formats file size in human-readable format (bytes, KB, MB, GB).
+        /// </summary>
+        private string FormatFileSize(long bytes)
+        {
+            string[] sizes = { "bytes", "KB", "MB", "GB", "TB" };
+            double len = bytes;
+            int order = 0;
+            
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            
+            return $"{len:0.##} {sizes[order]}";
         }
 
         // Navigation commands - these handle moving through the file list
@@ -621,6 +724,16 @@ namespace AstroImages.Wpf.ViewModels
         public event Action<string>? LoadFilesWithProgressRequested;
 
         /// <summary>
+        /// Event that requests the View to refresh custom keywords with a progress dialog.
+        /// </summary>
+        public event Action? RefreshCustomKeywordsWithProgressRequested;
+
+        /// <summary>
+        /// Event that requests the View to refresh FITS keywords with a progress dialog.
+        /// </summary>
+        public event Action? RefreshFitsKeywordsWithProgressRequested;
+
+        /// <summary>
         /// Called by the View when an image has finished rendering.
         /// Used for play mode to start the delay after image rendering is complete.
         /// </summary>
@@ -786,10 +899,10 @@ namespace AstroImages.Wpf.ViewModels
             {
                 _appConfig.CustomKeywords = result;
                 _appConfig.Save();
-                RefreshFileListKeywords();
-                _listViewColumnService.UpdateListViewColumns();
-                // Auto-resize columns after configuration change
-                _listViewColumnService.AutoResizeColumns();
+                
+                // Request the View to refresh with progress dialog
+                // Column updates happen in the async handler after refresh completes
+                RefreshCustomKeywordsWithProgressRequested?.Invoke();
             }
         }
 
@@ -800,10 +913,10 @@ namespace AstroImages.Wpf.ViewModels
             {
                 _appConfig.FitsKeywords = result;
                 _appConfig.Save();
-                RefreshFileListFitsKeywords();
-                _listViewColumnService.UpdateListViewColumns();
-                // Auto-resize columns after configuration change
-                _listViewColumnService.AutoResizeColumns();
+                
+                // Request the View to refresh with progress dialog
+                // Column updates happen in the async handler after refresh completes
+                RefreshFitsKeywordsWithProgressRequested?.Invoke();
             }
         }
 
@@ -907,6 +1020,7 @@ namespace AstroImages.Wpf.ViewModels
             {
                 OnPropertyChanged(nameof(HasSelectedFiles));
                 OnPropertyChanged(nameof(FileSelectionStatusText));
+                OnPropertyChanged(nameof(StatusBarText));
             }
         }
     }

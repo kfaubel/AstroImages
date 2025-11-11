@@ -115,6 +115,13 @@ namespace AstroImages.Wpf
             _viewModel.LoadFilesWithProgressRequested += async (directoryPath) => 
                 await LoadFilesWithProgressAsync(directoryPath, isStartup: false);
 
+            // Wire up refresh keywords with progress events
+            _viewModel.RefreshCustomKeywordsWithProgressRequested += async () => 
+                await RefreshCustomKeywordsWithProgressAsync();
+            
+            _viewModel.RefreshFitsKeywordsWithProgressRequested += async () => 
+                await RefreshFitsKeywordsWithProgressAsync();
+
             // Load last directory if available - do this asynchronously to show UI quickly
             if (!string.IsNullOrEmpty(config.LastOpenDirectory) && System.IO.Directory.Exists(config.LastOpenDirectory))
             {
@@ -226,6 +233,102 @@ namespace AstroImages.Wpf
                         // Don't crash the app over a preference setting
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Refreshes custom keywords with a progress dialog
+        /// </summary>
+        private async Task RefreshCustomKeywordsWithProgressAsync()
+        {
+            LoadingWindow? loadingWindow = null;
+            
+            try
+            {
+                // Show loading dialog on UI thread
+                loadingWindow = new LoadingWindow("Refreshing custom keywords...");
+                loadingWindow.Owner = this;
+                loadingWindow.Show();
+                
+                // Allow UI to update
+                await Task.Delay(50);
+                
+                // Run refresh on background thread
+                await Task.Run(() =>
+                {
+                    if (_viewModel != null)
+                    {
+                        // Use Dispatcher to update UI thread
+                        Dispatcher.Invoke(() =>
+                        {
+                            _viewModel.RefreshFileListKeywords((current, total) =>
+                            {
+                                // Update progress bar on UI thread
+                                loadingWindow.UpdateProgress(current, total);
+                                
+                                // Force UI to update by processing events at background priority
+                                Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+                            });
+                        });
+                    }
+                });
+                
+                // Update columns and auto-resize after refresh is complete
+                _listViewColumnService?.UpdateListViewColumns();
+                _listViewColumnService?.AutoResizeColumns();
+            }
+            finally
+            {
+                // Always close the loading window
+                loadingWindow?.Close();
+            }
+        }
+
+        /// <summary>
+        /// Refreshes FITS keywords with a progress dialog
+        /// </summary>
+        private async Task RefreshFitsKeywordsWithProgressAsync()
+        {
+            LoadingWindow? loadingWindow = null;
+            
+            try
+            {
+                // Show loading dialog on UI thread
+                loadingWindow = new LoadingWindow("Refreshing FITS keywords...");
+                loadingWindow.Owner = this;
+                loadingWindow.Show();
+                
+                // Allow UI to update
+                await Task.Delay(50);
+                
+                // Run refresh on background thread
+                await Task.Run(() =>
+                {
+                    if (_viewModel != null)
+                    {
+                        // Use Dispatcher to update UI thread
+                        Dispatcher.Invoke(() =>
+                        {
+                            _viewModel.RefreshFileListFitsKeywords((current, total) =>
+                            {
+                                // Update progress bar on UI thread
+                                loadingWindow.UpdateProgress(current, total);
+                                
+                                // Force UI to update by processing events at background priority
+                                Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+                            });
+                        });
+                    }
+                });
+                
+                // Update columns and auto-resize after refresh is complete
+                _listViewColumnService?.UpdateListViewColumns();
+                _listViewColumnService?.AutoResizeColumns();
+            }
+            finally
+            {
+                // Always close the loading window
+                loadingWindow?.Close();
             }
         }
 
