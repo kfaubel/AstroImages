@@ -167,24 +167,30 @@ namespace AstroImages.Wpf
                 await Task.Delay(50);
                 
                 // Run file loading on background thread
+                System.Collections.Generic.List<Models.FileItem>? loadedFiles = null;
+                
                 await Task.Run(() =>
                 {
                     if (_viewModel != null)
                     {
-                        // Use Dispatcher to update UI thread
-                        Dispatcher.Invoke(() =>
+                        // LoadFiles will be called on background thread, but progress callback
+                        // needs to update UI, so we marshal it to the UI thread
+                        loadedFiles = _viewModel.LoadFiles(directoryPath, (current, total) =>
                         {
-                            _viewModel.LoadFiles(directoryPath, (current, total) =>
+                            // Marshal progress update to UI thread
+                            Dispatcher.Invoke(() =>
                             {
-                                // Update progress bar on UI thread
                                 loadingWindow.UpdateProgress(current, total);
-                                
-                                // Force UI to update by processing events at background priority
-                                Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
                             });
                         });
                     }
                 });
+                
+                // Update ObservableCollection on UI thread
+                if (_viewModel != null && loadedFiles != null)
+                {
+                    _viewModel.UpdateFilesCollection(loadedFiles);
+                }
                 
                 // Select first image if available (only on startup)
                 if (isStartup && _viewModel != null && _viewModel.Files.Count > 0)
@@ -226,24 +232,30 @@ namespace AstroImages.Wpf
                 await Task.Delay(50);
                 
                 // Run file loading on background thread
+                System.Collections.Generic.List<Models.FileItem>? loadedFiles = null;
+                
                 await Task.Run(() =>
                 {
                     if (_viewModel != null)
                     {
-                        // Use Dispatcher to update UI thread
-                        Dispatcher.Invoke(() =>
+                        // LoadSpecificFiles will be called on background thread, but progress callback
+                        // needs to update UI, so we marshal it to the UI thread
+                        loadedFiles = _viewModel.LoadSpecificFiles(filePaths, (current, total) =>
                         {
-                            _viewModel.LoadSpecificFiles(filePaths, (current, total) =>
+                            // Marshal progress update to UI thread
+                            Dispatcher.Invoke(() =>
                             {
-                                // Update progress bar on UI thread
                                 loadingWindow.UpdateProgress(current, total);
-                                
-                                // Force UI to update by processing events at background priority
-                                Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
                             });
                         });
                     }
                 });
+                
+                // Update ObservableCollection on UI thread
+                if (_viewModel != null && loadedFiles != null)
+                {
+                    _viewModel.UpdateSpecificFilesCollection(loadedFiles);
+                }
                 
                 // Select first file so its image is visible
                 if (_viewModel != null && _viewModel.Files.Count > 0)

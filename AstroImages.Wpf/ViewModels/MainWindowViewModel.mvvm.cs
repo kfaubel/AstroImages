@@ -162,7 +162,7 @@ namespace AstroImages.Wpf.ViewModels
         /// we delegate to specialized services that handle the specific tasks.
         /// </summary>
         /// <param name="directoryPath">Path to the directory containing files to load</param>
-        public void LoadFiles(string directoryPath, Action<int, int>? progressCallback = null)
+        public System.Collections.Generic.List<Models.FileItem> LoadFiles(string directoryPath, Action<int, int>? progressCallback = null)
         {
             // Reset filtered view mode - we're loading a full directory
             IsFilteredView = false;
@@ -170,6 +170,50 @@ namespace AstroImages.Wpf.ViewModels
             // Set the current directory for display in title and status bar
             CurrentDirectory = directoryPath;
             
+            // Use the file management service to get file information
+            var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
+            
+            int total = fileItems.Count;
+            
+            // Use thread-safe counter for progress tracking
+            int processedCount = 0;
+            object progressLock = new object();
+            
+            // Process files in parallel for better performance
+            var processedItems = new System.Collections.Concurrent.ConcurrentBag<Models.FileItem>();
+            
+            System.Threading.Tasks.Parallel.ForEach(fileItems, 
+                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                fileItem =>
+                {
+                    // Extract both custom and FITS keywords for each file
+                    _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
+                    
+                    // Add to thread-safe collection
+                    processedItems.Add(fileItem);
+                    
+                    // Update progress in a thread-safe manner
+                    lock (progressLock)
+                    {
+                        processedCount++;
+                        // Report progress every 5 files to reduce overhead
+                        if (processedCount % 5 == 0 || processedCount == total)
+                        {
+                            progressCallback?.Invoke(processedCount, total);
+                        }
+                    }
+                });
+            
+            // Return sorted list - caller will add to ObservableCollection on UI thread
+            return processedItems.OrderBy(f => f.Name).ToList();
+        }
+        
+        /// <summary>
+        /// Updates the Files collection with the loaded items. Must be called on UI thread.
+        /// </summary>
+        /// <param name="fileItems">The processed file items to add</param>
+        public void UpdateFilesCollection(System.Collections.Generic.List<Models.FileItem> fileItems)
+        {
             // Clear existing files from the observable collection
             // First, unhook event handlers from existing items
             foreach (var fileItem in Files)
@@ -180,26 +224,12 @@ namespace AstroImages.Wpf.ViewModels
             // ObservableCollection automatically notifies the UI when items are added/removed
             Files.Clear();
             
-            // Use the file management service to get file information
-            var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
-            
-            int total = fileItems.Count;
-            int current = 0;
-            
-            // For each file, extract keywords and add to our collection
+            // Add all processed items to the observable collection
             foreach (var fileItem in fileItems)
             {
-                // Extract both custom and FITS keywords for each file
-                _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
-                
                 // Listen for IsSelected property changes to update HasSelectedFiles
                 fileItem.PropertyChanged += FileItem_PropertyChanged;
-                
-                Files.Add(fileItem);  // Adding to ObservableCollection triggers UI update
-                
-                // Report progress
-                current++;
-                progressCallback?.Invoke(current, total);
+                Files.Add(fileItem);
             }
 
             // Set default sort by filename
@@ -207,6 +237,7 @@ namespace AstroImages.Wpf.ViewModels
             
             // Notify that the file count and selection status has changed
             OnPropertyChanged(nameof(FileSelectionStatusText));
+            OnPropertyChanged(nameof(StatusBarText));
             
             // Notify the View that files have been loaded so it can update the UI
             FilesLoaded?.Invoke();
@@ -218,7 +249,7 @@ namespace AstroImages.Wpf.ViewModels
         /// </summary>
         /// <param name="filePaths">Array of file paths to load</param>
         /// <param name="progressCallback">Optional progress callback (current, total)</param>
-        public void LoadSpecificFiles(string[] filePaths, Action<int, int>? progressCallback = null)
+        public System.Collections.Generic.List<Models.FileItem> LoadSpecificFiles(string[] filePaths, Action<int, int>? progressCallback = null)
         {
             // Set filtered view mode and determine directory from first file
             IsFilteredView = true;
@@ -228,6 +259,52 @@ namespace AstroImages.Wpf.ViewModels
                 CurrentDirectory = System.IO.Path.GetDirectoryName(filePaths[0]) ?? "";
             }
             
+            int total = filePaths.Length;
+            
+            // Use thread-safe counter for progress tracking
+            int processedCount = 0;
+            object progressLock = new object();
+            
+            // Process files in parallel for better performance
+            var processedItems = new System.Collections.Concurrent.ConcurrentBag<Models.FileItem>();
+            
+            System.Threading.Tasks.Parallel.ForEach(filePaths,
+                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                filePath =>
+                {
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        var fileItem = _fileManagementService.GetFileInfo(filePath);
+                        
+                        // Extract both custom and FITS keywords for the file
+                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
+                        
+                        // Add to thread-safe collection
+                        processedItems.Add(fileItem);
+                    }
+                    
+                    // Update progress in a thread-safe manner
+                    lock (progressLock)
+                    {
+                        processedCount++;
+                        // Report progress every 5 files to reduce overhead
+                        if (processedCount % 5 == 0 || processedCount == total)
+                        {
+                            progressCallback?.Invoke(processedCount, total);
+                        }
+                    }
+                });
+            
+            // Return sorted list - caller will add to ObservableCollection on UI thread
+            return processedItems.OrderBy(f => f.Name).ToList();
+        }
+        
+        /// <summary>
+        /// Updates the Files collection with specific files. Must be called on UI thread.
+        /// </summary>
+        /// <param name="fileItems">The processed file items to add</param>
+        public void UpdateSpecificFilesCollection(System.Collections.Generic.List<Models.FileItem> fileItems)
+        {
             // Clear existing files from the observable collection
             // First, unhook event handlers from existing items
             foreach (var fileItem in Files)
@@ -237,28 +314,12 @@ namespace AstroImages.Wpf.ViewModels
             
             Files.Clear();
             
-            int total = filePaths.Length;
-            int current = 0;
-            
-            // Load each specified file
-            foreach (var filePath in filePaths)
+            // Add all processed items to the observable collection
+            foreach (var fileItem in fileItems)
             {
-                if (System.IO.File.Exists(filePath))
-                {
-                    var fileItem = _fileManagementService.GetFileInfo(filePath);
-                    
-                    // Extract both custom and FITS keywords for the file
-                    _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
-                    
-                    // Listen for IsSelected property changes to update HasSelectedFiles
-                    fileItem.PropertyChanged += FileItem_PropertyChanged;
-                    
-                    Files.Add(fileItem);
-                }
-                
-                // Report progress
-                current++;
-                progressCallback?.Invoke(current, total);
+                // Listen for IsSelected property changes to update HasSelectedFiles
+                fileItem.PropertyChanged += FileItem_PropertyChanged;
+                Files.Add(fileItem);
             }
             
             // Set default sort by filename

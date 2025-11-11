@@ -23,6 +23,149 @@ namespace AstroImages.Core
         }
 
         /// <summary>
+        /// Parse FITS header directly from file, reading only the header blocks.
+        /// This is much faster than reading the entire file for large FITS files.
+        /// </summary>
+        /// <param name="filePath">Path to the FITS file</param>
+        /// <returns>Dictionary of header keywords and values</returns>
+        public static Dictionary<string, object> ParseHeaderFromFile(string filePath)
+        {
+            const int blockSize = 2880;  // FITS standard block size
+            const int maxBlocks = 100;   // Maximum header blocks to read (288KB max)
+            
+            var header = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            
+            try
+            {
+                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, blockSize))
+                {
+                    byte[] blockBuffer = new byte[blockSize];
+                    
+                    for (int blockIndex = 0; blockIndex < maxBlocks; blockIndex++)
+                    {
+                        // Read one FITS block
+                        int bytesRead = fileStream.Read(blockBuffer, 0, blockSize);
+                        if (bytesRead < blockSize)
+                            break; // End of file or incomplete block
+                        
+                        // Parse this block
+                        var blockString = Encoding.ASCII.GetString(blockBuffer);
+                        bool foundEnd = ParseHeaderBlock(blockString, header);
+                        
+                        if (foundEnd)
+                            break; // Found END card, header is complete
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Return partial header on error
+            }
+            
+            return header;
+        }
+
+        /// <summary>
+        /// Parse a single FITS header block (2880 bytes) and add keywords to the header dictionary.
+        /// Returns true if END card is found.
+        /// </summary>
+        private static bool ParseHeaderBlock(string blockString, Dictionary<string, object> header)
+        {
+            const int cardSize = 80;     // FITS standard card size
+            const int blockSize = 2880;  // FITS standard block size
+            
+            for (int cardStart = 0; cardStart < blockSize; cardStart += cardSize)
+            {
+                if (cardStart + cardSize > blockSize) break;
+                
+                var card = blockString.Substring(cardStart, cardSize);
+                
+                // Check for END card
+                if (card.StartsWith("END") && (card.Length < 4 || card[3] == ' '))
+                {
+                    return true; // Found END card
+                }
+                
+                // Parse the card and add to header
+                ParseCard(card, header);
+            }
+            
+            return false; // END card not found in this block
+        }
+
+        /// <summary>
+        /// Parse a single FITS header card (80 characters) and add to header dictionary
+        /// </summary>
+        private static void ParseCard(string card, Dictionary<string, object> header)
+        {
+            try
+            {
+                // Skip blank lines and comment-only lines
+                if (string.IsNullOrWhiteSpace(card) || card.StartsWith("COMMENT") || card.StartsWith("HISTORY"))
+                    return;
+                
+                // Extract keyword (first 8 characters, trimmed)
+                if (card.Length < 8) return;
+                var keyword = card.Substring(0, 8).Trim();
+                if (string.IsNullOrEmpty(keyword)) return;
+                
+                // Check for value indicator (= in position 8)
+                if (card.Length < 10 || card[8] != '=') return;
+                
+                // Extract value and comment
+                var valueAndComment = card.Substring(10); // After "KEYWORD = "
+                var value = ExtractValue(valueAndComment);
+                
+                if (value != null && !header.ContainsKey(keyword))
+                {
+                    header[keyword] = value;
+                }
+            }
+            catch (Exception)
+            {
+                // Skip malformed cards
+            }
+        }
+
+        /// <summary>
+        /// Extract value from FITS card value section
+        /// </summary>
+        private static object? ExtractValue(string valueAndComment)
+        {
+            var trimmed = valueAndComment.Trim();
+            if (string.IsNullOrEmpty(trimmed)) return null;
+            
+            // String value (enclosed in single quotes)
+            if (trimmed.StartsWith("'"))
+            {
+                var endQuote = trimmed.IndexOf("'", 1);
+                if (endQuote > 0)
+                {
+                    return trimmed.Substring(1, endQuote - 1).Trim();
+                }
+                return trimmed.Substring(1).Trim();
+            }
+            
+            // Remove inline comment (anything after /)
+            var commentPos = trimmed.IndexOf('/');
+            if (commentPos >= 0)
+            {
+                trimmed = trimmed.Substring(0, commentPos).Trim();
+            }
+            
+            // Boolean value
+            if (trimmed == "T") return true;
+            if (trimmed == "F") return false;
+            
+            // Numeric value
+            if (int.TryParse(trimmed, out int intVal)) return intVal;
+            if (double.TryParse(trimmed, out double doubleVal)) return doubleVal;
+            
+            // Return as string if nothing else matches
+            return trimmed;
+        }
+
+        /// <summary>
         /// Enhanced FITS header parser with comprehensive support for all FITS header types
         /// and robust error handling
         /// </summary>

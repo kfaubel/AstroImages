@@ -26,8 +26,8 @@ namespace AstroImages.Wpf.Services
                 // Only process FITS files for FITS keyword extraction
                 if (FitsUtilities.IsFitsFile(filePath))
                 {
-                    var fileBytes = File.ReadAllBytes(filePath);
-                    var fitsHeaders = FitsParser.ParseHeader(fileBytes);
+                    // Use the optimized header-only reader instead of reading entire file
+                    var fitsHeaders = FitsParser.ParseHeaderFromFile(filePath);
 
                     foreach (var keyword in keywords)
                     {
