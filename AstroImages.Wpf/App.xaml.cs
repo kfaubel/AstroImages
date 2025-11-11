@@ -49,9 +49,14 @@ namespace AstroImages.Wpf
                 // Initialize the theme service before creating any windows
                 ThemeService.Initialize();
                 
+                // Extract file paths from command-line arguments (if any)
+                // When user opens files with our app from Explorer, paths are passed as arguments
+                string[]? filePaths = e.Args.Length > 0 ? e.Args : null;
+                
                 // Create the main application window first
                 // The window will apply saved position/size settings from config automatically
-                var win = new MainWindow();
+                // Pass file paths if provided so it can load only those files
+                var win = new MainWindow(filePaths);
                 
                 // Set this as the application's main window - WPF uses this to know when to exit
                 this.MainWindow = win;

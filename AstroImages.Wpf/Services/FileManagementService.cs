@@ -79,6 +79,24 @@ namespace AstroImages.Wpf.Services
             return newFilePath;
         }
 
+        /// <summary>
+        /// Gets file information for a single file path.
+        /// Used when loading specific files instead of a full directory.
+        /// </summary>
+        /// <param name="filePath">Full path to the file</param>
+        /// <returns>FileItem with basic file information</returns>
+        public FileItem GetFileInfo(string filePath)
+        {
+            var fileInfo = new FileInfo(filePath);
+            
+            return new FileItem
+            {
+                Name = fileInfo.Name,
+                Path = fileInfo.FullName,
+                Size = fileInfo.Length
+            };
+        }
+
         public List<FileItem> LoadFilesFromDirectory(string directory)
         {
             var files = new List<FileItem>();

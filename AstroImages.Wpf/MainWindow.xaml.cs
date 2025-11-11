@@ -24,13 +24,19 @@ namespace AstroImages.Wpf
         // Private field to hold reference to the ListView column service
         // Used for auto-resizing columns when data changes
         private IListViewColumnService? _listViewColumnService;
+        
+        // Private field to store command-line file paths (if provided)
+        private readonly string[]? _commandLineFilePaths;
 
         /// <summary>
         /// Constructor - called when creating a new MainWindow instance.
         /// This sets up all the services and connects the UI to the ViewModel.
         /// </summary>
-        public MainWindow()
+        /// <param name="filePaths">Optional array of file paths from command-line arguments</param>
+        public MainWindow(string[]? filePaths = null)
         {
+            _commandLineFilePaths = filePaths;
+            
             // Initialize WPF components from the XAML file
             // This must be called before accessing any UI elements
             InitializeComponent();
@@ -122,10 +128,16 @@ namespace AstroImages.Wpf
             _viewModel.RefreshFitsKeywordsWithProgressRequested += async () => 
                 await RefreshFitsKeywordsWithProgressAsync();
 
-            // Load last directory if available - do this asynchronously to show UI quickly
-            if (!string.IsNullOrEmpty(config.LastOpenDirectory) && System.IO.Directory.Exists(config.LastOpenDirectory))
+            // Handle startup file loading
+            if (_commandLineFilePaths != null && _commandLineFilePaths.Length > 0)
             {
-                // Start loading files asynchronously after UI is shown
+                // User opened specific files from Windows Explorer
+                // Load only those files instead of entire directory
+                Loaded += async (sender, e) => await LoadSpecificFilesWithProgressAsync(_commandLineFilePaths);
+            }
+            else if (!string.IsNullOrEmpty(config.LastOpenDirectory) && System.IO.Directory.Exists(config.LastOpenDirectory))
+            {
+                // No command-line files, load last opened directory
                 Loaded += async (sender, e) => await LoadFilesWithProgressAsync(config.LastOpenDirectory, isStartup: true);
             }
 
@@ -193,6 +205,60 @@ namespace AstroImages.Wpf
                 {
                     ShowSplashScreenIfEnabled();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Loads specific files (from command-line arguments) with a progress dialog
+        /// </summary>
+        private async Task LoadSpecificFilesWithProgressAsync(string[] filePaths)
+        {
+            LoadingWindow? loadingWindow = null;
+            
+            try
+            {
+                // Show loading dialog on UI thread
+                loadingWindow = new LoadingWindow($"Loading {filePaths.Length} file{(filePaths.Length != 1 ? "s" : "")}...");
+                loadingWindow.Owner = this;
+                loadingWindow.Show();
+                
+                // Allow UI to update
+                await Task.Delay(50);
+                
+                // Run file loading on background thread
+                await Task.Run(() =>
+                {
+                    if (_viewModel != null)
+                    {
+                        // Use Dispatcher to update UI thread
+                        Dispatcher.Invoke(() =>
+                        {
+                            _viewModel.LoadSpecificFiles(filePaths, (current, total) =>
+                            {
+                                // Update progress bar on UI thread
+                                loadingWindow.UpdateProgress(current, total);
+                                
+                                // Force UI to update by processing events at background priority
+                                Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+                            });
+                        });
+                    }
+                });
+                
+                // Select first file so its image is visible
+                if (_viewModel != null && _viewModel.Files.Count > 0)
+                {
+                    _viewModel.SelectedIndex = 0;
+                }
+                
+                // Auto-resize columns after loading files
+                _listViewColumnService?.UpdateListViewColumns();
+                _listViewColumnService?.AutoResizeColumns();
+            }
+            finally
+            {
+                // Always close the loading window
+                loadingWindow?.Close();
             }
         }
 

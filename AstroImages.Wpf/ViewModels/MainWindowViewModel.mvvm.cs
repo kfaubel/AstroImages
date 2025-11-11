@@ -164,6 +164,9 @@ namespace AstroImages.Wpf.ViewModels
         /// <param name="directoryPath">Path to the directory containing files to load</param>
         public void LoadFiles(string directoryPath, Action<int, int>? progressCallback = null)
         {
+            // Reset filtered view mode - we're loading a full directory
+            IsFilteredView = false;
+            
             // Set the current directory for display in title and status bar
             CurrentDirectory = directoryPath;
             
@@ -204,6 +207,66 @@ namespace AstroImages.Wpf.ViewModels
             
             // Notify that the file count and selection status has changed
             OnPropertyChanged(nameof(FileSelectionStatusText));
+            
+            // Notify the View that files have been loaded so it can update the UI
+            FilesLoaded?.Invoke();
+        }
+
+        /// <summary>
+        /// Loads only the specified files (used when opening files from Windows Explorer).
+        /// This method loads specific files instead of scanning an entire directory.
+        /// </summary>
+        /// <param name="filePaths">Array of file paths to load</param>
+        /// <param name="progressCallback">Optional progress callback (current, total)</param>
+        public void LoadSpecificFiles(string[] filePaths, Action<int, int>? progressCallback = null)
+        {
+            // Set filtered view mode and determine directory from first file
+            IsFilteredView = true;
+            
+            if (filePaths.Length > 0)
+            {
+                CurrentDirectory = System.IO.Path.GetDirectoryName(filePaths[0]) ?? "";
+            }
+            
+            // Clear existing files from the observable collection
+            // First, unhook event handlers from existing items
+            foreach (var fileItem in Files)
+            {
+                fileItem.PropertyChanged -= FileItem_PropertyChanged;
+            }
+            
+            Files.Clear();
+            
+            int total = filePaths.Length;
+            int current = 0;
+            
+            // Load each specified file
+            foreach (var filePath in filePaths)
+            {
+                if (System.IO.File.Exists(filePath))
+                {
+                    var fileItem = _fileManagementService.GetFileInfo(filePath);
+                    
+                    // Extract both custom and FITS keywords for the file
+                    _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
+                    
+                    // Listen for IsSelected property changes to update HasSelectedFiles
+                    fileItem.PropertyChanged += FileItem_PropertyChanged;
+                    
+                    Files.Add(fileItem);
+                }
+                
+                // Report progress
+                current++;
+                progressCallback?.Invoke(current, total);
+            }
+            
+            // Set default sort by filename
+            SortByColumn("File");
+            
+            // Notify that the file count and selection status has changed
+            OnPropertyChanged(nameof(FileSelectionStatusText));
+            OnPropertyChanged(nameof(StatusBarText));
             
             // Notify the View that files have been loaded so it can update the UI
             FilesLoaded?.Invoke();
@@ -333,6 +396,12 @@ namespace AstroImages.Wpf.ViewModels
         }
 
         /// <summary>
+        /// Indicates whether we're showing a filtered view (specific files from command-line)
+        /// instead of all files from a directory.
+        /// </summary>
+        public bool IsFilteredView { get; set; }
+
+        /// <summary>
         /// Computed property for the window title showing application name and current folder.
         /// </summary>
         public string WindowTitle
@@ -365,20 +434,12 @@ namespace AstroImages.Wpf.ViewModels
                 int selectedCount = Files.Count(f => f.IsSelected);
                 int totalCount = Files.Count;
                 
-                // Calculate total size
-                long totalBytes = 0;
-                foreach (var file in Files)
-                {
-                    if (System.IO.File.Exists(file.Path))
-                    {
-                        totalBytes += new System.IO.FileInfo(file.Path).Length;
-                    }
-                }
-                
-                string sizeText = FormatFileSize(totalBytes);
                 string selectionText = selectedCount > 0 ? $" | {selectedCount} selected" : "";
                 
-                return $"📁 {CurrentDirectory} | {totalCount} file{(totalCount != 1 ? "s" : "")}{selectionText} | {sizeText}";
+                // Add filtered view indicator
+                string filteredViewText = IsFilteredView ? $" (showing {totalCount} selected file{(totalCount != 1 ? "s" : "")})" : "";
+                
+                return $"📁 {CurrentDirectory} | {totalCount} file{(totalCount != 1 ? "s" : "")}{selectionText}{filteredViewText}";
             }
         }
 
