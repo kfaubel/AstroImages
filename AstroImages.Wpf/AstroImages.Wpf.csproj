@@ -10,9 +10,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>AstroImages</AssemblyName>
     <!-- Version Information -->
-    <Version>1.0.7</Version>
-    <AssemblyVersion>1.0.7.0</AssemblyVersion>
-    <FileVersion>1.0.7.0</FileVersion>
+    <Version>1.0.8</Version>
+    <AssemblyVersion>1.0.8.0</AssemblyVersion>
+    <FileVersion>1.0.8.0</FileVersion>
     <AssemblyTitle>AstroImages</AssemblyTitle>
     <AssemblyDescription>Astronomical Image Viewer for FITS and standard image formats</AssemblyDescription>
     <AssemblyCompany>Ken Faubel</AssemblyCompany>
