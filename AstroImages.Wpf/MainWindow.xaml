@@ -6,6 +6,9 @@
         Icon="icon.ico"
         Background="{DynamicResource ThemeWindowBackground}"
         Foreground="{DynamicResource ThemeForeground}">
+    <Window.InputBindings>
+        <KeyBinding Key="O" Modifiers="Ctrl+Shift" Command="{Binding OpenFilesCommand}" />
+    </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -17,6 +20,7 @@
         <Menu Grid.Row="0">
             <MenuItem Header="File">
                 <MenuItem Header="Open Folder..." Command="{Binding OpenFolderDialogCommand}" />
+                <MenuItem Header="Open Files..." Click="OpenFiles_Click" InputGestureText="Ctrl+Shift+O" />
                 <Separator />
                 <MenuItem Header="Exit" Click="Exit_Click" />
             </MenuItem>

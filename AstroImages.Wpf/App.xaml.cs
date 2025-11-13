@@ -1,5 +1,6 @@
 using System.Windows;
 using System.IO;
+using System.Threading;
 using AstroImages.Wpf.Services;
 
 namespace AstroImages.Wpf
@@ -11,6 +12,8 @@ namespace AstroImages.Wpf
     /// </summary>
     public partial class App : System.Windows.Application
     {
+        private static Mutex? _mutex;
+        private const string MutexName = "AstroImages_SingleInstance_Mutex";
 
         /// <summary>
         /// Constructor - sets up global exception handling
@@ -41,6 +44,25 @@ namespace AstroImages.Wpf
         /// <param name="e">Startup arguments passed to the application</param>
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Check if another instance is already running
+            bool createdNew;
+            _mutex = new Mutex(true, MutexName, out createdNew);
+
+            if (!createdNew)
+            {
+                // Another instance is already running
+                // Show message and exit
+                System.Windows.MessageBox.Show(
+                    "AstroImages is already running. Please use the running instance to open files.\n\n" +
+                    "Note: To open multiple files, select them all in Windows Explorer before right-clicking 'Open with'.",
+                    "AstroImages Already Running",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                
+                Current.Shutdown();
+                return;
+            }
+
             try
             {
                 // Always call the base class method first - this initializes the WPF framework
@@ -52,6 +74,16 @@ namespace AstroImages.Wpf
                 // Extract file paths from command-line arguments (if any)
                 // When user opens files with our app from Explorer, paths are passed as arguments
                 string[]? filePaths = e.Args.Length > 0 ? e.Args : null;
+                
+                // Debug: Log the arguments received
+                if (filePaths != null && filePaths.Length > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Command-line arguments received: {filePaths.Length} files");
+                    for (int i = 0; i < filePaths.Length; i++)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  [{i}]: {filePaths[i]}");
+                    }
+                }
                 
                 // Create the main application window first
                 // The window will apply saved position/size settings from config automatically
@@ -96,6 +128,17 @@ namespace AstroImages.Wpf
                 }
                 Environment.Exit(1); // Exit with error code 1
             }
+        }
+
+        /// <summary>
+        /// Clean up mutex on exit
+        /// </summary>
+        /// <param name="e"></param>
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _mutex?.ReleaseMutex();
+            _mutex?.Dispose();
+            base.OnExit(e);
         }
 
         /// <summary>

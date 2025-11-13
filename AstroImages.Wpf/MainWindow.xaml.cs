@@ -121,6 +121,9 @@ namespace AstroImages.Wpf
             _viewModel.LoadFilesWithProgressRequested += async (directoryPath) => 
                 await LoadFilesWithProgressAsync(directoryPath, isStartup: false);
 
+            // Wire up open files event
+            _viewModel.OpenFilesRequested += () => OpenFiles_Click(this, new RoutedEventArgs());
+
             // Wire up refresh keywords with progress events
             _viewModel.RefreshCustomKeywordsWithProgressRequested += async () => 
                 await RefreshCustomKeywordsWithProgressAsync();
@@ -192,8 +195,8 @@ namespace AstroImages.Wpf
                     _viewModel.UpdateFilesCollection(loadedFiles);
                 }
                 
-                // Select first image if available (only on startup)
-                if (isStartup && _viewModel != null && _viewModel.Files.Count > 0)
+                // Select first image if available
+                if (_viewModel != null && _viewModel.Files.Count > 0)
                 {
                     _viewModel.SelectedIndex = 0;
                 }
@@ -933,6 +936,34 @@ namespace AstroImages.Wpf
         {
             // Close the main window, which will trigger the Closing event and save state
             this.Close();
+        }
+
+        /// <summary>
+        /// Opens a file dialog to select multiple image files
+        /// </summary>
+        private async void OpenFiles_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Select Image Files",
+                Multiselect = true,
+                Filter = "All Supported Files|*.fits;*.fit;*.fts;*.xisf;*.jpg;*.jpeg;*.png;*.bmp;*.tiff;*.tif;*.gif;*.webp|" +
+                        "FITS Files (*.fits, *.fit, *.fts)|*.fits;*.fit;*.fts|" +
+                        "XISF Files (*.xisf)|*.xisf|" +
+                        "JPEG Files (*.jpg, *.jpeg)|*.jpg;*.jpeg|" +
+                        "PNG Files (*.png)|*.png|" +
+                        "BMP Files (*.bmp)|*.bmp|" +
+                        "TIFF Files (*.tiff, *.tif)|*.tiff;*.tif|" +
+                        "GIF Files (*.gif)|*.gif|" +
+                        "WebP Files (*.webp)|*.webp|" +
+                        "All Files (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == true && dialog.FileNames.Length > 0)
+            {
+                // Load the selected files
+                await LoadSpecificFilesWithProgressAsync(dialog.FileNames);
+            }
         }
 
         #region Window State Management

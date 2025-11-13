@@ -254,6 +254,13 @@ namespace AstroImages.Wpf.ViewModels
             // Set filtered view mode and determine directory from first file
             IsFilteredView = true;
             
+            // Debug: Log the files being processed
+            System.Diagnostics.Debug.WriteLine($"LoadSpecificFiles called with {filePaths.Length} files");
+            foreach (var path in filePaths)
+            {
+                System.Diagnostics.Debug.WriteLine($"  File: {path}");
+            }
+            
             if (filePaths.Length > 0)
             {
                 CurrentDirectory = System.IO.Path.GetDirectoryName(filePaths[0]) ?? "";
@@ -296,7 +303,9 @@ namespace AstroImages.Wpf.ViewModels
                 });
             
             // Return sorted list - caller will add to ObservableCollection on UI thread
-            return processedItems.OrderBy(f => f.Name).ToList();
+            var result = processedItems.OrderBy(f => f.Name).ToList();
+            System.Diagnostics.Debug.WriteLine($"LoadSpecificFiles returning {result.Count} items");
+            return result;
         }
         
         /// <summary>
@@ -305,6 +314,8 @@ namespace AstroImages.Wpf.ViewModels
         /// <param name="fileItems">The processed file items to add</param>
         public void UpdateSpecificFilesCollection(System.Collections.Generic.List<Models.FileItem> fileItems)
         {
+            System.Diagnostics.Debug.WriteLine($"UpdateSpecificFilesCollection called with {fileItems.Count} items");
+            
             // Clear existing files from the observable collection
             // First, unhook event handlers from existing items
             foreach (var fileItem in Files)
@@ -317,10 +328,13 @@ namespace AstroImages.Wpf.ViewModels
             // Add all processed items to the observable collection
             foreach (var fileItem in fileItems)
             {
+                System.Diagnostics.Debug.WriteLine($"  Adding file: {fileItem.Name}");
                 // Listen for IsSelected property changes to update HasSelectedFiles
                 fileItem.PropertyChanged += FileItem_PropertyChanged;
                 Files.Add(fileItem);
             }
+            
+            System.Diagnostics.Debug.WriteLine($"Files collection now has {Files.Count} items");
             
             // Set default sort by filename
             SortByColumn("File");
@@ -697,6 +711,7 @@ namespace AstroImages.Wpf.ViewModels
         public RelayCommand RefreshCustomKeywordsCommand { get; }        // Refresh custom keyword extraction
         public RelayCommand RefreshFitsKeywordsCommand { get; }          // Refresh FITS keyword extraction
         public RelayCommand OpenFolderDialogCommand { get; }             // Show folder selection dialog
+        public RelayCommand OpenFilesCommand { get; }                    // Open specific files dialog
         public RelayCommand ShowGeneralOptionsDialogCommand { get; }     // Show general application options
         public RelayCommand ShowCustomKeywordsDialogCommand { get; }     // Show custom keywords configuration
         public RelayCommand ShowFitsKeywordsDialogCommand { get; }       // Show FITS keywords configuration
@@ -767,6 +782,7 @@ namespace AstroImages.Wpf.ViewModels
             RefreshCustomKeywordsCommand = new RelayCommand(_ => RefreshFileListKeywords());
             RefreshFitsKeywordsCommand = new RelayCommand(_ => RefreshFileListFitsKeywords());
             OpenFolderDialogCommand = new RelayCommand(_ => OpenFolderAndLoadFiles());
+            OpenFilesCommand = new RelayCommand(_ => OpenFilesRequested?.Invoke());
             ShowGeneralOptionsDialogCommand = new RelayCommand(_ => ShowGeneralOptionsDialog());
             ShowCustomKeywordsDialogCommand = new RelayCommand(_ => ShowCustomKeywordsDialog());
             ShowFitsKeywordsDialogCommand = new RelayCommand(_ => ShowFitsKeywordsDialog());
@@ -844,6 +860,11 @@ namespace AstroImages.Wpf.ViewModels
         /// The string parameter is the directory path to load.
         /// </summary>
         public event Action<string>? LoadFilesWithProgressRequested;
+
+        /// <summary>
+        /// Event that requests the View to show the open files dialog.
+        /// </summary>
+        public event Action? OpenFilesRequested;
 
         /// <summary>
         /// Event that requests the View to refresh custom keywords with a progress dialog.

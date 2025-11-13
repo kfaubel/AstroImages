@@ -14,7 +14,7 @@
         
         <!-- Documentation Content -->
         <FlowDocumentScrollViewer Name="DocumentViewer" Grid.Row="0" Margin="10">
-            <FlowDocument Name="DocumentContent" FontFamily="Segoe UI" FontSize="12">
+            <FlowDocument Name="DocumentContent" FontFamily="Segoe UI" FontSize="14">
                 <!-- Content will be loaded dynamically -->
             </FlowDocument>
         </FlowDocumentScrollViewer>
