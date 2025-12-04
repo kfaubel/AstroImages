@@ -4,13 +4,13 @@ A modern WPF application for browsing and reviewing astronomical images and FITS
 
 ## Key Features
 
-- **Multi-format support**: FITS, XISF, JPEG, PNG, BMP, TIFF, GIF, and WebP files
-- **FITS file support**: Native parsing and display of astronomical FITS files
-- **XISF file support**: Full support for PixInsight's XISF format with metadata extraction
-- **Filename parsing**: Extract metadata from structured filenames (perfect for NINA users)
-- **FITS header display**: View and sort by FITS header keywords and XISF properties
-- **File metadata viewer**: Click the (i) button on any row to view comprehensive file metadata, headers, and image properties
-- **File sorting**: Select and move multiple files to another folder or the trash
+- **View FITS and XISF astronomical images** - Includes display of metadata for these file formats
+- **View other common image foramts** - JPG, PNG, BMP, GIF, WEBP and TIFF
+- **Zoom and pan controls** - Navigate through your images with mouse wheel zoom and drag-to-pan functionality
+- **File metadata display** - View filename metadata as well as info in FITS/XISF headers
+- **Select and move images** - Select images and then move them to a processing folder or the recycle bin
+- **Image statistics and analysis** - Examine pixel statistics and image properties
+- **Dark mode** - Switch between light and dark themes for comfortable viewing
 
 ### Support for NINA Users
 
@@ -57,7 +57,7 @@ This app can parse RMS, HFR, star count, and other quality metrics directly from
 1. **Clone the repository**
    ```powershell
    git clone https://github.com/kfaubel/AstroImages.git
-   cd AstroImages2
+   cd AstroImages
    ```
 
 2. **Open in VS Code**
@@ -78,6 +78,9 @@ This app can parse RMS, HFR, star count, and other quality metrics directly from
 ```powershell
 # Restore dependencies
 dotnet restore
+
+# Remove derived files
+dotnet clean
 
 # Build the solution
 dotnet build
@@ -110,32 +113,7 @@ AstroImages2/
 └── TestData/                 # Sample FITS files for testing
 ```
 
-### Architecture
-
-This application follows the **MVVM (Model-View-ViewModel)** pattern with **Dependency Injection**:
-
-- **Models**: Data structures (`FileItem`, `AppConfig`)
-- **Views**: XAML files (`MainWindow.xaml`, etc.)
-- **ViewModels**: UI logic and binding (`MainWindowViewModel`)
-- **Services**: Business logic (file management, configuration, dialogs)
-
 ---
-
-## Building and Publishing
-
-### Debug vs Release Builds
-
-```powershell
-# Debug build (default)
-dotnet build
-
-# Release build (optimized)
-dotnet build --configuration Release
-
-# Clean and rebuild
-dotnet clean
-dotnet build --configuration Release
-```
 
 ### Creating Distributable Releases
 
@@ -146,55 +124,20 @@ dotnet build --configuration Release
 dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained
 ```
 
-#### Alternative: Self-Contained Executable
-
-```powershell
-# Large single file - includes .NET runtime (156MB+)
-dotnet publish AstroImages.Wpf -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
-```
-
 ### Publishing to GitHub Releases
 
-1. **Create a release build**
-   ```powershell
-   dotnet publish AstroImages.Wpf -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
-   ```
+See the .gethub/wrokflow/release.yaml for setup to deploy a release to github 
 
-2. **Create GitHub release**
-   - Go to your GitHub repository
-   - Click "Releases" → "Create a new release"
-   - Tag version (e.g., `v1.0.0`)
-   - Upload the executable from the publish folder
-   - Add release notes
+#### Manually publish a new version
 
-3. **Automated releases** (optional)
-   - Use GitHub Actions for automated builds
-   - Create `.github/workflows/release.yml`:
+Update the version number in the project files in AstroImages.Wpf.cproj
 
-```yaml
-name: Release
+```powershell
+# Apply a tag starting with a 'v'
+git tag v1.0.0
 
-on:
-  push:
-    tags: ['v*']
-
-jobs:
-  release:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
-    - name: Publish
-      run: dotnet publish AstroImages.Wpf -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
-    - name: Create Release
-      uses: actions/create-release@v1
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        files: AstroImages.Wpf/bin/Release/net8.0-windows/win-x64/publish/AstroImages.Wpf.exe
+# Push the tag to the remote repository to trigger a release
+git push origin v1.0.0
 ```
 
 ---
@@ -263,69 +206,9 @@ Always include timestamping when signing:
 
 ---
 
-## Testing and Debugging
-
-### Sample Data
-
-The `TestData/` folder contains sample FITS files for testing:
-- Various filters (R, G, B, H, O, S, L)
-- Different exposure times and temperatures
-- Filename parsing test cases
-
-
-### Common Issues
-
-- **Binding errors**: Check Output window for binding warnings
-- **File access**: Ensure proper permissions for file operations
-- **FITS parsing**: Verify FITS files are valid and accessible
-- **Configuration**: Check AppData folder for config issues
-
----
-
-## Dependencies
-
-- **.NET 8**: Latest LTS version of .NET
-- **Microsoft.Extensions.DependencyInjection**: For dependency injection
-- **System.Text.Json**: For configuration serialization
-- **WPF**: Windows Presentation Foundation (included in .NET)
-
-
----
-
 ## User Guide
 
-### Getting Started
-
-1. **Launch the application** - The splash screen will appear briefly
-2. **Automatic folder restore** - Your last opened folder will be restored (if it still exists)
-3. **Open a folder** - Use File → Open Folder (Ctrl+O) to browse to your image directory
-4. **Configure parsing** - Set up custom keywords and FITS headers for your workflow
-
-### Navigation and Viewing
-
-- **File list**: Left pane shows all images with metadata columns
-- **Image viewer**: Right pane displays the selected image
-- **Zoom controls**: Use toolbar buttons or mouse wheel to zoom
-- **Navigation**: Use arrow keys or navigation buttons to move between images
-- **Slideshow**: Click Play button for automatic progression through images
-
-### File Management
-
-- **Selection**: Click on files to select them (multi-select with Ctrl+Click)
-- **Batch operations**: Select multiple files for group operations
-- **Move files**: Use File → Move Selected Files to relocate or organize images
-- **Quality assessment**: Sort by RMS, HFR, or star count to identify best images
-- **Metadata viewer**: Click the (i) button next to any file to view detailed information:
-  - **FITS files**: Complete header information with search/filter capabilities
-  - **All files**: File properties, dimensions, creation dates
-  - **Custom keywords**: Extracted values from filenames
-  - **Export functionality**: Save all metadata to text files
-
-### Configuration
-
-**Options → Custom Keywords**: Configure filename parsing for your naming convention
-**Options → FITS Keywords**: Select which FITS header values to display as columns
-**Options → General**: Control application behavior and display preferences
+See the AstroImages.Wpf/Documentation/Help.md file or run the app and go to Help -> Documentation
 
 ### Keyboard Shortcuts
 
@@ -338,37 +221,7 @@ The `TestData/` folder contains sample FITS files for testing:
 - **Ctrl+1**: Actual size (1:1)
 - **F1**: Show help documentation
 
-### FITS Header Keywords
-- `OBJECT`: Target name
-- `EXPTIME`: Exposure duration
-- `FILTER`: Filter used
-- `GAIN`: Camera gain setting
-- `OFFSET`: Camera offset
-- `FOCPOS`: Focuser position
-
-### Supported File Formats
-
-### Standard Image Formats
-- **JPEG** (.jpg, .jpeg) - Standard photography format
-- **PNG** (.png) - Lossless compression with transparency
-- **BMP** (.bmp) - Windows bitmap format
-- **TIFF** (.tif, .tiff) - High-quality archival format
-- **GIF** (.gif) - Graphics Interchange Format
-- **WebP** (.webp) - Modern web image format
-
-### Astronomical Formats
-- **FITS** (.fits, .fit, .fts) - Flexible Image Transport System
-  - Full header parsing and display
-  - Automatic histogram stretching
-  - Scientific data preservation
-  - Monochrome and color support
-
-- **XISF** (.xisf) - Extensible Image Serialization Format
-  - PixInsight's modern astronomical image format
-  - XML-based metadata with rich properties
-  - Support for UInt8/16/32 and Float32/64 data types
-  - Comprehensive metadata extraction and display
-  - Little-endian byte order (XISF native format)
+#
 
 ## License
 

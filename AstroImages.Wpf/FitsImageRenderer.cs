@@ -344,14 +344,17 @@ namespace AstroImages.Wpf
             {
                 Console.WriteLine($"[FitsImageRenderer] Starting optimized XISF render for {System.IO.Path.GetFileName(filePath)}");
                 
-                // Get cached header information (includes file bytes)
+                // Get cached header information
                 var cacheStart = stopwatch.ElapsedMilliseconds;
                 var cache = GetOrCreateXisfCache(filePath);
                 Console.WriteLine($"[FitsImageRenderer] Cache/header processing took {stopwatch.ElapsedMilliseconds - cacheStart}ms");
                 
+                // Load file bytes if not already loaded
                 if (cache.FileBytes == null)
                 {
-                    throw new InvalidOperationException("Failed to load file data");
+                    var loadStart = stopwatch.ElapsedMilliseconds;
+                    cache.FileBytes = File.ReadAllBytes(filePath);
+                    Console.WriteLine($"[FitsImageRenderer] File load took {stopwatch.ElapsedMilliseconds - loadStart}ms ({cache.FileBytes.Length:N0} bytes)");
                 }
                 
                 Console.WriteLine($"[FitsImageRenderer] Detected {cache.Channels} channel(s) in XISF file {System.IO.Path.GetFileName(filePath)} ({cache.Width}x{cache.Height}, {cache.SampleFormat})");
@@ -395,6 +398,14 @@ namespace AstroImages.Wpf
                 if (pixels == null || pixels.Length == 0)
                 {
                     throw new InvalidOperationException("Invalid XISF image data");
+                }
+
+                // Apply additional auto-stretch if enabled (same as FITS files)
+                if (autoStretch)
+                {
+                    var stretchStart = stopwatch.ElapsedMilliseconds;
+                    pixels = ApplyAutoStretch(pixels, cache.Width, cache.Height);
+                    Console.WriteLine($"[FitsImageRenderer] Auto-stretch took {stopwatch.ElapsedMilliseconds - stretchStart}ms");
                 }
 
                 var grayscaleBitmapStart = stopwatch.ElapsedMilliseconds;
@@ -450,13 +461,9 @@ namespace AstroImages.Wpf
             
             try
             {
-                // Read file once and cache the bytes
-                newCache.FileBytes = File.ReadAllBytes(filePath);
-                Console.WriteLine($"[FitsImageRenderer] File read took {stopwatch.ElapsedMilliseconds}ms ({newCache.FileBytes.Length:N0} bytes)");
-                
-                // Parse header efficiently
+                // Parse header from file stream (don't load entire file yet)
                 var headerParseStart = stopwatch.ElapsedMilliseconds;
-                var headerInfo = ParseXisfHeaderOptimized(newCache.FileBytes);
+                var headerInfo = ParseXisfHeaderFromFile(filePath);
                 Console.WriteLine($"[FitsImageRenderer] Header parsing took {stopwatch.ElapsedMilliseconds - headerParseStart}ms");
                 
                 newCache.Width = headerInfo.Width;
@@ -465,6 +472,9 @@ namespace AstroImages.Wpf
                 newCache.SampleFormat = headerInfo.SampleFormat;
                 newCache.ImagePosition = headerInfo.ImagePosition;
                 newCache.ImageSize = headerInfo.ImageSize;
+                
+                // Don't load file bytes yet - they'll be loaded on-demand when rendering
+                newCache.FileBytes = null;
                 
                 // Cache the entry
                 _xisfCache.TryAdd(cacheKey, newCache);
@@ -500,6 +510,48 @@ namespace AstroImages.Wpf
             // Read header as UTF-8
             var headerXml = System.Text.Encoding.UTF8.GetString(buffer, 16, headerLength);
             
+            return ParseXisfHeaderXml(headerXml);
+        }
+        
+        /// <summary>
+        /// Parse XISF header directly from file (for optimized caching without loading entire file)
+        /// </summary>
+        private static (int Width, int Height, int Channels, string SampleFormat, long ImagePosition, long ImageSize) ParseXisfHeaderFromFile(string filePath)
+        {
+            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                // Read and validate signature
+                byte[] signatureBuffer = new byte[8];
+                stream.Read(signatureBuffer, 0, 8);
+                var signature = System.Text.Encoding.ASCII.GetString(signatureBuffer);
+                if (signature != "XISF0100")
+                    throw new InvalidOperationException("Invalid XISF signature");
+                
+                // Read header length
+                byte[] lengthBuffer = new byte[4];
+                stream.Read(lengthBuffer, 0, 4);
+                int headerLength = BitConverter.ToInt32(lengthBuffer, 0);
+                
+                if (headerLength <= 0 || headerLength > 100 * 1024 * 1024) // Sanity check: max 100MB header
+                    throw new InvalidOperationException($"Invalid header length: {headerLength}");
+                
+                // Skip reserved field (4 bytes)
+                stream.Seek(4, SeekOrigin.Current);
+                
+                // Read header XML
+                byte[] headerBuffer = new byte[headerLength];
+                stream.Read(headerBuffer, 0, headerLength);
+                var headerXml = System.Text.Encoding.UTF8.GetString(headerBuffer);
+                
+                return ParseXisfHeaderXml(headerXml);
+            }
+        }
+        
+        /// <summary>
+        /// Parse XISF header XML to extract image metadata
+        /// </summary>
+        private static (int Width, int Height, int Channels, string SampleFormat, long ImagePosition, long ImageSize) ParseXisfHeaderXml(string headerXml)
+        {
             // Fast XML parsing - look for essential attributes only
             int width = 0, height = 0, channels = 1;
             string sampleFormat = "UInt16";

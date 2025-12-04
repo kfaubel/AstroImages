@@ -204,13 +204,30 @@ namespace AstroImages.Core
             return value switch
             {
                 bool b => b ? "T" : "F",
-                double d => d.ToString("G"),
-                float f => f.ToString("G"),
+                double d => FormatNumber(d),
+                float f => FormatNumber(f),
                 int i => i.ToString(),
                 long l => l.ToString(),
                 string s => s.Trim(),
                 _ => value.ToString()?.Trim() ?? ""
             };
+        }
+
+        /// <summary>
+        /// Format a numeric value, showing integers without decimal point and 
+        /// floating point values rounded to 5 decimal places
+        /// </summary>
+        private static string FormatNumber(double value)
+        {
+            var rounded = Math.Round(value, 5);
+            
+            // If the rounded value equals its integer conversion, it's a whole number
+            if (rounded == Math.Floor(rounded))
+            {
+                return ((long)rounded).ToString();
+            }
+            
+            return rounded.ToString("G");
         }
 
         /// <summary>

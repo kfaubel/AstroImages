@@ -20,8 +20,8 @@ namespace AstroImages.Wpf
         public MoveFilesDialog(List<string> fileNames) : this()
         {
             FilesToMove = fileNames;
-            // Instead of showing individual files, show just the count
-            FilesListControl.ItemsSource = new[] { $"Moving {fileNames.Count} file{(fileNames.Count == 1 ? "" : "s")}..." };
+            // Show the count of files being moved
+            FilesSummaryTextBlock.Text = $"Moving {fileNames.Count} file{(fileNames.Count == 1 ? "" : "s")}...";
         }
 
         public void SetDefaultDirectory(string defaultDirectory)

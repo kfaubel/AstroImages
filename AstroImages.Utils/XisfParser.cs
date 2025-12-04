@@ -17,6 +17,62 @@ namespace AstroImages.Utils
         private const string XISF_SIGNATURE = "XISF0100";
         
         /// <summary>
+        /// Parse XISF metadata from file header only (optimized for large files)
+        /// </summary>
+        public static Dictionary<string, object> ParseMetadataFromFile(string filePath)
+        {
+            var metadata = new Dictionary<string, object>();
+            
+            try
+            {
+                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    // Read signature (8 bytes)
+                    byte[] signature = new byte[8];
+                    fileStream.Read(signature, 0, 8);
+                    
+                    if (Encoding.ASCII.GetString(signature) != XISF_SIGNATURE)
+                    {
+                        throw new InvalidOperationException("Invalid XISF file signature");
+                    }
+                    
+                    // Read header length (4 bytes, little-endian)
+                    byte[] lengthBytes = new byte[4];
+                    fileStream.Read(lengthBytes, 0, 4);
+                    int headerLength = BitConverter.ToInt32(lengthBytes, 0);
+                    
+                    if (headerLength <= 0 || headerLength > 100 * 1024 * 1024) // Sanity check: max 100MB header
+                    {
+                        throw new InvalidOperationException($"Invalid header length: {headerLength}");
+                    }
+                    
+                    // Skip reserved field (4 bytes)
+                    fileStream.Seek(4, SeekOrigin.Current);
+                    
+                    // Read header XML
+                    byte[] headerBuffer = new byte[headerLength];
+                    fileStream.Read(headerBuffer, 0, headerLength);
+                    var headerXml = Encoding.UTF8.GetString(headerBuffer);
+                    
+                    // Parse XML header
+                    var xmlDoc = new XmlDocument();
+                    xmlDoc.LoadXml(headerXml);
+                    
+                    // Extract metadata from XML
+                    ExtractMetadataFromXml(xmlDoc, metadata);
+                    ExtractPropertiesFromXml(xmlDoc, metadata);
+                    ExtractImageInfoFromXml(xmlDoc, metadata);
+                }
+                
+                return metadata;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to parse XISF metadata: {ex.Message}", ex);
+            }
+        }
+        
+        /// <summary>
         /// Parse XISF metadata from file and return comprehensive information
         /// </summary>
         public static Dictionary<string, object> ParseMetadata(byte[] buffer)

@@ -23,7 +23,7 @@ namespace AstroImages.Wpf.Services
 
             try
             {
-                // Only process FITS files for FITS keyword extraction
+                // Process FITS files
                 if (FitsUtilities.IsFitsFile(filePath))
                 {
                     // Use the optimized header-only reader instead of reading entire file
@@ -38,7 +38,23 @@ namespace AstroImages.Wpf.Services
                         }
                     }
                 }
-                // Skip all other file formats (XISF, JPG, PNG, TIFF) for FITS keyword extraction
+                // Process XISF files - they store FITS keywords with "FITS_" prefix
+                else if (XisfUtilities.IsXisfFile(filePath))
+                {
+                    // Use the optimized header-only reader instead of reading entire file
+                    var metadata = XisfParser.ParseMetadataFromFile(filePath);
+
+                    foreach (var keyword in keywords)
+                    {
+                        // XISF stores FITS keywords with "FITS_" prefix
+                        var xisfKey = $"FITS_{keyword}";
+                        if (metadata.TryGetValue(xisfKey, out var value))
+                        {
+                            result[keyword] = XisfUtilities.FormatPropertyValue(value);
+                        }
+                    }
+                }
+                // Skip all other file formats (JPG, PNG, TIFF, etc.) for FITS keyword extraction
                 // These files don't have FITS-style keywords, so return empty result
             }
             catch (Exception)
