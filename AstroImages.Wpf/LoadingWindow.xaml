@@ -18,7 +18,7 @@
         
         <TextBlock Grid.Row="0" 
                    x:Name="MessageText"
-                   Text="Loading images..."
+                   Text="Loading image metadata..."
                    FontSize="14"
                    HorizontalAlignment="Center"
                    Foreground="{DynamicResource ThemeForeground}"

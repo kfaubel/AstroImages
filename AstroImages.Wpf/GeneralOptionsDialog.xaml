@@ -22,6 +22,9 @@
                 <CheckBox Name="ShowSizeColumnCheckBox" 
                          Content="Show size in the file list" 
                          Margin="0,5"/>
+                <CheckBox Name="ScanXisfForFitsKeywordsCheckBox" 
+                         Content="Scan XISF files for FITS keywords (slower)" 
+                         Margin="0,5"/>
             </StackPanel>
         </GroupBox>
         

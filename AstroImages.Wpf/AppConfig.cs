@@ -49,6 +49,13 @@ namespace AstroImages.Wpf
         /// </summary>
         public bool ShowSizeColumn { get; set; } = false;
         
+        /// <summary>
+        /// Whether to scan XISF files for FITS keywords.
+        /// Default is false because XISF scanning can be slow for large files.
+        /// When enabled, FITS keywords will be extracted from XISF file headers.
+        /// </summary>
+        public bool ScanXisfForFitsKeywords { get; set; } = false;
+        
         // Window state properties - these remember the window position and size
         
         /// <summary>
@@ -177,10 +184,11 @@ namespace AstroImages.Wpf
                     return config ?? new AppConfig();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // If anything goes wrong (file corruption, permissions, etc.),
                 // don't crash the app - just use default settings
+                App.LoggingService?.LogError("Config Load", "Failed to load configuration file, using defaults", ex);
             }
             
             // File doesn't exist or loading failed - return default configuration
@@ -200,9 +208,10 @@ namespace AstroImages.Wpf
                 var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // If config saving fails, continue silently
+                // If config saving fails, continue silently but log it
+                App.LoggingService?.LogError("Config Save", "Failed to save configuration file", ex);
             }
         }
     }

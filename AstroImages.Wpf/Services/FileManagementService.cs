@@ -139,9 +139,10 @@ namespace AstroImages.Wpf.Services
                     });
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // If directory loading fails, return empty list
+                // Log directory access failures (permissions, network issues, etc.)
+                App.LoggingService?.LogError("Directory Load", $"Failed to load files from {directory}", ex);
             }
 
             return files;

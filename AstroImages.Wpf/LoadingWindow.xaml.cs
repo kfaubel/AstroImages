@@ -24,7 +24,7 @@ namespace AstroImages.Wpf
                 LoadProgressBar.Maximum = total;
                 LoadProgressBar.Value = current;
                 LoadProgressBar.IsIndeterminate = false;
-                MessageText.Text = $"Loading images... {current} of {total}";
+                MessageText.Text = $"Loading image metadata... {current} of {total}";
             }
         }
     }

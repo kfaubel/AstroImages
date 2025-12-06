@@ -73,6 +73,116 @@ namespace AstroImages.Utils
         }
         
         /// <summary>
+        /// Parse only specific FITS keywords from XISF file header (optimized for file list loading)
+        /// This is much faster than ParseMetadataFromFile when you only need a few specific keywords
+        /// </summary>
+        public static Dictionary<string, string> ParseSpecificFitsKeywords(string filePath, IEnumerable<string> keywords)
+        {
+            var result = new Dictionary<string, string>();
+            
+            if (keywords == null || !keywords.Any())
+                return result;
+            
+            try
+            {
+                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    // Read signature (8 bytes)
+                    byte[] signature = new byte[8];
+                    fileStream.Read(signature, 0, 8);
+                    
+                    if (Encoding.ASCII.GetString(signature) != XISF_SIGNATURE)
+                    {
+                        throw new InvalidOperationException("Invalid XISF file signature");
+                    }
+                    
+                    // Read header length (4 bytes, little-endian)
+                    byte[] lengthBytes = new byte[4];
+                    fileStream.Read(lengthBytes, 0, 4);
+                    int headerLength = BitConverter.ToInt32(lengthBytes, 0);
+                    
+                    if (headerLength <= 0 || headerLength > 100 * 1024 * 1024) // Sanity check: max 100MB header
+                    {
+                        throw new InvalidOperationException($"Invalid header length: {headerLength}");
+                    }
+                    
+                    // Skip reserved field (4 bytes)
+                    fileStream.Seek(4, SeekOrigin.Current);
+                    
+                    // Read header XML
+                    byte[] headerBuffer = new byte[headerLength];
+                    fileStream.Read(headerBuffer, 0, headerLength);
+                    var headerXml = Encoding.UTF8.GetString(headerBuffer);
+                    
+                    // Debug: Log first 2000 chars of header to see the actual format
+                    var preview = headerXml.Length > 2000 ? headerXml.Substring(0, 2000) : headerXml;
+                    System.Diagnostics.Debug.WriteLine($"XISF Header preview for {System.IO.Path.GetFileName(filePath)}:");
+                    System.Diagnostics.Debug.WriteLine(preview);
+                    System.Diagnostics.Debug.WriteLine($"Looking for keywords: {string.Join(", ", keywords)}");
+                    
+                    // Fast string search approach - single pass through XML
+                    // Build lookup set for O(1) keyword checking
+                    var keywordSet = new HashSet<string>(keywords);
+                    
+                    // Find all Property elements with FITS: prefix in a single pass
+                    int searchIndex = 0;
+                    while (searchIndex < headerXml.Length && result.Count < keywordSet.Count)
+                    {
+                        // Find next Property element with FITS: prefix
+                        int propStart = headerXml.IndexOf("<Property", searchIndex, StringComparison.Ordinal);
+                        if (propStart == -1) break;
+                        
+                        int propEnd = headerXml.IndexOf(">", propStart, StringComparison.Ordinal);
+                        if (propEnd == -1) break;
+                        
+                        // Extract the Property tag content
+                        string propTag = headerXml.Substring(propStart, propEnd - propStart + 1);
+                        
+                        // Check if it's a FITS keyword by looking for id="FITS:
+                        int fitsIdStart = propTag.IndexOf("id=\"FITS:", StringComparison.Ordinal);
+                        if (fitsIdStart != -1)
+                        {
+                            // Extract keyword name
+                            int nameStart = fitsIdStart + 9; // Length of "id=\"FITS:"
+                            int nameEnd = propTag.IndexOf("\"", nameStart, StringComparison.Ordinal);
+                            if (nameEnd != -1)
+                            {
+                                string keywordName = propTag.Substring(nameStart, nameEnd - nameStart);
+                                
+                                // Check if this is one of the requested keywords
+                                if (keywordSet.Contains(keywordName))
+                                {
+                                    // Extract value attribute
+                                    int valueStart = propTag.IndexOf("value=\"", StringComparison.Ordinal);
+                                    if (valueStart != -1)
+                                    {
+                                        valueStart += 7; // Length of "value=\""
+                                        int valueEnd = propTag.IndexOf("\"", valueStart, StringComparison.Ordinal);
+                                        if (valueEnd != -1)
+                                        {
+                                            string value = propTag.Substring(valueStart, valueEnd - valueStart);
+                                            result[keywordName] = value;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        searchIndex = propEnd + 1;
+                    }
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // Log the error and re-throw so caller can handle it
+                System.Diagnostics.Debug.WriteLine($"ParseSpecificFitsKeywords failed for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
+                throw new InvalidOperationException($"Failed to parse XISF FITS keywords: {ex.Message}", ex);
+            }
+        }
+        
+        /// <summary>
         /// Parse XISF metadata from file and return comprehensive information
         /// </summary>
         public static Dictionary<string, object> ParseMetadata(byte[] buffer)

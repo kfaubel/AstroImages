@@ -27,6 +27,9 @@ namespace AstroImages.Wpf
         
         // Private field to store command-line file paths (if provided)
         private readonly string[]? _commandLineFilePaths;
+        
+        // Logging service for tracking user actions and errors
+        private readonly ILoggingService _loggingService;
 
         /// <summary>
         /// Constructor - called when creating a new MainWindow instance.
@@ -36,6 +39,7 @@ namespace AstroImages.Wpf
         public MainWindow(string[]? filePaths = null)
         {
             _commandLineFilePaths = filePaths;
+            _loggingService = App.LoggingService;
             
             // Initialize WPF components from the XAML file
             // This must be called before accessing any UI elements
@@ -90,7 +94,8 @@ namespace AstroImages.Wpf
                 generalOptionsDialogService,
                 customKeywordsDialogService,
                 fitsKeywordsDialogService,
-                _listViewColumnService
+                _listViewColumnService,
+                _loggingService
             );
 
             // Connect the ViewModel to the UI through DataContext
@@ -474,47 +479,60 @@ namespace AstroImages.Wpf
             // Get the currently selected file from the ViewModel's Files collection
             var file = _viewModel.Files[_viewModel.SelectedIndex];
             
+            _loggingService.LogFileOpened(file.Name);
+            
             // Verify the file still exists on disk (user might have moved/deleted it)
             if (System.IO.File.Exists(file.Path))
             {
-                // Use our custom FITS renderer to load and process the image
-                // This handles both FITS files and standard image formats (JPEG, PNG, etc.)
-                var image = FitsImageRenderer.RenderFitsFile(file.Path, _viewModel.AutoStretch);
-                
-                if (image != null)
+                try
                 {
-                    // Successfully loaded the image - now display it
-                    
-                    // Set the image source to our loaded bitmap
-                    DisplayImage.Source = image;
-                    
-                    // Show the image immediately
-                    ImageScrollViewer.Visibility = Visibility.Visible;
-                    PlaceholderText.Visibility = Visibility.Collapsed;
-
-                    // Always start in Fit mode for new images
-                    _viewModel.FitMode = true;
-
-                    // Force layout update to ensure ScrollViewer is properly sized
-                    this.UpdateLayout();
-                    
-                    // Use a small delay to ensure the UI is fully rendered before calculating fit scale
-                    // This helps avoid timing issues where the ScrollViewer might not be sized yet
-                    Dispatcher.BeginInvoke(new Action(() =>
+                    // Use our custom FITS renderer to load and process the image
+                    // This handles both FITS files and standard image formats (JPEG, PNG, etc.)
+                    var image = FitsImageRenderer.RenderFitsFile(file.Path, _viewModel.AutoStretch);
+                
+                    if (image != null)
                     {
-                        FitImageToScrollViewer();
-                        System.Diagnostics.Debug.WriteLine("Image loaded and fit mode applied");
+                        // Successfully loaded the image - now display it
                         
-                        // Restore normal cursor after image rendering is complete
-                        this.Cursor = System.Windows.Input.Cursors.Arrow;
+                        // Set the image source to our loaded bitmap
+                        DisplayImage.Source = image;
                         
-                        // Notify the ViewModel that image rendering is complete
-                        _viewModel?.OnImageRenderingCompleted();
-                    }), System.Windows.Threading.DispatcherPriority.Loaded);
-                    
-                    return;
-                    
+                        // Show the image immediately
+                        ImageScrollViewer.Visibility = Visibility.Visible;
+                        PlaceholderText.Visibility = Visibility.Collapsed;
+
+                        // Always start in Fit mode for new images
+                        _viewModel.FitMode = true;
+
+                        // Force layout update to ensure ScrollViewer is properly sized
+                        this.UpdateLayout();
+                        
+                        // Use a small delay to ensure the UI is fully rendered before calculating fit scale
+                        // This helps avoid timing issues where the ScrollViewer might not be sized yet
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            FitImageToScrollViewer();
+                            System.Diagnostics.Debug.WriteLine("Image loaded and fit mode applied");
+                            
+                            // Restore normal cursor after image rendering is complete
+                            this.Cursor = System.Windows.Input.Cursors.Arrow;
+                            
+                            // Notify the ViewModel that image rendering is complete
+                            _viewModel?.OnImageRenderingCompleted();
+                        }), System.Windows.Threading.DispatcherPriority.Loaded);
+                        
+                        return;
+                    }
                 }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Image Rendering", $"Failed to render {file.Name}", ex);
+                    // Fall through to show error state
+                }
+            }
+            else
+            {
+                _loggingService.LogWarning("File Access", $"File not found: {file.Path}");
             }
             
             // If failed to load
@@ -865,6 +883,19 @@ namespace AstroImages.Wpf
         }
 
         /// <summary>
+        /// Event handler for View Activity Log menu item
+        /// </summary>
+        private void ViewLog_Click(object sender, RoutedEventArgs e)
+        {
+            var logWindow = new LogViewerWindow(_loggingService);
+            logWindow.Owner = this;
+            logWindow.ShowDialog();
+        }
+
+        #region File Progress Dialog
+        // These methods handle showing a progress dialog while loading files
+
+        /// <summary>
         /// Event handler for Help > Check for Updates menu item.
         /// Manually checks for updates from GitHub releases.
         /// </summary>
@@ -913,6 +944,7 @@ namespace AstroImages.Wpf
             catch (Exception ex)
             {
                 // Handle errors gracefully
+                _loggingService.LogError("Update Check", "Update check from menu failed", ex);
                 System.Windows.MessageBox.Show(
                     $"Unable to check for updates: {ex.Message}",
                     "Update Check Failed",
@@ -965,6 +997,7 @@ namespace AstroImages.Wpf
                 await LoadSpecificFilesWithProgressAsync(dialog.FileNames);
             }
         }
+        #endregion
 
         #region Window State Management
         /// <summary>
@@ -1073,5 +1106,3 @@ namespace AstroImages.Wpf
         #endregion
     }
 }
-
-

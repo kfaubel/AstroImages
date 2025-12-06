@@ -164,6 +164,10 @@ namespace AstroImages.Wpf.ViewModels
         /// <param name="directoryPath">Path to the directory containing files to load</param>
         public System.Collections.Generic.List<Models.FileItem> LoadFiles(string directoryPath, Action<int, int>? progressCallback = null)
         {
+            _loggingService.LogFolderOpen(directoryPath);
+            
+            var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
             // Reset filtered view mode - we're loading a full directory
             IsFilteredView = false;
             
@@ -171,7 +175,9 @@ namespace AstroImages.Wpf.ViewModels
             CurrentDirectory = directoryPath;
             
             // Use the file management service to get file information
+            var loadDirStart = totalStopwatch.ElapsedMilliseconds;
             var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
+            _loggingService.LogInfo($"Directory scan took {totalStopwatch.ElapsedMilliseconds - loadDirStart}ms for {fileItems.Count} files");
             
             int total = fileItems.Count;
             
@@ -179,30 +185,60 @@ namespace AstroImages.Wpf.ViewModels
             int processedCount = 0;
             object progressLock = new object();
             
+            // Track timing per file type
+            var fitsCount = 0;
+            var xisfCount = 0;
+            var otherCount = 0;
+            
             // Process files in parallel for better performance
             var processedItems = new System.Collections.Concurrent.ConcurrentBag<Models.FileItem>();
             
+            var metadataStart = totalStopwatch.ElapsedMilliseconds;
             System.Threading.Tasks.Parallel.ForEach(fileItems, 
                 new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
                 fileItem =>
                 {
-                    // Extract both custom and FITS keywords for each file
-                    _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
-                    
-                    // Add to thread-safe collection
-                    processedItems.Add(fileItem);
-                    
-                    // Update progress in a thread-safe manner
-                    lock (progressLock)
+                    try
                     {
-                        processedCount++;
-                        // Report progress every 5 files to reduce overhead
-                        if (processedCount % 5 == 0 || processedCount == total)
+                        // Track file types
+                        var ext = System.IO.Path.GetExtension(fileItem.Name).ToLowerInvariant();
+                        if (ext == ".fits" || ext == ".fit" || ext == ".fts")
+                            System.Threading.Interlocked.Increment(ref fitsCount);
+                        else if (ext == ".xisf")
+                            System.Threading.Interlocked.Increment(ref xisfCount);
+                        else
+                            System.Threading.Interlocked.Increment(ref otherCount);
+                        
+                        // Extract both custom and FITS keywords for each file
+                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords);
+                        
+                        // Add to thread-safe collection
+                        processedItems.Add(fileItem);
+                        
+                        // Update progress in a thread-safe manner
+                        lock (progressLock)
                         {
-                            progressCallback?.Invoke(processedCount, total);
+                            processedCount++;
+                            // Report progress every 5 files to reduce overhead
+                            if (processedCount % 5 == 0 || processedCount == total)
+                            {
+                                progressCallback?.Invoke(processedCount, total);
+                                // Log progress occasionally
+                                if (processedCount % 20 == 0 || processedCount == total)
+                                {
+                                    _loggingService.LogMetadataReading(fileItem.Name, total, processedCount);
+                                }
+                            }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _loggingService.LogError("Metadata Extraction", $"Failed to process {fileItem.Name}: {ex.Message}", ex);
+                    }
                 });
+            
+            var metadataTime = totalStopwatch.ElapsedMilliseconds - metadataStart;
+            _loggingService.LogInfo($"Metadata extraction took {metadataTime}ms ({fitsCount} FITS, {xisfCount} XISF, {otherCount} other files)");
             
             // Return sorted list - caller will add to ObservableCollection on UI thread
             return processedItems.OrderBy(f => f.Name).ToList();
@@ -703,6 +739,7 @@ namespace AstroImages.Wpf.ViewModels
         private readonly ICustomKeywordsDialogService _customKeywordsDialogService; // Shows custom keywords dialog
         private readonly IFitsKeywordsDialogService _fitsKeywordsDialogService;     // Shows FITS keywords dialog
         private readonly IListViewColumnService _listViewColumnService;         // Manages ListView column visibility
+        private readonly ILoggingService _loggingService;                       // Logging service for tracking actions and errors
         #endregion
         #region Main Application Commands
         // These commands handle the primary application functionality
@@ -746,13 +783,15 @@ namespace AstroImages.Wpf.ViewModels
             IGeneralOptionsDialogService? generalOptionsDialogService,
             ICustomKeywordsDialogService? customKeywordsDialogService,
             IFitsKeywordsDialogService? fitsKeywordsDialogService,
-            IListViewColumnService listViewColumnService)
+            IListViewColumnService listViewColumnService,
+            ILoggingService loggingService)
         {
             // Store injected dependencies for later use
             _fileManagementService = fileManagementService;
             _keywordExtractionService = keywordExtractionService;
             _appConfig = appConfig;
             _folderDialogService = folderDialogService;
+            _loggingService = loggingService;
             
             // Initialize AutoStretch from configuration
             _autoStretch = _appConfig.AutoStretch;
@@ -993,7 +1032,8 @@ namespace AstroImages.Wpf.ViewModels
                 _appConfig.ShowSizeColumn, 
                 _appConfig.Theme, 
                 _appConfig.ShowFullScreenHelp,
-                _appConfig.PlayPauseInterval);
+                _appConfig.PlayPauseInterval,
+                _appConfig.ScanXisfForFitsKeywords);
                 
             if (result.showSizeColumn.HasValue)
             {
@@ -1016,6 +1056,11 @@ namespace AstroImages.Wpf.ViewModels
                     _appConfig.PlayPauseInterval = result.playPauseInterval.Value;
                 }
                 
+                if (result.scanXisfForFitsKeywords.HasValue)
+                {
+                    _appConfig.ScanXisfForFitsKeywords = result.scanXisfForFitsKeywords.Value;
+                }
+                
                 _appConfig.Save();
                 _listViewColumnService.UpdateListViewColumns();
                 // Auto-resize columns after configuration change
@@ -1028,8 +1073,10 @@ namespace AstroImages.Wpf.ViewModels
             if (SelectedIndex < 0 || SelectedIndex >= Files.Count)
                 return;
 
+            _loggingService.LogFullscreenToggle(true);
             var fullScreenWindow = new FullScreenWindow(Files, SelectedIndex, _appConfig);
             fullScreenWindow.ShowDialog();
+            _loggingService.LogFullscreenToggle(false);
             
             // Update the selected index to the last viewed image in full screen
             SelectedIndex = fullScreenWindow.CurrentIndex;
@@ -1073,6 +1120,16 @@ namespace AstroImages.Wpf.ViewModels
                 
                 try
                 {
+                    // If XISF scanning was disabled and this is an XISF file, populate keywords now
+                    if (!_appConfig.ScanXisfForFitsKeywords && 
+                        (fileItem.Path.EndsWith(".xisf", StringComparison.OrdinalIgnoreCase)) &&
+                        _appConfig.FitsKeywords.Any() &&
+                        (fileItem.FitsKeywords == null || fileItem.FitsKeywords.Count == 0))
+                    {
+                        // Load FITS keywords from XISF file on-demand
+                        _keywordExtractionService.PopulateKeywords(fileItem, Enumerable.Empty<string>(), _appConfig.FitsKeywords, skipXisf: false);
+                    }
+                    
                     var dialog = new FileMetadataDialog(fileItem);
                     
                     // Find the main window to set as owner

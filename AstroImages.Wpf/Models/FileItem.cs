@@ -18,8 +18,22 @@ namespace AstroImages.Wpf.Models
             get => _isSelected;
             set
             {
-                _isSelected = value;
-                OnPropertyChanged(nameof(IsSelected));
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged(nameof(IsSelected));
+                    
+                    // Log the mark/unmark action
+                    try
+                    {
+                        var loggingService = App.LoggingService;
+                        loggingService?.LogFileMarked(Name, value);
+                    }
+                    catch
+                    {
+                        // Silently fail if logging service is not available
+                    }
+                }
             }
         }
         

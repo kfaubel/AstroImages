@@ -35,6 +35,8 @@
             <MenuItem Header="Help">
                 <MenuItem Header="Check for Updates" Click="CheckForUpdates_Click" />
                 <Separator />
+                <MenuItem Header="View Activity Log" Click="ViewLog_Click" />
+                <Separator />
                 <MenuItem Header="Documentation" Click="Documentation_Click" />
                 <MenuItem Header="About" Click="About_Click" />
             </MenuItem>

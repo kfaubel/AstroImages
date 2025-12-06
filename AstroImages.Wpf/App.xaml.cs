@@ -14,6 +14,9 @@ namespace AstroImages.Wpf
     {
         private static Mutex? _mutex;
         private const string MutexName = "AstroImages_SingleInstance_Mutex";
+        
+        // Singleton logging service available throughout the application
+        public static ILoggingService LoggingService { get; private set; } = new LoggingService();
 
         /// <summary>
         /// Constructor - sets up global exception handling
@@ -25,6 +28,7 @@ namespace AstroImages.Wpf
             {
                 try
                 {
+                    LoggingService.LogError("Unhandled Exception", e.Exception.Message, e.Exception);
                     System.Windows.MessageBox.Show(
                         $"Unhandled Exception:\n\nMessage: {e.Exception.Message}\n\nStack Trace: {e.Exception.StackTrace}",
                         "AstroImages - Unhandled Error",
@@ -68,6 +72,8 @@ namespace AstroImages.Wpf
                 // Always call the base class method first - this initializes the WPF framework
                 base.OnStartup(e);
                 
+                LoggingService.LogInfo("Application starting");
+                
                 // Initialize the theme service before creating any windows
                 ThemeService.Initialize();
                 
@@ -106,6 +112,7 @@ namespace AstroImages.Wpf
             {
                 // If anything goes wrong during startup, show an error and exit gracefully
                 // $"{ex}" is string interpolation - puts the exception details in the message
+                LoggingService.LogError("Application Startup", ex.Message, ex);
                 try
                 {
                     System.Windows.MessageBox.Show(
@@ -136,6 +143,7 @@ namespace AstroImages.Wpf
         /// <param name="e"></param>
         protected override void OnExit(ExitEventArgs e)
         {
+            LoggingService.LogInfo("Application exiting");
             _mutex?.ReleaseMutex();
             _mutex?.Dispose();
             base.OnExit(e);
@@ -195,6 +203,7 @@ namespace AstroImages.Wpf
             catch (Exception ex)
             {
                 // Don't let update check failures crash the app
+                LoggingService.LogError("Update Check", "Failed to check for updates", ex);
                 System.Diagnostics.Debug.WriteLine($"Update check failed: {ex.Message}");
             }
         }

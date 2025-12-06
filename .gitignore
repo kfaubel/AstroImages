@@ -401,8 +401,8 @@ $RECYCLE.BIN/
 
 # Project-specific
 # Keep TestData folder as it contains sample FITS files for testing
-TestData/
-TestBin/
+TestData2/
+TestData/ 
 TestData.zip
 
 

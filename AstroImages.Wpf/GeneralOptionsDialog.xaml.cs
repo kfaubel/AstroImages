@@ -21,6 +21,11 @@ namespace AstroImages.Wpf
         /// The dialog reads this value on creation and updates it based on user input.
         /// </summary>
         public bool ShowSizeColumn { get; set; }
+        
+        /// <summary>
+        /// Property to track whether to scan XISF files for FITS keywords.
+        /// </summary>
+        public bool ScanXisfForFitsKeywords { get; set; }
 
         /// <summary>
         /// Property to track the selected theme mode (Auto, Light, or Dark).
@@ -65,17 +70,20 @@ namespace AstroImages.Wpf
         /// <param name="theme">Current theme mode setting</param>
         /// <param name="showFullScreenHelp">Current value of the ShowFullScreenHelp setting</param>
         /// <param name="playPauseInterval">Current pause interval for play mode in seconds</param>
-        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval) : this()
+        /// <param name="scanXisfForFitsKeywords">Current value of the ScanXisfForFitsKeywords setting</param>
+        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords) : this()
         {
             // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
             SelectedTheme = theme;
             ShowFullScreenHelp = showFullScreenHelp;
             PlayPauseInterval = playPauseInterval;
+            ScanXisfForFitsKeywords = scanXisfForFitsKeywords;
             
             // Set the checkbox state to match the current setting
             // ShowSizeColumnCheckBox is a UI control defined in the XAML file
             ShowSizeColumnCheckBox.IsChecked = showSizeColumn;
+            ScanXisfForFitsKeywordsCheckBox.IsChecked = scanXisfForFitsKeywords;
             
             // Set the theme combo box selection
             ThemeComboBox.SelectedIndex = (int)theme;
@@ -130,6 +138,7 @@ namespace AstroImages.Wpf
             // The ?? operator means "if left side is null, use right side"
             // IsChecked is nullable bool (bool?) so it can be true, false, or null
             ShowSizeColumn = ShowSizeColumnCheckBox.IsChecked ?? false;
+            ScanXisfForFitsKeywords = ScanXisfForFitsKeywordsCheckBox.IsChecked ?? false;
             
             // Read the selected theme from the combo box
             SelectedTheme = (ThemeMode)(ThemeComboBox.SelectedIndex);
