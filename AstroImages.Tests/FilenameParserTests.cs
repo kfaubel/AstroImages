@@ -1,0 +1,168 @@
+using Xunit;
+using AstroImages.Wpf;
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+namespace AstroImages.Tests
+{
+    /// <summary>
+    /// Tests for FilenameParser which extracts keyword values from NINA-formatted filenames.
+    /// This is critical for quickly extracting quality metrics (RMS, HFR, star count) from filenames.
+    /// </summary>
+    public class FilenameParserTests
+    {
+        [Fact]
+        public void ExtractKeywordValues_NinaFormattedFilename_ExtractsRMS()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits";
+            var keywords = new[] { "RMS" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.ContainsKey("RMS"), "Should extract RMS keyword");
+            Assert.Equal("0.75", result["RMS"]);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_NinaFormattedFilename_ExtractsHFR()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits";
+            var keywords = new[] { "HFR" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.True(result.ContainsKey("HFR"), "Should extract HFR keyword");
+            Assert.Equal("2.26", result["HFR"]);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_NinaFormattedFilename_ExtractsMultipleKeywords()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits";
+            var keywords = new[] { "RMS", "HFR", "Stars" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.Equal(3, result.Count);
+            Assert.Equal("0.75", result["RMS"]);
+            Assert.Equal("2.26", result["HFR"]);
+            Assert.Equal("2029", result["Stars"]);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_MissingKeyword_DoesNotIncludeInResult()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits";
+            var keywords = new[] { "MISSING" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_CaseInsensitive()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits";
+            var keywords = new[] { "rms", "hfr", "STARS" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.Equal(3, result.Count);
+            Assert.True(result.ContainsKey("rms") || result.ContainsKey("RMS"));
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_EmptyFilename_ReturnsEmptyDictionary()
+        {
+            // Arrange
+            var filename = "";
+            var keywords = new[] { "RMS", "HFR" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_NullFilename_ReturnsEmptyDictionary()
+        {
+            // Arrange
+            string filename = null;
+            var keywords = new[] { "RMS", "HFR" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_KeywordAtEndOfFilename_NotExtracted()
+        {
+            // Arrange - Keyword at end has no following value
+            var filename = "2025-10-16_23-42-23_R_RMS";
+            var keywords = new[] { "RMS" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.Empty(result); // Should not extract because there's no value after RMS
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_DifferentNinaFile_ExtractsCorrectly()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-46-13_B_RMS_1.12_HFR_2.43_Stars_1269_100_10.00s_-10.00C_0026.fits";
+            var keywords = new[] { "RMS", "HFR", "Stars" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.Equal("1.12", result["RMS"]);
+            Assert.Equal("2.43", result["HFR"]);
+            Assert.Equal("1269", result["Stars"]);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_FileWithEmptyValues_ExtractsEmptyString()
+        {
+            // Arrange - File with empty HFR and Stars values
+            var filename = "2025-10-17_07-31-45_R_RMS_0.00_HFR__Stars__100_0.02s_8.00C_0000.fits";
+            var keywords = new[] { "HFR", "Stars" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            // Should extract empty string for HFR (value between HFR and Stars is empty)
+            Assert.True(result.ContainsKey("HFR"));
+        }
+    }
+}
