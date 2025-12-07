@@ -97,6 +97,12 @@ namespace AstroImages.Wpf
         public string? LastOpenDirectory { get; set; } = null;
         
         /// <summary>
+        /// List of recently opened folders (up to 10, most recent first).
+        /// Used for the "Open Recent" menu.
+        /// </summary>
+        public List<string> RecentFolders { get; set; } = new List<string>();
+        
+        /// <summary>
         /// Whether to show the splash screen on application startup.
         /// Default is true (show splash screen). Set to false to skip it.
         /// </summary>

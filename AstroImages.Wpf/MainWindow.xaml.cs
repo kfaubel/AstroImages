@@ -30,6 +30,9 @@ namespace AstroImages.Wpf
         
         // Logging service for tracking user actions and errors
         private readonly ILoggingService _loggingService;
+        
+        // Background warming task to pre-scan files and trigger antivirus
+        private System.Threading.CancellationTokenSource? _warmupCancellation;
 
         /// <summary>
         /// Constructor - called when creating a new MainWindow instance.
@@ -174,16 +177,38 @@ namespace AstroImages.Wpf
                 // Allow UI to update
                 await Task.Delay(50);
                 
-                // Run file loading on background thread
+                // Step 1: Load file list (fast - just filenames)
                 System.Collections.Generic.List<Models.FileItem>? loadedFiles = null;
                 
                 await Task.Run(() =>
                 {
                     if (_viewModel != null)
                     {
-                        // LoadFiles will be called on background thread, but progress callback
-                        // needs to update UI, so we marshal it to the UI thread
-                        loadedFiles = _viewModel.LoadFiles(directoryPath, (current, total) =>
+                        loadedFiles = _viewModel.LoadFiles(directoryPath);
+                    }
+                });
+                
+                // Step 2: Clear old list and show filenames immediately on UI thread
+                if (_viewModel != null && loadedFiles != null)
+                {
+                    _viewModel.UpdateFilesCollection(loadedFiles);
+                    
+                    // Select first image if available
+                    if (_viewModel.Files.Count > 0)
+                    {
+                        _viewModel.SelectedIndex = 0;
+                    }
+                    
+                    // Auto-resize columns
+                    _listViewColumnService?.AutoResizeColumns();
+                }
+                
+                // Step 3: Populate metadata in background (slow - reads file headers)
+                await Task.Run(() =>
+                {
+                    if (_viewModel != null && loadedFiles != null)
+                    {
+                        _viewModel.PopulateMetadataAsync(loadedFiles, (current, total) =>
                         {
                             // Marshal progress update to UI thread
                             Dispatcher.Invoke(() =>
@@ -194,20 +219,14 @@ namespace AstroImages.Wpf
                     }
                 });
                 
-                // Update ObservableCollection on UI thread
-                if (_viewModel != null && loadedFiles != null)
+                // Refresh the UI to show updated metadata
+                if (_listViewColumnService != null)
                 {
-                    _viewModel.UpdateFilesCollection(loadedFiles);
+                    _listViewColumnService.AutoResizeColumns();
                 }
                 
-                // Select first image if available
-                if (_viewModel != null && _viewModel.Files.Count > 0)
-                {
-                    _viewModel.SelectedIndex = 0;
-                }
-                
-                // Auto-resize columns after loading files
-                _listViewColumnService?.AutoResizeColumns();
+                // Start background warming to pre-trigger antivirus scans
+                _ = WarmupFilesAsync(loadedFiles);
             }
             finally
             {
@@ -220,6 +239,90 @@ namespace AstroImages.Wpf
                     ShowSplashScreenIfEnabled();
                 }
             }
+        }
+        
+        /// <summary>
+        /// Warms up files in the background by reading them to trigger Windows Defender scans.
+        /// This makes subsequent image loads instant since antivirus has already scanned them.
+        /// Uses parallel processing for faster warmup.
+        /// </summary>
+        private async Task WarmupFilesAsync(System.Collections.Generic.List<Models.FileItem>? files)
+        {
+            if (files == null || files.Count == 0)
+                return;
+            
+            // Cancel any existing warmup
+            _warmupCancellation?.Cancel();
+            _warmupCancellation = new System.Threading.CancellationTokenSource();
+            var token = _warmupCancellation.Token;
+            
+            await Task.Run(() =>
+            {
+                _loggingService.LogInfo($"Starting background file warmup for {files.Count} files");
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                int warmedCount = 0;
+                object progressLock = new object();
+                
+                // Filter to only FITS and XISF files (the large ones that trigger scans)
+                var filesToWarmup = files.Where(f =>
+                {
+                    var ext = System.IO.Path.GetExtension(f.Path).ToLowerInvariant();
+                    return ext == ".fits" || ext == ".fit" || ext == ".fts" || ext == ".xisf";
+                }).ToList();
+                
+                // Process files in parallel using multiple threads
+                // Use more threads since we're I/O bound (waiting on Windows Defender scans)
+                System.Threading.Tasks.Parallel.ForEach(filesToWarmup,
+                    new System.Threading.Tasks.ParallelOptions 
+                    { 
+                        MaxDegreeOfParallelism = Math.Min(20, Environment.ProcessorCount * 3),
+                        CancellationToken = token
+                    },
+                    file =>
+                    {
+                        try
+                        {
+                            // Read the entire file to trigger Windows Defender scan
+                            using (var fileStream = new System.IO.FileStream(file.Path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read, 81920, System.IO.FileOptions.SequentialScan))
+                            {
+                                byte[] buffer = new byte[81920];
+                                while (fileStream.Read(buffer, 0, buffer.Length) > 0)
+                                {
+                                    if (token.IsCancellationRequested)
+                                        break;
+                                }
+                            }
+                            
+                            lock (progressLock)
+                            {
+                                warmedCount++;
+                                
+                                // Log progress every 10 files
+                                if (warmedCount % 10 == 0)
+                                {
+                                    _loggingService.LogInfo($"Background warmup: {warmedCount}/{filesToWarmup.Count} files ({stopwatch.ElapsedMilliseconds}ms)");
+                                }
+                            }
+                        }
+                        catch (System.OperationCanceledException)
+                        {
+                            // Expected when cancelled
+                        }
+                        catch (Exception ex)
+                        {
+                            _loggingService.LogError("File Warmup", $"Failed to warm up {file.Name}", ex);
+                        }
+                    });
+                
+                if (!token.IsCancellationRequested)
+                {
+                    _loggingService.LogInfo($"Background warmup completed: {warmedCount} files in {stopwatch.ElapsedMilliseconds}ms");
+                }
+                else
+                {
+                    _loggingService.LogInfo($"Background warmup cancelled after {warmedCount} files");
+                }
+            }, token);
         }
 
         /// <summary>
@@ -1089,6 +1192,10 @@ namespace AstroImages.Wpf
         /// </summary>
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Cancel any ongoing background warmup
+            _warmupCancellation?.Cancel();
+            _warmupCancellation?.Dispose();
+            
             var config = AppConfig.Load();
             
             // Save current window state

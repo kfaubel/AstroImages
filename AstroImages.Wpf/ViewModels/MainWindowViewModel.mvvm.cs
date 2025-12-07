@@ -166,6 +166,10 @@ namespace AstroImages.Wpf.ViewModels
         {
             _loggingService.LogFolderOpen(directoryPath);
             
+            // Add to recent folders
+            AddToRecentFolders(directoryPath);
+            _appConfig.Save();
+            
             var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
             
             // Reset filtered view mode - we're loading a full directory
@@ -179,6 +183,16 @@ namespace AstroImages.Wpf.ViewModels
             var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
             _loggingService.LogInfo($"Directory scan took {totalStopwatch.ElapsedMilliseconds - loadDirStart}ms for {fileItems.Count} files");
             
+            // Return file items immediately without metadata - metadata will be populated separately
+            return fileItems.OrderBy(f => f.Name).ToList();
+        }
+        
+        /// <summary>
+        /// Populates metadata for files in the background, updating the UI progressively
+        /// </summary>
+        public void PopulateMetadataAsync(System.Collections.Generic.List<Models.FileItem> fileItems, Action<int, int>? progressCallback = null)
+        {
+            var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
             int total = fileItems.Count;
             
             // Use thread-safe counter for progress tracking
@@ -191,8 +205,6 @@ namespace AstroImages.Wpf.ViewModels
             var otherCount = 0;
             
             // Process files in parallel for better performance
-            var processedItems = new System.Collections.Concurrent.ConcurrentBag<Models.FileItem>();
-            
             var metadataStart = totalStopwatch.ElapsedMilliseconds;
             System.Threading.Tasks.Parallel.ForEach(fileItems, 
                 new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
@@ -211,9 +223,6 @@ namespace AstroImages.Wpf.ViewModels
                         
                         // Extract both custom and FITS keywords for each file
                         _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords);
-                        
-                        // Add to thread-safe collection
-                        processedItems.Add(fileItem);
                         
                         // Update progress in a thread-safe manner
                         lock (progressLock)
@@ -239,9 +248,6 @@ namespace AstroImages.Wpf.ViewModels
             
             var metadataTime = totalStopwatch.ElapsedMilliseconds - metadataStart;
             _loggingService.LogInfo($"Metadata extraction took {metadataTime}ms ({fitsCount} FITS, {xisfCount} XISF, {otherCount} other files)");
-            
-            // Return sorted list - caller will add to ObservableCollection on UI thread
-            return processedItems.OrderBy(f => f.Name).ToList();
         }
         
         /// <summary>
@@ -748,6 +754,7 @@ namespace AstroImages.Wpf.ViewModels
         public RelayCommand RefreshCustomKeywordsCommand { get; }        // Refresh custom keyword extraction
         public RelayCommand RefreshFitsKeywordsCommand { get; }          // Refresh FITS keyword extraction
         public RelayCommand OpenFolderDialogCommand { get; }             // Show folder selection dialog
+        public RelayCommand OpenRecentFolderCommand { get; }             // Open a recent folder
         public RelayCommand OpenFilesCommand { get; }                    // Open specific files dialog
         public RelayCommand ShowGeneralOptionsDialogCommand { get; }     // Show general application options
         public RelayCommand ShowCustomKeywordsDialogCommand { get; }     // Show custom keywords configuration
@@ -821,6 +828,7 @@ namespace AstroImages.Wpf.ViewModels
             RefreshCustomKeywordsCommand = new RelayCommand(_ => RefreshFileListKeywords());
             RefreshFitsKeywordsCommand = new RelayCommand(_ => RefreshFileListFitsKeywords());
             OpenFolderDialogCommand = new RelayCommand(_ => OpenFolderAndLoadFiles());
+            OpenRecentFolderCommand = new RelayCommand(param => OpenRecentFolder(param));
             OpenFilesCommand = new RelayCommand(_ => OpenFilesRequested?.Invoke());
             ShowGeneralOptionsDialogCommand = new RelayCommand(_ => ShowGeneralOptionsDialog());
             ShowCustomKeywordsDialogCommand = new RelayCommand(_ => ShowCustomKeywordsDialog());
@@ -1020,10 +1028,68 @@ namespace AstroImages.Wpf.ViewModels
             if (!string.IsNullOrEmpty(selectedFolder))
             {
                 _appConfig.LastOpenDirectory = selectedFolder;
+                AddToRecentFolders(selectedFolder);
                 _appConfig.Save();
                 
                 // Request the View to load files with a progress dialog
                 LoadFilesWithProgressRequested?.Invoke(selectedFolder);
+            }
+        }
+        
+        /// <summary>
+        /// Opens a folder from the recent folders list
+        /// </summary>
+        private void OpenRecentFolder(object? parameter)
+        {
+            if (parameter is string folderPath && System.IO.Directory.Exists(folderPath))
+            {
+                _appConfig.LastOpenDirectory = folderPath;
+                AddToRecentFolders(folderPath);
+                _appConfig.Save();
+                
+                // Request the View to load files with a progress dialog
+                LoadFilesWithProgressRequested?.Invoke(folderPath);
+            }
+        }
+        
+        /// <summary>
+        /// Adds a folder to the recent folders list, maintaining max 10 items with most recent first
+        /// </summary>
+        private void AddToRecentFolders(string folderPath)
+        {
+            // Remove if already exists (to move to top)
+            _appConfig.RecentFolders.Remove(folderPath);
+            
+            // Add to beginning of list
+            _appConfig.RecentFolders.Insert(0, folderPath);
+            
+            // Keep only last 10
+            while (_appConfig.RecentFolders.Count > 10)
+            {
+                _appConfig.RecentFolders.RemoveAt(_appConfig.RecentFolders.Count - 1);
+            }
+            
+            OnPropertyChanged(nameof(RecentFolders));
+        }
+        
+        /// <summary>
+        /// Gets the list of recent folders for binding to the menu
+        /// </summary>
+        public System.Collections.ObjectModel.ObservableCollection<string> RecentFolders
+        {
+            get
+            {
+                // Filter out folders that no longer exist
+                var existingFolders = _appConfig.RecentFolders.Where(f => System.IO.Directory.Exists(f)).ToList();
+                
+                // Update config if some folders were removed
+                if (existingFolders.Count != _appConfig.RecentFolders.Count)
+                {
+                    _appConfig.RecentFolders = existingFolders;
+                    _appConfig.Save();
+                }
+                
+                return new System.Collections.ObjectModel.ObservableCollection<string>(existingFolders);
             }
         }
         private void ShowGeneralOptionsDialog()

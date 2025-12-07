@@ -20,6 +20,17 @@
         <Menu Grid.Row="0">
             <MenuItem Header="File">
                 <MenuItem Header="Open Folder..." Command="{Binding OpenFolderDialogCommand}" />
+                <MenuItem Header="Open Recent" ItemsSource="{Binding RecentFolders}">
+                    <MenuItem.Resources>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="Header" Value="{Binding}" />
+                            <Setter Property="Command" Value="{Binding DataContext.OpenRecentFolderCommand, RelativeSource={RelativeSource AncestorType=Menu}}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+                            <Setter Property="Background" Value="{DynamicResource ThemeMenuBackground}" />
+                        </Style>
+                    </MenuItem.Resources>
+                </MenuItem>
                 <MenuItem Header="Open Files..." Click="OpenFiles_Click" InputGestureText="Ctrl+Shift+O" />
                 <Separator />
                 <MenuItem Header="Exit" Click="Exit_Click" />

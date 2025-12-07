@@ -175,8 +175,19 @@ namespace AstroImages.Wpf
         {
             try
             {
-
-                var bytes = File.ReadAllBytes(filePath);
+                // Use FileStream with SequentialScan to potentially avoid triggering antivirus scans
+                // This mirrors the approach used in ParseHeaderFromFile which doesn't trigger scans
+                byte[] bytes;
+                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.SequentialScan))
+                {
+                    bytes = new byte[fileStream.Length];
+                    int totalRead = 0;
+                    int bytesRead;
+                    while (totalRead < bytes.Length && (bytesRead = fileStream.Read(bytes, totalRead, bytes.Length - totalRead)) > 0)
+                    {
+                        totalRead += bytesRead;
+                    }
+                }
                 
                 // Validate the FITS data structure
                 if (!FitsUtilities.IsFitsData(bytes))
@@ -325,7 +336,17 @@ namespace AstroImages.Wpf
         {
             try
             {
-                var bytes = File.ReadAllBytes(filePath);
+                byte[] bytes;
+                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.SequentialScan))
+                {
+                    bytes = new byte[fileStream.Length];
+                    int totalRead = 0;
+                    int bytesRead;
+                    while (totalRead < bytes.Length && (bytesRead = fileStream.Read(bytes, totalRead, bytes.Length - totalRead)) > 0)
+                    {
+                        totalRead += bytesRead;
+                    }
+                }
                 return FitsParser.ParseHeader(bytes);
             }
             catch (Exception)
@@ -353,7 +374,16 @@ namespace AstroImages.Wpf
                 if (cache.FileBytes == null)
                 {
                     var loadStart = stopwatch.ElapsedMilliseconds;
-                    cache.FileBytes = File.ReadAllBytes(filePath);
+                    using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.SequentialScan))
+                    {
+                        cache.FileBytes = new byte[fileStream.Length];
+                        int totalRead = 0;
+                        int bytesRead;
+                        while (totalRead < cache.FileBytes.Length && (bytesRead = fileStream.Read(cache.FileBytes, totalRead, cache.FileBytes.Length - totalRead)) > 0)
+                        {
+                            totalRead += bytesRead;
+                        }
+                    }
                     Console.WriteLine($"[FitsImageRenderer] File load took {stopwatch.ElapsedMilliseconds - loadStart}ms ({cache.FileBytes.Length:N0} bytes)");
                 }
                 
