@@ -31,20 +31,20 @@ namespace AstroImages.Wpf
     {
         private static readonly ConcurrentDictionary<string, XisfHeaderCache> _xisfCache = new();
         
-        public static BitmapSource? RenderFitsFile(string filePath, bool autoStretch = true)
+        public static BitmapSource? RenderFitsFile(string filePath, bool autoStretch = true, int stretchAggressiveness = 5)
         {
             try
             {
                 // Check if it's an XISF file first
                 if (XisfUtilities.IsXisfFile(filePath))
                 {
-                    return RenderXisfFile(filePath, autoStretch);
+                    return RenderXisfFile(filePath, autoStretch, stretchAggressiveness);
                 }
                 
                 // Check if it's a FITS file
                 if (FitsUtilities.IsFitsFile(filePath))
                 {
-                    return RenderFitsFileInternal(filePath, autoStretch);
+                    return RenderFitsFileInternal(filePath, autoStretch, stretchAggressiveness);
                 }
                 
                 // Try to render as standard image format (stretching doesn't apply to standard images)
@@ -171,7 +171,7 @@ namespace AstroImages.Wpf
             }
         }
 
-        private static BitmapSource? RenderFitsFileInternal(string filePath, bool autoStretch = true)
+        private static BitmapSource? RenderFitsFileInternal(string filePath, bool autoStretch = true, int stretchAggressiveness = 5)
         {
             try
             {
@@ -207,7 +207,7 @@ namespace AstroImages.Wpf
                 var stats = FitsUtilities.CalculateImageStatistics(pixels);
                 
                 // Apply stretching algorithm if enabled, otherwise use raw pixel values
-                var scaledPixels = autoStretch ? ApplyAutoStretch(pixels, width, height) : pixels;
+                var scaledPixels = autoStretch ? ApplyAutoStretch(pixels, width, height, stretchAggressiveness) : pixels;
 
                 // Check for potential issues and provide informative messages
                 if (Math.Abs(stats["Max"] - stats["Min"]) < 0.001)
@@ -265,71 +265,139 @@ namespace AstroImages.Wpf
             }
         }
 
-        private static byte[] ApplyAutoStretch(byte[] originalPixels, int width, int height)
+        private static byte[] ApplyAutoStretch(byte[] originalPixels, int width, int height, int aggressiveness = 5)
         {
-            // Convert back to larger data type for better processing
-            var floatPixels = new float[originalPixels.Length];
-            for (int i = 0; i < originalPixels.Length; i++)
-            {
-                floatPixels[i] = originalPixels[i];
-            }
-            
-            // Calculate histogram for better stretching
+            // Calculate histogram
             var histogram = new int[256];
             foreach (var pixel in originalPixels)
             {
                 histogram[pixel]++;
             }
             
-            // Find 1% and 99% percentiles for better contrast
-            int totalPixels = width * height;
-            int lowCount = (int)(totalPixels * 0.01);
-            int highCount = (int)(totalPixels * 0.99);
+            // Map aggressiveness (0-10) to percentile clipping and target median
+            // 0 = almost no clipping (0.0001%), 5 = gentle (0.01%), 10 = aggressive (1%)
+            double lowPercentile, highPercentile;
+            float targetMedian;
             
-            int lowValue = 0, highValue = 255;
+            System.Diagnostics.Debug.WriteLine($"ApplyAutoStretch: aggressiveness={aggressiveness}");
+            
+            if (aggressiveness <= 5)
+            {
+                // 0-5: very gentle to gentle
+                // Low: 0.0001% to 0.01% (0.000001 to 0.0001 as decimal)
+                lowPercentile = 0.000001 + (aggressiveness / 5.0) * (0.0001 - 0.000001);
+                highPercentile = 1.0 - lowPercentile;
+                // Target median: 0.05 to 0.08
+                targetMedian = 0.05f + (aggressiveness / 5.0f) * 0.03f;
+                System.Diagnostics.Debug.WriteLine($"  Branch: <=5, lowPercentile={lowPercentile}, highPercentile={highPercentile}, targetMedian={targetMedian}");
+            }
+            else
+            {
+                // 6-10: gentle to aggressive
+                // Low: 0.01% to 1% (0.0001 to 0.01 as decimal)
+                double factor = (aggressiveness - 5) / 5.0;
+                lowPercentile = 0.0001 + factor * 0.0099;
+                highPercentile = 1.0 - lowPercentile;
+                // Target median: 0.08 to 0.25
+                targetMedian = 0.08f + (float)factor * 0.17f;
+                System.Diagnostics.Debug.WriteLine($"  Branch: >5, factor={factor}, lowPercentile={lowPercentile}, highPercentile={highPercentile}, targetMedian={targetMedian}");
+            }
+            
+            int totalPixels = width * height;
+            int lowCount = (int)(totalPixels * lowPercentile);
+            int highCount = (int)(totalPixels * lowPercentile);  // Symmetric clipping on both ends
+            
+            System.Diagnostics.Debug.WriteLine($"  totalPixels={totalPixels}, lowCount={lowCount}, highCount={highCount}");
+            
+            int blackPoint = 0, whitePoint = 255;
             int count = 0;
             
-            // Find low percentile
+            // Find black point (clip bottom lowPercentile of pixels)
             for (int i = 0; i < 256; i++)
             {
                 count += histogram[i];
                 if (count >= lowCount)
                 {
-                    lowValue = i;
+                    blackPoint = i;
                     break;
                 }
             }
             
-            // Find high percentile
+            // Find white point (clip top lowPercentile of pixels)
             count = 0;
             for (int i = 255; i >= 0; i--)
             {
                 count += histogram[i];
-                if (count >= (totalPixels - highCount))
+                if (count >= highCount)
                 {
-                    highValue = i;
+                    whitePoint = i;
                     break;
                 }
             }
             
-            // Apply stretch
+            // Calculate median value for MTF (midtone transfer function) target
+            count = 0;
+            int medianValue = 128;
+            int medianCount = totalPixels / 2;
+            for (int i = 0; i < 256; i++)
+            {
+                count += histogram[i];
+                if (count >= medianCount)
+                {
+                    medianValue = i;
+                    break;
+                }
+            }
+            
+            // Apply stretch with MTF (preserves highlights better than gamma)
             var stretchedPixels = new byte[originalPixels.Length];
-            float range = highValue - lowValue;
+            float range = whitePoint - blackPoint;
             if (range == 0) range = 1;
+            
+            // Use the targetMedian calculated from aggressiveness level
+            float medianNormalized = (medianValue - blackPoint) / range;
             
             for (int i = 0; i < originalPixels.Length; i++)
             {
-                float normalized = (originalPixels[i] - lowValue) / range;
+                // Normalize to 0-1 range
+                float normalized = (originalPixels[i] - blackPoint) / range;
                 normalized = Math.Max(0, Math.Min(1, normalized)); // Clamp to 0-1
                 
-                // Apply gamma correction for better visibility
-                normalized = (float)Math.Pow(normalized, 0.8);
+                // Apply Midtone Transfer Function (MTF)
+                // This is similar to PixInsight's screen transfer function
+                float stretched;
+                if (medianNormalized > 0 && medianNormalized < 1)
+                {
+                    // Calculate MTF balance parameter
+                    float balance = MidtoneTF(medianNormalized, targetMedian);
+                    stretched = MidtoneTF(normalized, balance);
+                }
+                else
+                {
+                    // Fallback to gentle gamma if median calculation fails
+                    stretched = (float)Math.Pow(normalized, 0.5);
+                }
                 
-                // Scale to 0-255 range (normal representation: bright stars = white, dark sky = black)
-                stretchedPixels[i] = (byte)(normalized * 255);
+                // Scale to 0-255 range
+                stretchedPixels[i] = (byte)(stretched * 255);
             }
             
             return stretchedPixels;
+        }
+        
+        /// <summary>
+        /// Midtone Transfer Function - similar to PixInsight's MTF
+        /// Provides smooth tonal curve that preserves highlights better than simple gamma
+        /// </summary>
+        private static float MidtoneTF(float x, float m)
+        {
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+            if (m <= 0) return 0;
+            if (m >= 1) return 1;
+            
+            // MTF formula: ((m - 1) * x) / ((2m - 1) * x - m)
+            return ((m - 1) * x) / (((2 * m) - 1) * x - m);
         }
 
         public static System.Collections.Generic.Dictionary<string, object> GetFitsHeaders(string filePath)
@@ -358,7 +426,7 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Render XISF file to BitmapSource with optimized performance
         /// </summary>
-        private static BitmapSource? RenderXisfFile(string filePath, bool autoStretch = true)
+        private static BitmapSource? RenderXisfFile(string filePath, bool autoStretch = true, int stretchAggressiveness = 5)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
@@ -434,7 +502,7 @@ namespace AstroImages.Wpf
                 if (autoStretch)
                 {
                     var stretchStart = stopwatch.ElapsedMilliseconds;
-                    pixels = ApplyAutoStretch(pixels, cache.Width, cache.Height);
+                    pixels = ApplyAutoStretch(pixels, cache.Width, cache.Height, stretchAggressiveness);
                     Console.WriteLine($"[FitsImageRenderer] Auto-stretch took {stopwatch.ElapsedMilliseconds - stretchStart}ms");
                 }
 

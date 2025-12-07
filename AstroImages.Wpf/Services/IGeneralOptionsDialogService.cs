@@ -12,12 +12,14 @@ namespace AstroImages.Wpf.Services
         /// <param name="currentShowFullScreenHelp">The current ShowFullScreenHelp value.</param>
         /// <param name="currentPlayPauseInterval">The current play pause interval in seconds.</param>
         /// <param name="currentScanXisfForFitsKeywords">The current ScanXisfForFitsKeywords value.</param>
+        /// <param name="currentStretchAggressiveness">The current auto-stretch aggressiveness (0-10).</param>
         /// <returns>A tuple with the new settings, or null values if cancelled.</returns>
-        (bool? showSizeColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords) ShowGeneralOptionsDialog(
+        (bool? showSizeColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, int? stretchAggressiveness) ShowGeneralOptionsDialog(
             bool currentShowSizeColumn, 
             ThemeMode currentTheme, 
             bool currentShowFullScreenHelp,
             double currentPlayPauseInterval,
-            bool currentScanXisfForFitsKeywords);
+            bool currentScanXisfForFitsKeywords,
+            int currentStretchAggressiveness);
     }
 }

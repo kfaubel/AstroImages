@@ -57,7 +57,7 @@ namespace AstroImages.Wpf
             
             try
             {
-                var image = FitsImageRenderer.RenderFitsFile(fileItem.Path, autoStretch: true);
+                var image = FitsImageRenderer.RenderFitsFile(fileItem.Path, autoStretch: true, stretchAggressiveness: _appConfig.StretchAggressiveness);
                 DisplayImage.Source = image;
                 
                 // Update info text with selection status

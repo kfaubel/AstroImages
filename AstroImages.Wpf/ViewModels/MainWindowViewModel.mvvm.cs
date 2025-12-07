@@ -1099,7 +1099,8 @@ namespace AstroImages.Wpf.ViewModels
                 _appConfig.Theme, 
                 _appConfig.ShowFullScreenHelp,
                 _appConfig.PlayPauseInterval,
-                _appConfig.ScanXisfForFitsKeywords);
+                _appConfig.ScanXisfForFitsKeywords,
+                _appConfig.StretchAggressiveness);
                 
             if (result.showSizeColumn.HasValue)
             {
@@ -1125,6 +1126,13 @@ namespace AstroImages.Wpf.ViewModels
                 if (result.scanXisfForFitsKeywords.HasValue)
                 {
                     _appConfig.ScanXisfForFitsKeywords = result.scanXisfForFitsKeywords.Value;
+                }
+                
+                if (result.stretchAggressiveness.HasValue)
+                {
+                    _appConfig.StretchAggressiveness = result.stretchAggressiveness.Value;
+                    // Trigger image refresh when stretch setting changes
+                    AutoStretchChanged?.Invoke();
                 }
                 
                 _appConfig.Save();

@@ -157,6 +157,13 @@ namespace AstroImages.Wpf
         public double PlayPauseInterval { get; set; } = 1.0;
 
         /// <summary>
+        /// Aggressiveness of the auto-stretch algorithm (0-10).
+        /// 0 = very gentle (preserve all detail), 5 = balanced (default), 10 = aggressive (maximum contrast)
+        /// Affects how much the histogram is clipped and how bright the midtones are pushed.
+        /// </summary>
+        public int StretchAggressiveness { get; set; } = 5;
+
+        /// <summary>
         /// Static field containing the full path where the configuration file is stored.
         /// Uses the user's AppData folder which is standard for application settings on Windows.
         /// Example path: C:\Users\[username]\AppData\Roaming\AstroImages\app-config.json

@@ -31,6 +31,9 @@ namespace AstroImages.Wpf
         // Logging service for tracking user actions and errors
         private readonly ILoggingService _loggingService;
         
+        // Application configuration
+        private readonly AppConfig _appConfig;
+        
         // Background warming task to pre-scan files and trigger antivirus
         private System.Threading.CancellationTokenSource? _warmupCancellation;
 
@@ -50,10 +53,10 @@ namespace AstroImages.Wpf
 
             // Load application configuration from settings file
             // AppConfig.Load() reads saved settings or creates defaults
-            var config = AppConfig.Load();
+            _appConfig = AppConfig.Load();
             
             // Restore window position and size from saved configuration
-            RestoreWindowState(config);
+            RestoreWindowState(_appConfig);
 
             // Create all the service instances that the application needs
             // Services handle specific functionality (file management, dialogs, etc.)
@@ -85,14 +88,14 @@ namespace AstroImages.Wpf
             // Service that manages ListView columns (adding, removing, styling)
             // Needs reference to the actual ListView control from XAML
             // Store as field so we can call auto-resize methods later
-            _listViewColumnService = new ListViewColumnService(FileListView, config, greenBrush, blueBrush);
+            _listViewColumnService = new ListViewColumnService(FileListView, _appConfig, greenBrush, blueBrush);
 
             // Create the ViewModel with all required services
             // This uses "dependency injection" - passing dependencies to the constructor
             _viewModel = new MainWindowViewModel(
                 fileManagementService,
                 keywordExtractionService,
-                config,
+                _appConfig,
                 folderDialogService,
                 generalOptionsDialogService,
                 customKeywordsDialogService,
@@ -146,10 +149,10 @@ namespace AstroImages.Wpf
                 // Load only those files instead of entire directory
                 Loaded += async (sender, e) => await LoadSpecificFilesWithProgressAsync(_commandLineFilePaths);
             }
-            else if (!string.IsNullOrEmpty(config.LastOpenDirectory) && System.IO.Directory.Exists(config.LastOpenDirectory))
+            else if (!string.IsNullOrEmpty(_appConfig.LastOpenDirectory) && System.IO.Directory.Exists(_appConfig.LastOpenDirectory))
             {
                 // No command-line files, load last opened directory
-                Loaded += async (sender, e) => await LoadFilesWithProgressAsync(config.LastOpenDirectory, isStartup: true);
+                Loaded += async (sender, e) => await LoadFilesWithProgressAsync(_appConfig.LastOpenDirectory, isStartup: true);
             }
 
             // Wire up file selection to image display
@@ -390,12 +393,10 @@ namespace AstroImages.Wpf
         /// </summary>
         private void ShowSplashScreenIfEnabled()
         {
-            var config = AppConfig.Load();
-            
-            if (config.ShowSplashScreen)
+            if (_appConfig.ShowSplashScreen)
             {
                 // Create the splash screen window with current setting
-                var splash = new SplashWindow(config.ShowSplashScreen);
+                var splash = new SplashWindow(_appConfig.ShowSplashScreen);
                 
                 // Set the main window as the "owner" - this makes the splash appear on top
                 // and centers it relative to the main window
@@ -413,8 +414,8 @@ namespace AstroImages.Wpf
                         // Update configuration based on checkbox state
                         // If checked, disable splash screen for next time
                         // If unchecked, keep showing it
-                        config.ShowSplashScreen = !splash.DontShowAgain;
-                        config.Save();
+                        _appConfig.ShowSplashScreen = !splash.DontShowAgain;
+                        _appConfig.Save();
                     }
                     catch
                     {
@@ -565,6 +566,8 @@ namespace AstroImages.Wpf
         /// </summary>
         private void UpdateImageDisplay()
         {
+            System.Diagnostics.Debug.WriteLine($"UpdateImageDisplay called, StretchAggressiveness={_appConfig.StretchAggressiveness}");
+            
             // Validate that we have a valid selection
             // Check for: null ViewModel, no selection (-1), or selection out of bounds
             if (_viewModel == null || _viewModel.SelectedIndex < 0 || _viewModel.SelectedIndex >= _viewModel.Files.Count)
@@ -591,7 +594,7 @@ namespace AstroImages.Wpf
                 {
                     // Use our custom FITS renderer to load and process the image
                     // This handles both FITS files and standard image formats (JPEG, PNG, etc.)
-                    var image = FitsImageRenderer.RenderFitsFile(file.Path, _viewModel.AutoStretch);
+                    var image = FitsImageRenderer.RenderFitsFile(file.Path, _viewModel.AutoStretch, _appConfig.StretchAggressiveness);
                 
                     if (image != null)
                     {
@@ -954,11 +957,8 @@ namespace AstroImages.Wpf
         /// <param name="e">Event arguments for the click event</param>
         private void About_Click(object sender, RoutedEventArgs e)
         {
-            // Load current config to pass ShowSplashScreen setting
-            var config = AppConfig.Load();
-            
             // Reuse the splash screen window as an "About" dialog
-            var aboutWindow = new SplashWindow(config.ShowSplashScreen);
+            var aboutWindow = new SplashWindow(_appConfig.ShowSplashScreen);
             
             // Set this main window as the owner
             aboutWindow.Owner = this;
@@ -975,8 +975,8 @@ namespace AstroImages.Wpf
                 try
                 {
                     // Update configuration based on checkbox state
-                    config.ShowSplashScreen = !aboutWindow.DontShowAgain;
-                    config.Save();
+                    _appConfig.ShowSplashScreen = !aboutWindow.DontShowAgain;
+                    _appConfig.Save();
                 }
                 catch
                 {
@@ -1011,10 +1011,8 @@ namespace AstroImages.Wpf
                 // Show working cursor
                 this.Cursor = System.Windows.Input.Cursors.Wait;
                 
-                var config = AppConfig.Load();
-                
                 // Create update service
-                using var updateService = new Services.UpdateService(config.UpdateRepoOwner, config.UpdateRepoName);
+                using var updateService = new Services.UpdateService(_appConfig.UpdateRepoOwner, _appConfig.UpdateRepoName);
                 
                 // Check for updates
                 var updateInfo = await updateService.CheckForUpdatesAsync();
@@ -1030,8 +1028,8 @@ namespace AstroImages.Wpf
                     // Update config if user changed preferences
                     if (updateDialog.DisableUpdateChecks)
                     {
-                        config.CheckForUpdates = false;
-                        config.Save();
+                        _appConfig.CheckForUpdates = false;
+                        _appConfig.Save();
                     }
                 }
                 else
@@ -1143,10 +1141,9 @@ namespace AstroImages.Wpf
             // Only save if window is in normal state (not minimized or maximized)
             if (this.WindowState == WindowState.Normal)
             {
-                var config = AppConfig.Load();
-                config.WindowLeft = this.Left;
-                config.WindowTop = this.Top;
-                config.Save();
+                _appConfig.WindowLeft = this.Left;
+                _appConfig.WindowTop = this.Top;
+                _appConfig.Save();
             }
         }
 
@@ -1159,10 +1156,9 @@ namespace AstroImages.Wpf
             // Only save if window is in normal state
             if (this.WindowState == WindowState.Normal)
             {
-                var config = AppConfig.Load();
-                config.WindowWidth = this.Width;
-                config.WindowHeight = this.Height;
-                config.Save();
+                _appConfig.WindowWidth = this.Width;
+                _appConfig.WindowHeight = this.Height;
+                _appConfig.Save();
             }
             
             // Update the File column width to be responsive to window width
@@ -1181,9 +1177,8 @@ namespace AstroImages.Wpf
         /// </summary>
         private void MainWindow_StateChanged(object? sender, EventArgs e)
         {
-            var config = AppConfig.Load();
-            config.WindowState = (int)this.WindowState;
-            config.Save();
+            _appConfig.WindowState = (int)this.WindowState;
+            _appConfig.Save();
         }
 
         /// <summary>
@@ -1196,19 +1191,17 @@ namespace AstroImages.Wpf
             _warmupCancellation?.Cancel();
             _warmupCancellation?.Dispose();
             
-            var config = AppConfig.Load();
-            
             // Save current window state
             if (this.WindowState == WindowState.Normal)
             {
-                config.WindowLeft = this.Left;
-                config.WindowTop = this.Top;
-                config.WindowWidth = this.Width;
-                config.WindowHeight = this.Height;
+                _appConfig.WindowLeft = this.Left;
+                _appConfig.WindowTop = this.Top;
+                _appConfig.WindowWidth = this.Width;
+                _appConfig.WindowHeight = this.Height;
             }
-            config.WindowState = (int)this.WindowState;
+            _appConfig.WindowState = (int)this.WindowState;
             
-            config.Save();
+            _appConfig.Save();
         }
         #endregion
     }

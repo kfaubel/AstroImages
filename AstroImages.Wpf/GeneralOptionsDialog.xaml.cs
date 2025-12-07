@@ -44,6 +44,12 @@ namespace AstroImages.Wpf
         public double PlayPauseInterval { get; set; }
 
         /// <summary>
+        /// Property to track the aggressiveness of the auto-stretch algorithm (0-10).
+        /// 0 = very gentle, 5 = balanced, 10 = aggressive.
+        /// </summary>
+        public int StretchAggressiveness { get; set; }
+
+        /// <summary>
         /// Default constructor - creates the dialog with default settings.
         /// This constructor is required for XAML support and is called by other constructors.
         /// 
@@ -71,7 +77,8 @@ namespace AstroImages.Wpf
         /// <param name="showFullScreenHelp">Current value of the ShowFullScreenHelp setting</param>
         /// <param name="playPauseInterval">Current pause interval for play mode in seconds</param>
         /// <param name="scanXisfForFitsKeywords">Current value of the ScanXisfForFitsKeywords setting</param>
-        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords) : this()
+        /// <param name="stretchAggressiveness">Current aggressiveness of auto-stretch (0-10)</param>
+        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords, int stretchAggressiveness) : this()
         {
             // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
@@ -79,6 +86,7 @@ namespace AstroImages.Wpf
             ShowFullScreenHelp = showFullScreenHelp;
             PlayPauseInterval = playPauseInterval;
             ScanXisfForFitsKeywords = scanXisfForFitsKeywords;
+            StretchAggressiveness = stretchAggressiveness;
             
             // Set the checkbox state to match the current setting
             // ShowSizeColumnCheckBox is a UI control defined in the XAML file
@@ -93,6 +101,9 @@ namespace AstroImages.Wpf
             
             // Set the play pause interval combo box
             SelectPlayPauseInterval(playPauseInterval);
+            
+            // Set the stretch aggressiveness slider
+            StretchAggressivenessSlider.Value = stretchAggressiveness;
         }
 
         /// <summary>
@@ -157,6 +168,9 @@ namespace AstroImages.Wpf
             {
                 PlayPauseInterval = 1.0; // Default to 1 second if parsing fails
             }
+            
+            // Read the stretch aggressiveness from slider
+            StretchAggressiveness = (int)StretchAggressivenessSlider.Value;
             
             // Set DialogResult to true to indicate user clicked OK
             // This is how modal dialogs communicate their outcome to the caller
