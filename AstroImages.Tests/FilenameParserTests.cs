@@ -109,11 +109,11 @@ namespace AstroImages.Tests
         public void ExtractKeywordValues_NullFilename_ReturnsEmptyDictionary()
         {
             // Arrange
-            string filename = null;
+            string? nullFilename = null;
             var keywords = new[] { "RMS", "HFR" };
             
             // Act
-            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            var result = FilenameParser.ExtractKeywordValues(nullFilename!, keywords);
             
             // Assert
             Assert.NotNull(result);

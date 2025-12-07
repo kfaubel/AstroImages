@@ -110,13 +110,13 @@ namespace AstroImages.Tests
         }
         
         [Fact]
-        public void HasXisfExtension_NullString_ReturnsFalse()
+        public void HasXisfExtension_NullPath_ReturnsFalse()
         {
             // Arrange
-            string filename = null;
+            string? nullPath = null;
             
             // Act
-            var result = XisfUtilities.HasXisfExtension(filename);
+            var result = XisfUtilities.HasXisfExtension(nullPath!);
             
             // Assert
             Assert.False(result);
@@ -159,10 +159,10 @@ namespace AstroImages.Tests
         public void IsXisfData_NullBuffer_ReturnsFalse()
         {
             // Arrange
-            byte[] nullBuffer = null;
+            byte[]? nullBuffer = null;
             
             // Act
-            var result = XisfUtilities.IsXisfData(nullBuffer);
+            var result = XisfUtilities.IsXisfData(nullBuffer!);
             
             // Assert
             Assert.False(result);

@@ -89,10 +89,10 @@ namespace AstroImages.Tests
         public void IsFitsData_NullBuffer_ReturnsFalse()
         {
             // Arrange
-            byte[] nullBuffer = null;
+            byte[]? nullBuffer = null;
             
             // Act
-            var result = FitsUtilities.IsFitsData(nullBuffer);
+            var result = FitsUtilities.IsFitsData(nullBuffer!);
             
             // Assert
             Assert.False(result, "Null buffer should return false");
@@ -154,10 +154,10 @@ namespace AstroImages.Tests
         public void CalculateImageStatistics_NullArray_ReturnsEmptyDictionary()
         {
             // Arrange
-            byte[] pixels = null;
+            byte[]? pixels = null;
             
             // Act
-            var stats = FitsUtilities.CalculateImageStatistics(pixels);
+            var stats = FitsUtilities.CalculateImageStatistics(pixels!);
             
             // Assert
             Assert.NotNull(stats);

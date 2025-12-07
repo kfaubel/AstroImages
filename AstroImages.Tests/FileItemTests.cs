@@ -16,7 +16,7 @@ namespace AstroImages.Tests
             // Arrange
             var fileItem = new FileItem();
             var propertyChangedRaised = false;
-            string changedPropertyName = null;
+            string? changedPropertyName = null;
             
             fileItem.PropertyChanged += (sender, e) =>
             {

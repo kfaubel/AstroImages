@@ -121,7 +121,7 @@ namespace AstroImages.Tests
             }
             
             // Act
-            var result = XisfParser.ParseSpecificFitsKeywords(xisfFile, null);
+            var result = XisfParser.ParseSpecificFitsKeywords(xisfFile, null!);
             
             // Assert
             Assert.NotNull(result);

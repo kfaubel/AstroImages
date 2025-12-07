@@ -157,6 +157,7 @@ namespace AstroImages.Wpf
 
             // Wire up file selection to image display
             FileListView.SelectionChanged += FileListView_SelectionChanged;
+            FileListView.PreviewKeyDown += FileListView_PreviewKeyDown;
             UpdateImageDisplay();
 
             // Handle pane resize for Fit mode
@@ -551,6 +552,25 @@ namespace AstroImages.Wpf
             UpdateImageDisplay();
             if (_viewModel != null && _viewModel.FitMode)
                 CenterImageInScrollViewer();
+        }
+
+        /// <summary>
+        /// Handles keyboard input in the file list to toggle checkbox selection with spacebar.
+        /// </summary>
+        private void FileListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Space)
+            {
+                // Get the currently selected item
+                if (_viewModel != null && _viewModel.SelectedIndex >= 0 && _viewModel.SelectedIndex < _viewModel.Files.Count)
+                {
+                    var selectedFile = _viewModel.Files[_viewModel.SelectedIndex];
+                    selectedFile.IsSelected = !selectedFile.IsSelected;
+                    
+                    // Mark the event as handled so it doesn't cause other actions
+                    e.Handled = true;
+                }
+            }
         }
 
         /// <summary>
@@ -993,6 +1013,31 @@ namespace AstroImages.Wpf
             var logWindow = new LogViewerWindow(_loggingService);
             logWindow.Owner = this;
             logWindow.ShowDialog();
+        }
+
+        /// <summary>
+        /// Event handler for Help > Feedback menu item.
+        /// Opens the GitHub issues page in the default browser.
+        /// </summary>
+        private void Feedback_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var url = "https://github.com/kfaubel/AstroImages/issues";
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    $"Unable to open browser: {ex.Message}\n\nPlease visit:\nhttps://github.com/kfaubel/AstroImages/issues",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         #region File Progress Dialog

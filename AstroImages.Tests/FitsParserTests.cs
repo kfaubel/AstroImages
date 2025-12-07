@@ -114,15 +114,7 @@ namespace AstroImages.Tests
             
             // Assert
             // Look for string-type keywords (many FITS files have TELESCOP, INSTRUME, etc.)
-            var hasStringValue = false;
-            foreach (var kvp in header)
-            {
-                if (kvp.Value is string)
-                {
-                    hasStringValue = true;
-                    break;
-                }
-            }
+            _ = header.Values.Any(v => v is string);
             // This is informational - not all FITS files have string keywords
             Assert.True(true, "Parser should handle string values");
         }

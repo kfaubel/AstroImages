@@ -33,6 +33,8 @@
                 </MenuItem>
                 <MenuItem Header="Open Files..." Click="OpenFiles_Click" InputGestureText="Ctrl+Shift+O" />
                 <Separator />
+                <MenuItem Header="Move Selected..." Command="{Binding MoveSelectedCommand}" />
+                <Separator />
                 <MenuItem Header="Exit" Click="Exit_Click" />
             </MenuItem>
             <MenuItem Header="View">
@@ -49,6 +51,7 @@
                 <MenuItem Header="View Activity Log" Click="ViewLog_Click" />
                 <Separator />
                 <MenuItem Header="Documentation" Click="Documentation_Click" />
+                <MenuItem Header="Feedback" Click="Feedback_Click" />
                 <MenuItem Header="About" Click="About_Click" />
             </MenuItem>
         </Menu>
