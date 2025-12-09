@@ -415,3 +415,5 @@ TestData.zip
 .env
 .env.local
 .env.*.local
+
+.VSCodeCounter/
