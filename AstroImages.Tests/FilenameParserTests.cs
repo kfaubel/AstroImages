@@ -164,5 +164,78 @@ namespace AstroImages.Tests
             // Should extract empty string for HFR (value between HFR and Stars is empty)
             Assert.True(result.ContainsKey("HFR"));
         }
+        
+        [Fact]
+        public void ExtractKeywordValues_MultipleOccurrences_TakesFirstOccurrence()
+        {
+            // Arrange - Filename with duplicate keyword
+            var filename = "RMS_1.5_data_RMS_2.5.fits";
+            var keywords = new[] { "RMS" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.Equal("1.5", result["RMS"]); // Should take first occurrence
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_NoUnderscores_ReturnsEmpty()
+        {
+            // Arrange - Filename without underscores (different format)
+            var filename = "image-001-test.fits";
+            var keywords = new[] { "RMS", "HFR" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.Empty(result);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_EmptyKeywordsList_ReturnsEmpty()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26.fits";
+            var keywords = Array.Empty<string>();
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_SpecialCharactersInValue_ExtractsCorrectly()
+        {
+            // Arrange - Value with negative sign
+            var filename = "test_CCD-TEMP_-10.5_other.fits";
+            var keywords = new[] { "CCD-TEMP" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.True(result.ContainsKey("CCD-TEMP"));
+            Assert.Equal("-10.5", result["CCD-TEMP"]);
+        }
+        
+        [Fact]
+        public void ExtractKeywordValues_NumericKeyword_ExtractsCorrectly()
+        {
+            // Arrange - Numeric values as keywords
+            var filename = "image_100_5.00s_filter.fits";
+            var keywords = new[] { "100" };
+            
+            // Act
+            var result = FilenameParser.ExtractKeywordValues(filename, keywords);
+            
+            // Assert
+            Assert.True(result.ContainsKey("100"));
+            Assert.Equal("5.00s", result["100"]);
+        }
     }
 }

@@ -173,7 +173,9 @@ namespace AstroImages.Tests
                 { "TELESCOP", "Test Telescope" },
                 { "INSTRUME", "Test Camera" },
                 { "FILTER", "Luminance" },
-                { "EXPTIME", 300.0 }
+                { "EXPTIME", 300.0 },
+                { "OBJECT", "M31" },
+                { "CCD-TEMP", -10.5 }
             };
             
             // Act
@@ -181,11 +183,14 @@ namespace AstroImages.Tests
             
             // Assert
             Assert.NotNull(metadata);
-            // Should extract common astronomical metadata
+            Assert.True(metadata.ContainsKey("TELESCOP"));
+            Assert.Equal("Test Telescope", metadata["TELESCOP"]);
+            Assert.True(metadata.ContainsKey("FILTER"));
+            Assert.Equal("Luminance", metadata["FILTER"]);
         }
         
         [Fact]
-        public void ExtractAstronomicalMetadata_EmptyHeaders_ReturnsMetadata()
+        public void ExtractAstronomicalMetadata_EmptyHeaders_ReturnsEmptyMetadata()
         {
             // Arrange
             var headers = new Dictionary<string, object>();
@@ -195,6 +200,236 @@ namespace AstroImages.Tests
             
             // Assert
             Assert.NotNull(metadata);
+            Assert.Empty(metadata);
+        }
+        
+        [Fact]
+        public void GetFormatInfo_ValidHeaders_ReturnsFormatInfo()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "BITPIX", 16 },
+                { "NAXIS", 2 },
+                { "NAXIS1", 1920 },
+                { "NAXIS2", 1080 },
+                { "BZERO", 32768.0 },
+                { "BSCALE", 1.0 }
+            };
+            
+            // Act
+            var formatInfo = FitsUtilities.GetFormatInfo(headers);
+            
+            // Assert
+            Assert.NotNull(formatInfo);
+            Assert.True(formatInfo.ContainsKey("BitPix"));
+            Assert.Equal(16, formatInfo["BitPix"]);
+            Assert.True(formatInfo.ContainsKey("Width"));
+            Assert.Equal(1920, formatInfo["Width"]);
+            Assert.True(formatInfo.ContainsKey("Height"));
+            Assert.Equal(1080, formatInfo["Height"]);
+            Assert.True(formatInfo.ContainsKey("DataType"));
+        }
+        
+        [Fact]
+        public void GetFormatInfo_MinimalHeaders_ReturnsPartialInfo()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "BITPIX", 8 }
+            };
+            
+            // Act
+            var formatInfo = FitsUtilities.GetFormatInfo(headers);
+            
+            // Assert
+            Assert.NotNull(formatInfo);
+            Assert.True(formatInfo.ContainsKey("BitPix"));
+            Assert.True(formatInfo.ContainsKey("DataType"));
+        }
+        
+        [Fact]
+        public void FormatHeaderValue_Boolean_ReturnsFormattedString()
+        {
+            // Arrange
+            var trueValue = true;
+            var falseValue = false;
+            
+            // Act
+            var trueResult = FitsUtilities.FormatHeaderValue(trueValue);
+            var falseResult = FitsUtilities.FormatHeaderValue(falseValue);
+            
+            // Assert
+            Assert.Equal("T", trueResult);
+            Assert.Equal("F", falseResult);
+        }
+        
+        [Fact]
+        public void FormatHeaderValue_Numeric_ReturnsFormattedString()
+        {
+            // Arrange
+            var intValue = 42;
+            var doubleValue = 123.456;
+            
+            // Act
+            var intResult = FitsUtilities.FormatHeaderValue(intValue);
+            var doubleResult = FitsUtilities.FormatHeaderValue(doubleValue);
+            
+            // Assert
+            Assert.Equal("42", intResult);
+            Assert.NotNull(doubleResult);
+        }
+        
+        [Fact]
+        public void FormatHeaderValue_String_ReturnsTrimmedString()
+        {
+            // Arrange
+            var stringValue = "  Test String  ";
+            
+            // Act
+            var result = FitsUtilities.FormatHeaderValue(stringValue);
+            
+            // Assert
+            Assert.Equal("Test String", result);
+        }
+        
+        [Fact]
+        public void FormatHeaderValue_Null_ReturnsEmptyString()
+        {
+            // Arrange
+            object? nullValue = null;
+            
+            // Act
+            var result = FitsUtilities.FormatHeaderValue(nullValue!);
+            
+            // Assert
+            Assert.Equal("", result);
+        }
+        
+        [Fact]
+        public void ExtractWcsInfo_ValidHeaders_ExtractsWcsKeywords()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "CTYPE1", "RA---TAN" },
+                { "CTYPE2", "DEC--TAN" },
+                { "CRVAL1", 180.5 },
+                { "CRVAL2", 45.3 },
+                { "CRPIX1", 960.0 },
+                { "CRPIX2", 540.0 },
+                { "CDELT1", -0.0001 },
+                { "CDELT2", 0.0001 }
+            };
+            
+            // Act
+            var wcsInfo = FitsUtilities.ExtractWcsInfo(headers);
+            
+            // Assert
+            Assert.NotNull(wcsInfo);
+            Assert.True(wcsInfo.ContainsKey("CTYPE1"));
+            Assert.True(wcsInfo.ContainsKey("CRVAL1"));
+            Assert.Equal("RA---TAN", wcsInfo["CTYPE1"]);
+        }
+        
+        [Fact]
+        public void ExtractWcsInfo_NoWcsHeaders_ReturnsEmptyDictionary()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "SIMPLE", true },
+                { "BITPIX", 16 }
+            };
+            
+            // Act
+            var wcsInfo = FitsUtilities.ExtractWcsInfo(headers);
+            
+            // Assert
+            Assert.NotNull(wcsInfo);
+            Assert.Empty(wcsInfo);
+        }
+        
+        [Fact]
+        public void ValidateFitsHeader_ValidHeader_ReturnsNoIssues()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "SIMPLE", true },
+                { "BITPIX", 16 },
+                { "NAXIS", 2 },
+                { "NAXIS1", 1920 },
+                { "NAXIS2", 1080 }
+            };
+            
+            // Act
+            var issues = FitsUtilities.ValidateFitsHeader(headers);
+            
+            // Assert
+            Assert.NotNull(issues);
+            Assert.Empty(issues);
+        }
+        
+        [Fact]
+        public void ValidateFitsHeader_MissingRequiredKeyword_ReturnsIssue()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "SIMPLE", true },
+                { "BITPIX", 16 }
+                // Missing NAXIS
+            };
+            
+            // Act
+            var issues = FitsUtilities.ValidateFitsHeader(headers);
+            
+            // Assert
+            Assert.NotNull(issues);
+            Assert.NotEmpty(issues);
+            Assert.Contains(issues, i => i.Contains("NAXIS"));
+        }
+        
+        [Fact]
+        public void ValidateFitsHeader_InvalidBitpix_ReturnsIssue()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "SIMPLE", true },
+                { "BITPIX", 7 }, // Invalid BITPIX value
+                { "NAXIS", 2 }
+            };
+            
+            // Act
+            var issues = FitsUtilities.ValidateFitsHeader(headers);
+            
+            // Assert
+            Assert.NotNull(issues);
+            Assert.Contains(issues, i => i.Contains("BITPIX"));
+        }
+        
+        [Fact]
+        public void ValidateFitsHeader_MissingNAXISn_ReturnsIssue()
+        {
+            // Arrange
+            var headers = new Dictionary<string, object>
+            {
+                { "SIMPLE", true },
+                { "BITPIX", 16 },
+                { "NAXIS", 2 }
+                // Missing NAXIS1 and NAXIS2
+            };
+            
+            // Act
+            var issues = FitsUtilities.ValidateFitsHeader(headers);
+            
+            // Assert
+            Assert.NotNull(issues);
+            Assert.Contains(issues, i => i.Contains("NAXIS1"));
+            Assert.Contains(issues, i => i.Contains("NAXIS2"));
         }
     }
 }

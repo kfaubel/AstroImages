@@ -204,5 +204,146 @@ namespace AstroImages.Tests
             Assert.NotNull(stats);
             Assert.Empty(stats);
         }
+        
+        [Fact]
+        public void ExtractAstronomicalMetadata_ValidProperties_ExtractsMetadata()
+        {
+            // Arrange
+            var properties = new Dictionary<string, object>
+            {
+                { "FITS_TELESCOP", "Test Telescope" },
+                { "FITS_INSTRUME", "Test Camera" },
+                { "FITS_FILTER", "Red" },
+                { "FITS_EXPTIME", "120" },
+                { "Instrument_Camera_Name", "ZWO ASI294MM" },
+                { "Observation_Object_Name", "M31" }
+            };
+            
+            // Act
+            var metadata = XisfUtilities.ExtractAstronomicalMetadata(properties);
+            
+            // Assert
+            Assert.NotNull(metadata);
+            Assert.True(metadata.ContainsKey("FITS_TELESCOP"));
+            Assert.Equal("Test Telescope", metadata["FITS_TELESCOP"]);
+            Assert.True(metadata.ContainsKey("Instrument_Camera_Name"));
+            Assert.Equal("ZWO ASI294MM", metadata["Instrument_Camera_Name"]);
+        }
+        
+        [Fact]
+        public void ExtractAstronomicalMetadata_EmptyProperties_ReturnsEmptyDictionary()
+        {
+            // Arrange
+            var properties = new Dictionary<string, object>();
+            
+            // Act
+            var metadata = XisfUtilities.ExtractAstronomicalMetadata(properties);
+            
+            // Assert
+            Assert.NotNull(metadata);
+            Assert.Empty(metadata);
+        }
+        
+        [Fact]
+        public void GetFormatInfo_ValidProperties_ReturnsFormatInfo()
+        {
+            // Arrange
+            var properties = new Dictionary<string, object>
+            {
+                { "Image_geometry", "1920:1080:1" },
+                { "Image_sampleFormat", "UInt16" },
+                { "Image_Width", 1920 },
+                { "Image_Height", 1080 },
+                { "Image_Channels", 1 },
+                { "Image_colorSpace", "Gray" }
+            };
+            
+            // Act
+            var formatInfo = XisfUtilities.GetFormatInfo(properties);
+            
+            // Assert
+            Assert.NotNull(formatInfo);
+            Assert.True(formatInfo.ContainsKey("Geometry"));
+            Assert.True(formatInfo.ContainsKey("SampleFormat"));
+            Assert.True(formatInfo.ContainsKey("DataType"));
+            Assert.Equal("1920:1080:1", formatInfo["Geometry"]);
+            Assert.Equal("UInt16", formatInfo["SampleFormat"]);
+        }
+        
+        [Fact]
+        public void GetFormatInfo_MinimalProperties_ReturnsPartialInfo()
+        {
+            // Arrange
+            var properties = new Dictionary<string, object>
+            {
+                { "Image_sampleFormat", "UInt8" }
+            };
+            
+            // Act
+            var formatInfo = XisfUtilities.GetFormatInfo(properties);
+            
+            // Assert
+            Assert.NotNull(formatInfo);
+            Assert.True(formatInfo.ContainsKey("SampleFormat"));
+            Assert.True(formatInfo.ContainsKey("DataType"));
+        }
+        
+        [Fact]
+        public void FormatPropertyValue_Boolean_ReturnsFormattedString()
+        {
+            // Arrange
+            var trueValue = true;
+            var falseValue = false;
+            
+            // Act
+            var trueResult = XisfUtilities.FormatPropertyValue(trueValue);
+            var falseResult = XisfUtilities.FormatPropertyValue(falseValue);
+            
+            // Assert
+            Assert.Equal("True", trueResult);
+            Assert.Equal("False", falseResult);
+        }
+        
+        [Fact]
+        public void FormatPropertyValue_Numeric_ReturnsFormattedString()
+        {
+            // Arrange
+            var intValue = 42;
+            var doubleValue = 123.456;
+            
+            // Act
+            var intResult = XisfUtilities.FormatPropertyValue(intValue);
+            var doubleResult = XisfUtilities.FormatPropertyValue(doubleValue);
+            
+            // Assert
+            Assert.Equal("42", intResult);
+            Assert.NotNull(doubleResult);
+        }
+        
+        [Fact]
+        public void FormatPropertyValue_String_ReturnsTrimmedString()
+        {
+            // Arrange
+            var stringValue = "  Test String  ";
+            
+            // Act
+            var result = XisfUtilities.FormatPropertyValue(stringValue);
+            
+            // Assert
+            Assert.Equal("Test String", result);
+        }
+        
+        [Fact]
+        public void FormatPropertyValue_Null_ReturnsEmptyString()
+        {
+            // Arrange
+            object? nullValue = null;
+            
+            // Act
+            var result = XisfUtilities.FormatPropertyValue(nullValue!);
+            
+            // Assert
+            Assert.Equal("", result);
+        }
     }
 }

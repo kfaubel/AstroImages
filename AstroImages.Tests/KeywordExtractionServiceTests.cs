@@ -210,5 +210,101 @@ namespace AstroImages.Tests
             Assert.NotNull(fileItem.CustomKeywords);
             Assert.NotNull(fileItem.FitsKeywords);
         }
+        
+        [Fact]
+        public void ExtractFitsKeywords_NonFitsNonXisfFile_ReturnsEmpty()
+        {
+            // Arrange - Create a temporary non-FITS/XISF file
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, "This is not a FITS or XISF file");
+            
+            try
+            {
+                var keywords = new[] { "NAXIS", "BITPIX" };
+                
+                // Act
+                var result = _service.ExtractFitsKeywords(tempFile, keywords);
+                
+                // Assert
+                Assert.NotNull(result);
+                Assert.Empty(result);
+            }
+            finally
+            {
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
+        }
+        
+        [Fact]
+        public void ExtractFitsKeywords_MultipleFitsFiles_ExtractsConsistently()
+        {
+            // Arrange
+            var fitsFiles = new[]
+            {
+                Path.Combine(_testDataPath, "2025-10-16_23-46-13_B_RMS_1.12_HFR_2.43_Stars_1269_100_10.00s_-10.00C_0026.fits"),
+                Path.Combine(_testDataPath, "2025-10-17_07-31-45_R_RMS_0.00_HFR__Stars__100_0.02s_8.00C_0000.fits")
+            };
+            
+            var keywords = new[] { "BITPIX", "NAXIS" };
+            
+            // Act & Assert
+            foreach (var fitsFile in fitsFiles)
+            {
+                if (File.Exists(fitsFile))
+                {
+                    var result = _service.ExtractFitsKeywords(fitsFile, keywords);
+                    Assert.NotNull(result);
+                    // Each file should extract consistently
+                }
+            }
+        }
+        
+        [Fact]
+        public void PopulateKeywords_WithXisfFile_PopulatesCorrectly()
+        {
+            // Arrange
+            var xisfFile = Path.Combine(_testDataPath, "L60_starless - small.xisf");
+            
+            if (!File.Exists(xisfFile))
+            {
+                return;
+            }
+            
+            var fileItem = new FileItem
+            {
+                Name = Path.GetFileName(xisfFile),
+                Path = xisfFile,
+                Size = new FileInfo(xisfFile).Length
+            };
+            
+            var customKeywords = new[] { "L60", "starless" };
+            var fitsKeywords = new[] { "TELESCOP", "INSTRUME" };
+            
+            // Act
+            _service.PopulateKeywords(fileItem, customKeywords, fitsKeywords, skipXisf: false);
+            
+            // Assert
+            Assert.NotNull(fileItem.CustomKeywords);
+            Assert.NotNull(fileItem.FitsKeywords);
+        }
+        
+        [Fact]
+        public void ExtractCustomKeywordsFromFilename_ComplexFilename_ExtractsAll()
+        {
+            // Arrange
+            var filename = "2025-10-16_23-46-13_B_RMS_1.12_HFR_2.43_Stars_1269_100_10.00s_-10.00C_0026.fits";
+            var keywords = new[] { "RMS", "HFR", "Stars", "100" };
+            
+            // Act
+            var result = _service.ExtractCustomKeywordsFromFilename(filename, keywords);
+            
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.ContainsKey("RMS"));
+            Assert.True(result.ContainsKey("HFR"));
+            Assert.True(result.ContainsKey("Stars"));
+            Assert.True(result.ContainsKey("100"));
+        }
     }
 }

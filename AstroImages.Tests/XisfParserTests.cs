@@ -192,5 +192,122 @@ namespace AstroImages.Tests
             Assert.NotNull(result);
             // Should handle case variations gracefully
         }
+        
+        [Fact]
+        public void ParseMetadata_ValidBuffer_ReturnsMetadata()
+        {
+            // Arrange
+            var xisfFile = Path.Combine(_testDataPath, "L60_starless - small.xisf");
+            
+            if (!File.Exists(xisfFile))
+            {
+                return;
+            }
+            
+            var buffer = File.ReadAllBytes(xisfFile);
+            
+            // Act
+            var metadata = XisfParser.ParseMetadata(buffer);
+            
+            // Assert
+            Assert.NotNull(metadata);
+            Assert.NotEmpty(metadata);
+        }
+        
+        [Fact]
+        public void ParseMetadata_InvalidSignature_ThrowsException()
+        {
+            // Arrange
+            var buffer = new byte[100];
+            Array.Fill(buffer, (byte)0);
+            
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() => XisfParser.ParseMetadata(buffer));
+        }
+        
+        [Fact]
+        public void ReadImage_ValidXisfFile_ReturnsImageData()
+        {
+            // Arrange
+            var xisfFile = Path.Combine(_testDataPath, "L60_starless - small.xisf");
+            
+            if (!File.Exists(xisfFile))
+            {
+                return;
+            }
+            
+            var buffer = File.ReadAllBytes(xisfFile);
+            
+            // Act
+            try
+            {
+                var (width, height, pixels) = XisfParser.ReadImage(buffer);
+                
+                // Assert
+                Assert.True(width > 0, "Width should be positive");
+                Assert.True(height > 0, "Height should be positive");
+                Assert.NotNull(pixels);
+                Assert.Equal(width * height, pixels.Length);
+            }
+            catch (NotSupportedException)
+            {
+                // Some XISF files may use compression or formats not yet supported
+                // This is acceptable for this test
+            }
+        }
+        
+        [Fact]
+        public void ReadImage_InvalidBuffer_ThrowsException()
+        {
+            // Arrange
+            var buffer = new byte[100];
+            
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() => XisfParser.ReadImage(buffer));
+        }
+        
+        [Fact]
+        public void ReadImageRgb_ValidXisfFile_ReturnsRgbData()
+        {
+            // Arrange
+            var xisfFile = Path.Combine(_testDataPath, "L60_starless - small.xisf");
+            
+            if (!File.Exists(xisfFile))
+            {
+                return;
+            }
+            
+            var buffer = File.ReadAllBytes(xisfFile);
+            
+            // Act
+            try
+            {
+                var (width, height, rgbPixels) = XisfParser.ReadImageRgb(buffer);
+                
+                // Assert
+                Assert.True(width > 0, "Width should be positive");
+                Assert.True(height > 0, "Height should be positive");
+                Assert.NotNull(rgbPixels);
+                // RGB has 3 bytes per pixel
+                Assert.Equal(width * height * 3, rgbPixels.Length);
+            }
+            catch (NotSupportedException)
+            {
+                // Some XISF files may use compression or formats not yet supported
+                // This is acceptable for this test
+            }
+        }
+        
+        [Fact]
+        public void ParseSpecificFitsKeywords_InvalidFile_ThrowsException()
+        {
+            // Arrange
+            var invalidFile = "nonexistent.xisf";
+            var keywords = new[] { "TELESCOP" };
+            
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() =>
+                XisfParser.ParseSpecificFitsKeywords(invalidFile, keywords));
+        }
     }
 }

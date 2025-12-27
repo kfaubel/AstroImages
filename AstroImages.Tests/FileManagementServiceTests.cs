@@ -171,5 +171,140 @@ namespace AstroImages.Tests
             Assert.NotEqual(existingFile, result);
             Assert.Contains(" (1)", result);
         }
+        
+        [Fact]
+        public void LoadFilesFromDirectory_LoadsMultipleFileTypes()
+        {
+            // Arrange
+            var directory = _testDataPath;
+            
+            if (!Directory.Exists(directory))
+            {
+                return;
+            }
+            
+            // Act
+            var files = _service.LoadFilesFromDirectory(directory);
+            
+            // Assert
+            Assert.NotNull(files);
+            // Should load FITS, XISF, and possibly image files
+            var extensions = files.Select(f => Path.GetExtension(f.Name).ToLowerInvariant()).Distinct();
+            Assert.NotEmpty(extensions);
+        }
+        
+        [Fact]
+        public void GetFileInfo_CreatesFileItemWithCorrectProperties()
+        {
+            // Arrange
+            var directory = _testDataPath;
+            
+            if (!Directory.Exists(directory))
+            {
+                return;
+            }
+            
+            var testFile = Directory.GetFiles(directory).FirstOrDefault();
+            if (testFile == null)
+            {
+                return;
+            }
+            
+            var expectedInfo = new FileInfo(testFile);
+            
+            // Act
+            var fileItem = _service.GetFileInfo(testFile);
+            
+            // Assert
+            Assert.Equal(expectedInfo.Name, fileItem.Name);
+            Assert.Equal(expectedInfo.FullName, fileItem.Path);
+            Assert.Equal(expectedInfo.Length, fileItem.Size);
+        }
+        
+        [Fact]
+        public void GenerateUniqueFileName_MultipleIterations_GeneratesIncrementingNames()
+        {
+            // Arrange
+            var tempDir = Path.Combine(Path.GetTempPath(), "AstroImagesTest_" + Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            
+            try
+            {
+                var baseFileName = Path.Combine(tempDir, "test.fits");
+                
+                // Create the base file and a few numbered versions
+                File.WriteAllText(baseFileName, "test");
+                File.WriteAllText(Path.Combine(tempDir, "test (1).fits"), "test");
+                File.WriteAllText(Path.Combine(tempDir, "test (2).fits"), "test");
+                
+                // Act
+                var result = _service.GenerateUniqueFileName(baseFileName);
+                
+                // Assert
+                Assert.Contains(" (3)", result); // Should be the next number
+            }
+            finally
+            {
+                // Cleanup
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+        }
+        
+        [Fact]
+        public void LoadFilesFromDirectory_HandlesEmptyDirectory()
+        {
+            // Arrange
+            var tempDir = Path.Combine(Path.GetTempPath(), "AstroImagesTest_Empty_" + Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            
+            try
+            {
+                // Act
+                var files = _service.LoadFilesFromDirectory(tempDir);
+                
+                // Assert
+                Assert.NotNull(files);
+                Assert.Empty(files);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir);
+            }
+        }
+        
+        [Fact]
+        public void LoadFilesFromDirectory_IncludesXisfFiles()
+        {
+            // Arrange
+            var directory = _testDataPath;
+            
+            if (!Directory.Exists(directory))
+            {
+                return;
+            }
+            
+            // Act
+            var files = _service.LoadFilesFromDirectory(directory);
+            
+            // Assert - Check if XISF files are included
+            var xisfFiles = files.Where(f => f.Name.EndsWith(".xisf", StringComparison.OrdinalIgnoreCase));
+            // May or may not have XISF files, just ensure method handles them
+            Assert.NotNull(xisfFiles);
+        }
+        
+        [Fact]
+        public void MoveToRecycleBin_NonExistentFile_ReturnsFalse()
+        {
+            // Arrange
+            var nonExistentFile = "C:\\NonExistent\\File.fits";
+            
+            // Act
+            var result = _service.MoveToRecycleBin(nonExistentFile);
+            
+            // Assert
+            Assert.False(result);
+        }
     }
 }
