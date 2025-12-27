@@ -195,7 +195,7 @@ namespace AstroImages.Tests
             var buffer = new byte[100]; // Too small for valid FITS
             
             // Act & Assert
-            Assert.Throws<Exception>(() => FitsParser.ReadImage(buffer));
+            Assert.Throws<InvalidOperationException>(() => FitsParser.ReadImage(buffer));
         }
         
         [Fact]
