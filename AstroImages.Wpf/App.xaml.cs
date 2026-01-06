@@ -144,8 +144,31 @@ namespace AstroImages.Wpf
         protected override void OnExit(ExitEventArgs e)
         {
             LoggingService.LogInfo("Application exiting");
-            _mutex?.ReleaseMutex();
-            _mutex?.Dispose();
+            
+            // Safely release the mutex - it may not have been acquired on this thread
+            // This can happen when the app is closed from different threads
+            try
+            {
+                if (_mutex != null)
+                {
+                    try
+                    {
+                        _mutex.ReleaseMutex();
+                    }
+                    catch (ApplicationException)
+                    {
+                        // Mutex was not acquired by this thread, or already released
+                        // This is acceptable during shutdown
+                    }
+                    _mutex.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log any unexpected errors but don't crash during shutdown
+                System.Diagnostics.Debug.WriteLine($"Error releasing mutex: {ex.Message}");
+            }
+            
             base.OnExit(e);
         }
 

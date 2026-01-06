@@ -16,6 +16,7 @@ namespace AstroImages.Wpf.Services
 
         public Dictionary<string, string> ExtractFitsKeywords(string filePath, IEnumerable<string> keywords, bool skipXisf = false)
         {
+            var operationStopwatch = System.Diagnostics.Stopwatch.StartNew();
             var result = new Dictionary<string, string>();
 
             if (!File.Exists(filePath) || !keywords.Any())
@@ -73,6 +74,14 @@ namespace AstroImages.Wpf.Services
             {
                 // Log unexpected parsing errors (corrupted files, I/O errors, etc.)
                 App.LoggingService?.LogError("Keyword Extraction", $"Failed to extract keywords from {System.IO.Path.GetFileName(filePath)}", ex);
+            }
+            finally
+            {
+                operationStopwatch.Stop();
+                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                {
+                    App.LoggingService?.LogWarning("FITS Keyword Extraction", $"'{System.IO.Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
+                }
             }
 
             return result;

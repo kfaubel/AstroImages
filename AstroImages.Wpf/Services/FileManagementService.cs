@@ -106,6 +106,8 @@ namespace AstroImages.Wpf.Services
 
             try
             {
+                var operationStopwatch = System.Diagnostics.Stopwatch.StartNew();
+                
                 // Load all supported image formats
                 var supportedExtensions = new[]
                 {
@@ -124,6 +126,12 @@ namespace AstroImages.Wpf.Services
                 {
                     var matchingFiles = Directory.GetFiles(directory, pattern, SearchOption.TopDirectoryOnly);
                     allFiles.AddRange(matchingFiles);
+                }
+                
+                operationStopwatch.Stop();
+                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                {
+                    App.LoggingService?.LogWarning("Directory Enumeration", $"'{directory}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
                 }
                 
                 var fileInfos = allFiles.Select(f => new FileInfo(f))

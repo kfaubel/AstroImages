@@ -142,6 +142,18 @@ namespace AstroImages.Wpf
             _viewModel.RefreshFitsKeywordsWithProgressRequested += async () => 
                 await RefreshFitsKeywordsWithProgressAsync();
 
+            // Wire up clear image event to release file handles
+            _viewModel.ClearImageRequested += () => DisplayImage.Source = null;
+
+            // Wire up scroll to selected event to keep current file visible in play mode
+            _viewModel.ScrollToSelectedRequested += () =>
+            {
+                if (_viewModel.SelectedIndex >= 0 && _viewModel.SelectedIndex < _viewModel.Files.Count)
+                {
+                    FileListView.ScrollIntoView(_viewModel.Files[_viewModel.SelectedIndex]);
+                }
+            };
+
             // Handle startup file loading
             if (_commandLineFilePaths != null && _commandLineFilePaths.Length > 0)
             {
@@ -149,10 +161,10 @@ namespace AstroImages.Wpf
                 // Load only those files instead of entire directory
                 Loaded += async (sender, e) => await LoadSpecificFilesWithProgressAsync(_commandLineFilePaths);
             }
-            else if (!string.IsNullOrEmpty(_appConfig.LastOpenDirectory) && System.IO.Directory.Exists(_appConfig.LastOpenDirectory))
+            else
             {
-                // No command-line files, load last opened directory
-                Loaded += async (sender, e) => await LoadFilesWithProgressAsync(_appConfig.LastOpenDirectory, isStartup: true);
+                // No files passed from command line - show "Get Started" dialog on startup
+                Loaded += (sender, e) => ShowGetStartedDialog();
             }
 
             // Wire up file selection to image display
@@ -162,6 +174,28 @@ namespace AstroImages.Wpf
 
             // Handle pane resize for Fit mode
             ImageScrollViewer.SizeChanged += ImageScrollViewer_SizeChanged;
+        }
+
+        /// <summary>
+        /// Shows the "Get Started" dialog when the application starts with no files.
+        /// </summary>
+        private void ShowGetStartedDialog()
+        {
+            var getStartedDialog = new GetStartedDialog
+            {
+                Owner = this
+            };
+
+            // Wire up the Open Folder button to call the view model's command
+            getStartedDialog.OpenFolderRequested += () =>
+            {
+                if (_viewModel != null)
+                {
+                    _viewModel.OpenFolderDialogCommand.Execute(null);
+                }
+            };
+
+            getStartedDialog.ShowDialog();
         }
 
         /// <summary>

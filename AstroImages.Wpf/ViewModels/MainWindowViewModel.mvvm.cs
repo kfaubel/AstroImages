@@ -924,6 +924,18 @@ namespace AstroImages.Wpf.ViewModels
         public event Action? RefreshFitsKeywordsWithProgressRequested;
 
         /// <summary>
+        /// Event that requests the View to clear the currently displayed image.
+        /// Used before moving/deleting files to release file handles.
+        /// </summary>
+        public event Action? ClearImageRequested;
+
+        /// <summary>
+        /// Event that requests the View to scroll the selected item into view in the file list.
+        /// Used in play mode to keep the currently displayed file visible.
+        /// </summary>
+        public event Action? ScrollToSelectedRequested;
+
+        /// <summary>
         /// Called by the View when an image has finished rendering.
         /// Used for play mode to start the delay after image rendering is complete.
         /// </summary>
@@ -961,9 +973,12 @@ namespace AstroImages.Wpf.ViewModels
                 SelectedIndex++;
                 
             // If we're in play mode, mark that we're waiting for image rendering to complete
+            // and request the view to scroll the selected item into view
             if (IsPlaying)
             {
                 _awaitingImageRender = true;
+                // Request the view to scroll to the currently selected file
+                ScrollToSelectedRequested?.Invoke();
             }
         }
 
@@ -1260,6 +1275,19 @@ namespace AstroImages.Wpf.ViewModels
             {
                 try
                 {
+                    // Check if the currently displayed image is one of the files being moved
+                    // If so, clear the image to release the file handle before moving
+                    if (SelectedIndex >= 0 && SelectedIndex < Files.Count)
+                    {
+                        var currentFile = Files[SelectedIndex];
+                        if (selectedFiles.Contains(currentFile))
+                        {
+                            // Request the View to clear the displayed image
+                            // This releases any file handles held by the image control
+                            ClearImageRequested?.Invoke();
+                        }
+                    }
+                    
                     _fileManagementService.MoveSelectedFiles(selectedFiles, dialog.TargetDirectory, dialog.MoveToTrash);
                     
                     // Remove moved files from the list
@@ -1273,6 +1301,9 @@ namespace AstroImages.Wpf.ViewModels
                     
                     // Refresh the HasSelectedFiles property to update button state
                     OnPropertyChanged(nameof(HasSelectedFiles));
+                    
+                    // Refresh the StatusBarText to reset the selection count
+                    OnPropertyChanged(nameof(StatusBarText));
                     
                     System.Windows.MessageBox.Show($"Successfully moved {selectedFiles.Count} file(s).", 
                         "Move Complete", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);

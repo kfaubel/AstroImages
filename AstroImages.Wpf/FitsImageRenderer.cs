@@ -61,6 +61,7 @@ namespace AstroImages.Wpf
         /// </summary>
         private static BitmapSource? RenderStandardImage(string filePath)
         {
+            var operationStopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 // Try multiple approaches for loading standard images
@@ -90,6 +91,12 @@ namespace AstroImages.Wpf
                         bitmapImage.Freeze();
                         bitmap = bitmapImage;
                     }
+                }
+                
+                operationStopwatch.Stop();
+                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                {
+                    App.LoggingService?.LogWarning("Standard Image Load", $"'{Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
                 }
                 
                 if (bitmap != null)
@@ -173,6 +180,7 @@ namespace AstroImages.Wpf
 
         private static BitmapSource? RenderFitsFileInternal(string filePath, bool autoStretch = true, int stretchAggressiveness = 5)
         {
+            var operationStopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 // Use FileStream with SequentialScan to potentially avoid triggering antivirus scans
@@ -188,6 +196,13 @@ namespace AstroImages.Wpf
                         totalRead += bytesRead;
                     }
                 }
+                
+                operationStopwatch.Stop();
+                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                {
+                    App.LoggingService?.LogWarning("FITS File Read", $"'{Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
+                }
+                operationStopwatch.Restart();
                 
                 // Validate the FITS data structure
                 if (!FitsUtilities.IsFitsData(bytes))
@@ -452,7 +467,13 @@ namespace AstroImages.Wpf
                             totalRead += bytesRead;
                         }
                     }
-                    Console.WriteLine($"[FitsImageRenderer] File load took {stopwatch.ElapsedMilliseconds - loadStart}ms ({cache.FileBytes.Length:N0} bytes)");
+                    var fileLoadTime = stopwatch.ElapsedMilliseconds - loadStart;
+                    Console.WriteLine($"[FitsImageRenderer] File load took {fileLoadTime}ms ({cache.FileBytes.Length:N0} bytes)");
+                    
+                    if (fileLoadTime > 5000)
+                    {
+                        App.LoggingService?.LogWarning("XISF File Read", $"'{System.IO.Path.GetFileName(filePath)}' took {fileLoadTime}ms (>5s threshold)");
+                    }
                 }
                 
                 Console.WriteLine($"[FitsImageRenderer] Detected {cache.Channels} channel(s) in XISF file {System.IO.Path.GetFileName(filePath)} ({cache.Width}x{cache.Height}, {cache.SampleFormat})");
