@@ -157,9 +157,9 @@ namespace AstroImages.Wpf
             // Handle startup file loading
             if (_commandLineFilePaths != null && _commandLineFilePaths.Length > 0)
             {
-                // User opened specific files from Windows Explorer
-                // Load only those files instead of entire directory
-                Loaded += async (sender, e) => await LoadSpecificFilesWithProgressAsync(_commandLineFilePaths);
+                // User opened file(s) from Windows Explorer
+                // Load the entire containing folder and select the clicked file
+                Loaded += async (sender, e) => await LoadFolderAndSelectFileAsync(_commandLineFilePaths[0]);
             }
             else
             {
@@ -196,6 +196,43 @@ namespace AstroImages.Wpf
             };
 
             getStartedDialog.ShowDialog();
+        }
+
+        /// <summary>
+        /// Loads the containing folder of a file and selects that file in the list.
+        /// Called when user opens a file from Windows Explorer.
+        /// </summary>
+        private async Task LoadFolderAndSelectFileAsync(string filePath)
+        {
+            try
+            {
+                // Get the directory containing the file
+                var directory = System.IO.Path.GetDirectoryName(filePath);
+                if (string.IsNullOrEmpty(directory))
+                    return;
+
+                // Load all files from that directory
+                await LoadFilesWithProgressAsync(directory, isStartup: true);
+
+                // Select the clicked file
+                if (_viewModel != null)
+                {
+                    var fileName = System.IO.Path.GetFileName(filePath);
+                    var fileIndex = _viewModel.Files.FirstOrDefault(f => f.Name == fileName);
+                    if (fileIndex != null)
+                    {
+                        var index = _viewModel.Files.IndexOf(fileIndex);
+                        if (index >= 0)
+                        {
+                            _viewModel.SelectedIndex = index;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Startup File Loading", $"Failed to load folder and select file from command line arguments", ex);
+            }
         }
 
         /// <summary>
