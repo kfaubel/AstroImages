@@ -196,7 +196,8 @@
                                        RenderTransformOrigin="0,0"
                                        MouseLeftButtonDown="DisplayImage_MouseLeftButtonDown"
                                        MouseLeftButtonUp="DisplayImage_MouseLeftButtonUp"
-                                       MouseMove="DisplayImage_MouseMove">
+                                       MouseMove="DisplayImage_MouseMove"
+                                       RenderOptions.BitmapScalingMode="HighQuality">
                                     <Image.RenderTransform>
                                         <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
                                     </Image.RenderTransform>

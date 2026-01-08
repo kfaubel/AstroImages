@@ -129,9 +129,9 @@ namespace AstroImages.Wpf.Services
                 }
                 
                 operationStopwatch.Stop();
-                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                if (operationStopwatch.ElapsedMilliseconds > 3000)
                 {
-                    App.LoggingService?.LogWarning("Directory Enumeration", $"'{directory}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
+                    App.LoggingService?.LogWarning("Directory Enumeration", $"'{directory}' took {operationStopwatch.ElapsedMilliseconds}ms (>3s threshold)");
                 }
                 
                 var fileInfos = allFiles.Select(f => new FileInfo(f))

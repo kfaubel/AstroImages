@@ -94,9 +94,9 @@ namespace AstroImages.Wpf
                 }
                 
                 operationStopwatch.Stop();
-                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                if (operationStopwatch.ElapsedMilliseconds > 3000)
                 {
-                    App.LoggingService?.LogWarning("Standard Image Load", $"'{Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
+                    App.LoggingService?.LogWarning("Standard Image Load", $"'{Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>3s threshold)");
                 }
                 
                 if (bitmap != null)
@@ -198,9 +198,9 @@ namespace AstroImages.Wpf
                 }
                 
                 operationStopwatch.Stop();
-                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                if (operationStopwatch.ElapsedMilliseconds > 3000)
                 {
-                    App.LoggingService?.LogWarning("FITS File Read", $"'{Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
+                    App.LoggingService?.LogWarning("FITS File Read", $"'{Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>3s threshold)");
                 }
                 operationStopwatch.Restart();
                 

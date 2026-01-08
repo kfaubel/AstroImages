@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace AstroImages.Wpf.Services
 {
@@ -10,6 +11,12 @@ namespace AstroImages.Wpf.Services
         private readonly List<string> _logEntries = new();
         private readonly object _lockObject = new();
         private readonly string _logFilePath;
+
+        /// <summary>
+        /// Event raised when a long-running operation exceeds the threshold (3 seconds)
+        /// Allows UI to show progress dialogs
+        /// </summary>
+        public event EventHandler<(string operation, string target)>? LongOperationDetected;
 
         public LoggingService()
         {
@@ -80,6 +87,16 @@ namespace AstroImages.Wpf.Services
         public void LogWarning(string operation, string message)
         {
             LogEntry("WARNING", $"{operation}: {message}");
+            
+            // Trigger event for long operations (>3 second threshold)
+            if (message.Contains(">3s threshold"))
+            {
+                // Extract the target name from the message (e.g., 'filename.fits' from "'filename.fits' took Xms (>3s threshold)")
+                var targetMatch = Regex.Match(message, @"'([^']+)'");
+                var target = targetMatch.Success ? targetMatch.Groups[1].Value : "Unknown";
+                
+                LongOperationDetected?.Invoke(this, (operation, target));
+            }
         }
 
         public void LogInfo(string message)

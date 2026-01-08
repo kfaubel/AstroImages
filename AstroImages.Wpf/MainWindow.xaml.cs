@@ -154,6 +154,13 @@ namespace AstroImages.Wpf
                 }
             };
 
+            // Wire up long operation detection to show progress dialogs
+            _loggingService.LongOperationDetected += (sender, e) =>
+            {
+                var (operation, target) = e;
+                ShowOperationProgressDialog(operation, target);
+            };
+
             // Handle startup file loading
             if (_commandLineFilePaths != null && _commandLineFilePaths.Length > 0)
             {
@@ -313,6 +320,43 @@ namespace AstroImages.Wpf
                 {
                     ShowSplashScreenIfEnabled();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Shows a progress dialog for long-running file system operations (>3 seconds).
+        /// This provides user feedback so they know the application is working on something.
+        /// </summary>
+        private void ShowOperationProgressDialog(string operation, string target)
+        {
+            try
+            {
+                var message = $"{operation}: {target}";
+                var loadingWindow = new LoadingWindow(message);
+                loadingWindow.Owner = this;
+                loadingWindow.Show();
+
+                // Keep the dialog visible for at least 1 second, then close it
+                // (In case the operation finishes very quickly after logging)
+                var closeTask = Task.Delay(1000).ContinueWith(_ =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            loadingWindow.Close();
+                        }
+                        catch
+                        {
+                            // Window may have already been closed by other means
+                        }
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+                // Silently fail if we can't show the dialog
+                _loggingService.LogError("Progress Dialog", $"Failed to show operation progress dialog for {operation}", ex);
             }
         }
         

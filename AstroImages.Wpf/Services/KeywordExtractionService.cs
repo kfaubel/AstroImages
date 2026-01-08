@@ -78,9 +78,9 @@ namespace AstroImages.Wpf.Services
             finally
             {
                 operationStopwatch.Stop();
-                if (operationStopwatch.ElapsedMilliseconds > 5000)
+                if (operationStopwatch.ElapsedMilliseconds > 3000)
                 {
-                    App.LoggingService?.LogWarning("FITS Keyword Extraction", $"'{System.IO.Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>5s threshold)");
+                    App.LoggingService?.LogWarning("FITS Keyword Extraction", $"'{System.IO.Path.GetFileName(filePath)}' took {operationStopwatch.ElapsedMilliseconds}ms (>3s threshold)");
                 }
             }
 
