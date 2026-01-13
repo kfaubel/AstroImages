@@ -170,8 +170,14 @@ namespace AstroImages.Wpf
             }
             else
             {
-                // No files passed from command line - show "Get Started" dialog on startup
-                Loaded += (sender, e) => ShowGetStartedDialog();
+                // No files passed from command line - show open folder dialog directly
+                Loaded += (sender, e) =>
+                {
+                    if (_viewModel != null)
+                    {
+                        _viewModel.OpenFolderDialogCommand.Execute(null);
+                    }
+                };
             }
 
             // Wire up file selection to image display
@@ -181,28 +187,6 @@ namespace AstroImages.Wpf
 
             // Handle pane resize for Fit mode
             ImageScrollViewer.SizeChanged += ImageScrollViewer_SizeChanged;
-        }
-
-        /// <summary>
-        /// Shows the "Get Started" dialog when the application starts with no files.
-        /// </summary>
-        private void ShowGetStartedDialog()
-        {
-            var getStartedDialog = new GetStartedDialog
-            {
-                Owner = this
-            };
-
-            // Wire up the Open Folder button to call the view model's command
-            getStartedDialog.OpenFolderRequested += () =>
-            {
-                if (_viewModel != null)
-                {
-                    _viewModel.OpenFolderDialogCommand.Execute(null);
-                }
-            };
-
-            getStartedDialog.ShowDialog();
         }
 
         /// <summary>
