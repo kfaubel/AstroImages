@@ -90,16 +90,21 @@
                 <Grid Grid.Row="1" Margin="4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
+                    <!-- Auto Select Button -->
+                    <Button Name="AutoSelectButton" Grid.Column="0" Content="Auto Select..." 
+                            Click="AutoSelectButton_Click" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,4,4,4" />
+                    
                     <!-- Move Selected Button - Left Aligned -->
-                    <Button Name="MoveSelectedButton" Grid.Column="0" Content="Move selected..." 
+                    <Button Name="MoveSelectedButton" Grid.Column="1" Content="Move selected..." 
                             Command="{Binding MoveSelectedCommand}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,4,8,4" />
                     
                     <!-- Navigation Buttons - Center Aligned -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4">
                         <Button Name="GotoFirst" Width="40" Margin="2" Command="{Binding GotoFirstCommand}">
                             <Grid Width="20" Height="16">
                                 <Rectangle Width="2" Height="14" Fill="{DynamicResource ThemeButtonForeground}" HorizontalAlignment="Left" Margin="2,0,0,0"/>

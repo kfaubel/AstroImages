@@ -15,16 +15,13 @@ namespace AstroImages.Wpf.Services
     {
         private readonly System.Windows.Controls.ListView _fileListView;
         private readonly AppConfig _appConfig;
-        private readonly System.Windows.Media.Brush _greenTextBrush;
-        private readonly System.Windows.Media.Brush _blueTextBrush;
         private GridSplitter? _gridSplitter; // Track the splitter for manual move detection
 
         public ListViewColumnService(System.Windows.Controls.ListView fileListView, AppConfig appConfig, System.Windows.Media.Brush greenTextBrush, System.Windows.Media.Brush blueTextBrush)
         {
             _fileListView = fileListView;
             _appConfig = appConfig;
-            _greenTextBrush = greenTextBrush;
-            _blueTextBrush = blueTextBrush;
+            // Note: greenTextBrush and blueTextBrush parameters are no longer needed as we bind to theme resources directly
         }
         
         /// <summary>
@@ -75,9 +72,13 @@ namespace AstroImages.Wpf.Services
             checkFactory.SetBinding(System.Windows.Controls.CheckBox.IsCheckedProperty, new System.Windows.Data.Binding("IsSelected") { Mode = System.Windows.Data.BindingMode.TwoWay });
             checkFactory.SetValue(System.Windows.Controls.CheckBox.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
             var checkTemplate = new DataTemplate { VisualTree = checkFactory };
+            
+            // Create a sortable header for the checkbox column
+            var checkboxHeader = CreateSortableHeader("Mark");
+            
             var checkboxColumn = new GridViewColumn
             {
-                Header = "",
+                Header = checkboxHeader,
                 Width = 30,
                 CellTemplate = checkTemplate
             };
@@ -114,7 +115,7 @@ namespace AstroImages.Wpf.Services
             var buttonTemplate = new DataTemplate { VisualTree = buttonFactory };
             var metadataColumn = new GridViewColumn
             {
-                Header = "",
+                Header = "Info",
                 Width = 35,
                 CellTemplate = buttonTemplate
             };
@@ -152,7 +153,11 @@ namespace AstroImages.Wpf.Services
                 binding.ConverterParameter = keyword;
                 
                 factory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, binding);
-                factory.SetValue(System.Windows.Controls.TextBlock.ForegroundProperty, _greenTextBrush);
+                // Bind to theme resource so foreground color updates when theme changes
+                var foregroundBinding = new System.Windows.Data.Binding();
+                foregroundBinding.Source = System.Windows.Application.Current;
+                foregroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentGreen]");
+                factory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, foregroundBinding);
                 factory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
                 var template = new DataTemplate { VisualTree = factory };
                 
@@ -179,7 +184,11 @@ namespace AstroImages.Wpf.Services
                 binding.ConverterParameter = keyword;
                 
                 factory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, binding);
-                factory.SetValue(System.Windows.Controls.TextBlock.ForegroundProperty, _blueTextBrush);
+                // Bind to theme resource so foreground color updates when theme changes
+                var foregroundBinding = new System.Windows.Data.Binding();
+                foregroundBinding.Source = System.Windows.Application.Current;
+                foregroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentBlue]");
+                factory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, foregroundBinding);
                 factory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
                 var template = new DataTemplate { VisualTree = factory };
                 

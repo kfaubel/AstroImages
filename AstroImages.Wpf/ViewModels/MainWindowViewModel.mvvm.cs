@@ -662,6 +662,10 @@ namespace AstroImages.Wpf.ViewModels
                     ? files.OrderBy(f => f.Size).ToList()
                     : files.OrderByDescending(f => f.Size).ToList(),
                     
+                "Mark" => direction == ListSortDirection.Ascending 
+                    ? files.OrderBy(f => f.IsSelected).ToList()
+                    : files.OrderByDescending(f => f.IsSelected).ToList(),
+                    
                 _ when _appConfig.CustomKeywords.Contains(columnName) =>
                     SortByDictionaryValue(files, f => f.CustomKeywords, columnName, direction),
                     

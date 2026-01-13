@@ -156,9 +156,10 @@ namespace AstroImages.Wpf.Services
             // Code block colors (for documentation)
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 60, 60));        // #3C3C3C
 
-            // Accent colors for file list
-            app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 180, 255));               // #64B4FF (lighter blue for dark mode)
-            app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144));             // #90EE90 (light green)
+            // Accent colors for file list - dark mode (bright and vibrant)
+            app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(135, 206, 255));               // #87CEFF (brighter blue for dark mode)
+            app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144));              // #90EE90 (medium light green for dark mode)
+            app.Resources["ThemeAccent"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 215));                      // #0078D7 (Windows accent blue for headers)
 
             // ListView item selection and hover colors
             app.Resources["ThemeListViewHoverBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(55, 55, 55));     // #373737 (darker hover)
@@ -212,9 +213,10 @@ namespace AstroImages.Wpf.Services
             // Code block colors (for documentation)
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248));      // #F8F8F8
 
-            // Accent colors for file list
-            app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 115, 207));                  // #0073CF (medium blue for light mode - good contrast)
-            app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 128, 0));                  // #008000 (dark green)
+            // Accent colors for file list - light mode (distinct and readable with more color saturation)
+            app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 120, 180));                   // #3278B4 (brighter blue for light mode)
+            app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 150, 0));                    // #009600 (brighter green for light mode)
+            app.Resources["ThemeAccent"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 115, 207));                      // #0073CF (medium blue for light mode - good contrast for headers)
 
             // ListView item selection and hover colors
             app.Resources["ThemeListViewHoverBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));  // #F0F0F0 (light hover)

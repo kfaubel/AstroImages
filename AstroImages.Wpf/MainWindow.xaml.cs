@@ -170,9 +170,16 @@ namespace AstroImages.Wpf
             }
             else
             {
-                // No files passed from command line - show open folder dialog directly
-                Loaded += (sender, e) =>
+                // No files passed from command line - show splash screen first, then open folder dialog
+                Loaded += async (sender, e) =>
                 {
+                    // Show splash screen if enabled
+                    ShowSplashScreenIfEnabled();
+                    
+                    // Brief delay to allow UI to process
+                    await System.Threading.Tasks.Task.Delay(100);
+                    
+                    // Now show the folder dialog
                     if (_viewModel != null)
                     {
                         _viewModel.OpenFolderDialogCommand.Execute(null);
@@ -1218,6 +1225,108 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Opens a file dialog to select multiple image files
         /// </summary>
+        /// <summary>
+        /// Event handler for the Auto Select button - opens the Auto Select dialog
+        /// </summary>
+        private void AutoSelectButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel == null)
+                return;
+
+            // Show the Auto Select dialog with custom keywords
+            var autoSelectDialog = new AutoSelectDialog(_appConfig.CustomKeywords)
+            {
+                Owner = this
+            };
+
+            // Handle the Apply event
+            autoSelectDialog.ApplyRequested += (dialogSender, ranges) =>
+            {
+                ApplyAutoSelect(ranges);
+            };
+
+            autoSelectDialog.ShowDialog();
+        }
+
+        /// <summary>
+        /// Applies auto-select logic: selects files that don't match the criteria
+        /// </summary>
+        private void ApplyAutoSelect(Dictionary<string, (double? min, double? max)> ranges)
+        {
+            if (_viewModel?.Files == null || ranges.Count == 0)
+                return;
+
+            try
+            {
+                int selectedCount = 0;
+
+                // First, clear all marked boxes
+                foreach (var fileItem in _viewModel.Files)
+                {
+                    fileItem.IsSelected = false;
+                }
+
+                // Then, mark only files that match the criteria
+                foreach (var fileItem in _viewModel.Files)
+                {
+                    bool shouldSelect = false;
+
+                    // Check each keyword range
+                    foreach (var rangeKvp in ranges)
+                    {
+                        var keyword = rangeKvp.Key;
+                        var (min, max) = rangeKvp.Value;
+
+                        // Check if the file has this keyword
+                        if (!fileItem.CustomKeywords.TryGetValue(keyword, out var valueStr))
+                        {
+                            // File doesn't have this keyword - select it
+                            shouldSelect = true;
+                            break;
+                        }
+
+                        // Try to parse the value as a number
+                        if (!double.TryParse(valueStr, out var value))
+                        {
+                            // Value is not a number - select the file
+                            shouldSelect = true;
+                            break;
+                        }
+
+                        // Check if value is within range
+                        if (min.HasValue && value < min.Value)
+                        {
+                            // Below minimum - select the file
+                            shouldSelect = true;
+                            break;
+                        }
+
+                        if (max.HasValue && value > max.Value)
+                        {
+                            // Above maximum - select the file
+                            shouldSelect = true;
+                            break;
+                        }
+                    }
+
+                    // Update the file's selected state
+                    if (shouldSelect)
+                    {
+                        fileItem.IsSelected = true;
+                        selectedCount++;
+                    }
+                }
+
+                _loggingService.LogInfo($"Auto-select: Selected {selectedCount} of {_viewModel.Files.Count} files based on criteria");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Auto Select", "Error applying auto-select criteria", ex);
+                System.Windows.MessageBox.Show($"Error applying auto-select criteria: {ex.Message}", 
+                    "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
         private async void OpenFiles_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
