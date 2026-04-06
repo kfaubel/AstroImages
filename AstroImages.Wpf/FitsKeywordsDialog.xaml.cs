@@ -97,6 +97,24 @@ namespace AstroImages.Wpf
             ("CTYPE2", "Coordinate type code"),
             ("CUNIT1", "Units of coordinate increment and value"),
             ("CUNIT2", "Units of coordinate increment and value"),
+
+            // KTF
+            ("WINDSPD", "Wind speed (NINA: kph)"),
+            ("WINDDIR", "Wind direction in degrees"),
+            ("WINDGUST", "Wind gust speed (NINA: kph)"),
+            ("HUMIDITY", "Relative humidity in %"),
+            ("PRESSURE", "Atmospheric pressure in hPa"),
+            ("CLOUDCOVER", "Cloud cover percentage"),
+            ("SEEING", "Seeing conditions in arcseconds"),
+            ("DEWPOINT", "Dew point temperature in degrees C"),
+            ("AIRTEMP", "Air temperature in degrees C"),
+            ("SKYBRITE", "Sky brightness in mag/arcsec^2"),
+            ("STARFWHM", "FWHM of stars in arcseconds"),
+            ("MOONPHASE", "Moon phase percentage"),
+            ("MOONALT", "Moon altitude in degrees"),
+            ("MOONAZ", "Moon azimuth in degrees"),
+            ("SUNALT", "Sun altitude in degrees"),
+            ("SUNAZ", "Sun azimuth in degrees"),
             
             // Common photography/EXIF metadata keywords
             ("MAKE", "Camera manufacturer"),
