@@ -290,39 +290,26 @@ namespace AstroImages.Wpf
             }
             
             // Map aggressiveness (0-10) to percentile clipping and target median
-            // 0 = almost no clipping (0.0001%), 5 = gentle (0.01%), 10 = aggressive (1%)
+            // Use exponential scaling for smooth progression across the entire range
+            // 0 = very gentle (0.001%), 5 = moderate (0.03%), 10 = aggressive (1%)
             double lowPercentile, highPercentile;
             float targetMedian;
             
-            System.Diagnostics.Debug.WriteLine($"ApplyAutoStretch: aggressiveness={aggressiveness}");
+            // Exponential interpolation: minVal * (maxVal/minVal)^(agg/10)
+            // This gives smooth logarithmic steps: 0.00001 → 0.0003 → 0.01
+            double minPercentile = 0.00001;  // 0.001% at aggressiveness 0
+            double maxPercentile = 0.01;     // 1% at aggressiveness 10
+            lowPercentile = minPercentile * Math.Pow(maxPercentile / minPercentile, aggressiveness / 10.0);
+            highPercentile = 1.0 - lowPercentile;
             
-            if (aggressiveness <= 5)
-            {
-                // 0-5: very gentle to gentle
-                // Low: 0.0001% to 0.01% (0.000001 to 0.0001 as decimal)
-                lowPercentile = 0.000001 + (aggressiveness / 5.0) * (0.0001 - 0.000001);
-                highPercentile = 1.0 - lowPercentile;
-                // Target median: 0.05 to 0.08
-                targetMedian = 0.05f + (aggressiveness / 5.0f) * 0.03f;
-                System.Diagnostics.Debug.WriteLine($"  Branch: <=5, lowPercentile={lowPercentile}, highPercentile={highPercentile}, targetMedian={targetMedian}");
-            }
-            else
-            {
-                // 6-10: gentle to aggressive
-                // Low: 0.01% to 1% (0.0001 to 0.01 as decimal)
-                double factor = (aggressiveness - 5) / 5.0;
-                lowPercentile = 0.0001 + factor * 0.0099;
-                highPercentile = 1.0 - lowPercentile;
-                // Target median: 0.08 to 0.25
-                targetMedian = 0.08f + (float)factor * 0.17f;
-                System.Diagnostics.Debug.WriteLine($"  Branch: >5, factor={factor}, lowPercentile={lowPercentile}, highPercentile={highPercentile}, targetMedian={targetMedian}");
-            }
+            // Linear interpolation for target median: 0.05 to 0.25
+            targetMedian = 0.05f + (aggressiveness / 10.0f) * 0.20f;
+            
+            App.LoggingService?.LogInfo($"AutoStretch: agg={aggressiveness}, lowPercentile={lowPercentile:E2}, targetMedian={targetMedian:F2}");
             
             int totalPixels = width * height;
             int lowCount = (int)(totalPixels * lowPercentile);
             int highCount = (int)(totalPixels * lowPercentile);  // Symmetric clipping on both ends
-            
-            System.Diagnostics.Debug.WriteLine($"  totalPixels={totalPixels}, lowCount={lowCount}, highCount={highCount}");
             
             int blackPoint = 0, whitePoint = 255;
             int count = 0;
