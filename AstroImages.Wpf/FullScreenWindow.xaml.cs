@@ -32,6 +32,32 @@ namespace AstroImages.Wpf
 
             // Set cursor to hand
             Cursor = System.Windows.Input.Cursors.Hand;
+
+            // Position window on the same monitor as the owner before maximizing
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Loaded += PositionOnOwnerMonitor;
+        }
+
+        /// <summary>
+        /// Positions the window on the same monitor as the owner window
+        /// </summary>
+        private void PositionOnOwnerMonitor(object sender, RoutedEventArgs e)
+        {
+            if (Owner != null)
+            {
+                // Get the screen where the owner window is located
+                var ownerHandle = new System.Windows.Interop.WindowInteropHelper(Owner).Handle;
+                var screen = System.Windows.Forms.Screen.FromHandle(ownerHandle);
+                
+                // Position this window to fill that screen
+                Left = screen.Bounds.Left;
+                Top = screen.Bounds.Top;
+                Width = screen.Bounds.Width;
+                Height = screen.Bounds.Height;
+                
+                // Now maximize to that screen
+                WindowState = WindowState.Maximized;
+            }
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)

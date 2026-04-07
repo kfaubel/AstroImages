@@ -92,6 +92,50 @@ namespace AstroImages.Wpf.ViewModels
         /// The View can use this to refresh the current image with the new setting.
         /// </summary>
         public event Action? AutoStretchChanged;
+
+        private int _stretchAggressiveness;
+
+        /// <summary>
+        /// Controls the aggressiveness of the auto-stretch algorithm (0-10).
+        /// 0 = Off (no stretching), higher values = more aggressive stretching.
+        /// </summary>
+        public int StretchAggressiveness
+        {
+            get => _stretchAggressiveness;
+            set
+            {
+                // Clamp value between 0 and 10
+                var clampedValue = Math.Max(0, Math.Min(10, value));
+                if (_stretchAggressiveness != clampedValue)
+                {
+                    _stretchAggressiveness = clampedValue;
+                    _appConfig.StretchAggressiveness = clampedValue;
+                    // Update AutoStretch based on value
+                    AutoStretch = clampedValue > 0;
+                    _appConfig.Save();
+                    OnPropertyChanged(nameof(StretchAggressiveness));
+                    OnPropertyChanged(nameof(StretchDisplayText));
+                    // Trigger image refresh when stretching changes
+                    AutoStretchChanged?.Invoke();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Display text for stretch value. Shows "Off" when 0, otherwise the numeric value.
+        /// </summary>
+        public string StretchDisplayText => StretchAggressiveness == 0 ? "Off" : StretchAggressiveness.ToString();
+
+        /// <summary>
+        /// Command to increase stretch aggressiveness
+        /// </summary>
+        public RelayCommand IncreaseStretchCommand { get; }
+
+        /// <summary>
+        /// Command to decrease stretch aggressiveness
+        /// </summary>
+        public RelayCommand DecreaseStretchCommand { get; }
+
         /// <summary>
         /// Current zoom level for the image (1.0 = 100%, 2.0 = 200%, etc.)
         /// When this changes, we also notify ZoomDisplayText since it depends on ZoomLevel.
@@ -806,6 +850,7 @@ namespace AstroImages.Wpf.ViewModels
             
             // Initialize AutoStretch from configuration
             _autoStretch = _appConfig.AutoStretch;
+            _stretchAggressiveness = _appConfig.StretchAggressiveness;
             
             // Use null-coalescing operator (??) to provide default implementations if none injected
             // This provides fallback behavior while still supporting dependency injection
@@ -856,6 +901,10 @@ namespace AstroImages.Wpf.ViewModels
             FitToWindowCommand = new RelayCommand(_ => FitToWindow());
             ResetZoomCommand = new RelayCommand(_ => ZoomLevel = 1.0);  // Reset to 100%
             ZoomActualCommand = new RelayCommand(_ => SetZoomActual());
+
+            // Stretch commands
+            IncreaseStretchCommand = new RelayCommand(_ => StretchAggressiveness++, _ => StretchAggressiveness < 10);
+            DecreaseStretchCommand = new RelayCommand(_ => StretchAggressiveness--, _ => StretchAggressiveness > 0);
         }
         #endregion
 
@@ -938,6 +987,12 @@ namespace AstroImages.Wpf.ViewModels
         /// Used in play mode to keep the currently displayed file visible.
         /// </summary>
         public event Action? ScrollToSelectedRequested;
+
+        /// <summary>
+        /// Event that requests the View to enter full screen mode.
+        /// The View handles this to create the FullScreenWindow with proper owner positioning.
+        /// </summary>
+        public event Action? EnterFullScreenRequested;
 
         /// <summary>
         /// Called by the View when an image has finished rendering.
@@ -1119,7 +1174,8 @@ namespace AstroImages.Wpf.ViewModels
                 _appConfig.ShowFullScreenHelp,
                 _appConfig.PlayPauseInterval,
                 _appConfig.ScanXisfForFitsKeywords,
-                _appConfig.StretchAggressiveness);
+                _appConfig.FitsKeywords,
+                _appConfig.CustomKeywords);
                 
             if (result.showSizeColumn.HasValue)
             {
@@ -1147,11 +1203,15 @@ namespace AstroImages.Wpf.ViewModels
                     _appConfig.ScanXisfForFitsKeywords = result.scanXisfForFitsKeywords.Value;
                 }
                 
-                if (result.stretchAggressiveness.HasValue)
+                // Handle keyword changes from sub-dialogs
+                if (result.fitsKeywords != null)
                 {
-                    _appConfig.StretchAggressiveness = result.stretchAggressiveness.Value;
-                    // Trigger image refresh when stretch setting changes
-                    AutoStretchChanged?.Invoke();
+                    _appConfig.FitsKeywords = result.fitsKeywords;
+                }
+                
+                if (result.customKeywords != null)
+                {
+                    _appConfig.CustomKeywords = result.customKeywords;
                 }
                 
                 _appConfig.Save();
@@ -1166,13 +1226,8 @@ namespace AstroImages.Wpf.ViewModels
             if (SelectedIndex < 0 || SelectedIndex >= Files.Count)
                 return;
 
-            _loggingService.LogFullscreenToggle(true);
-            var fullScreenWindow = new FullScreenWindow(Files, SelectedIndex, _appConfig);
-            fullScreenWindow.ShowDialog();
-            _loggingService.LogFullscreenToggle(false);
-            
-            // Update the selected index to the last viewed image in full screen
-            SelectedIndex = fullScreenWindow.CurrentIndex;
+            // Raise event for View to handle - this allows the View to set the proper Owner
+            EnterFullScreenRequested?.Invoke();
         }
 
         private void ShowCustomKeywordsDialog()

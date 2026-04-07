@@ -172,6 +172,10 @@ namespace AstroImages.Wpf.Services
             // ScrollBar colors
             app.Resources["ThemeScrollBarBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 45));          // #2D2D2D
             app.Resources["ThemeScrollBarThumb"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 100));            // #646464
+
+            // Toolbar colors
+            app.Resources["ThemeToolbarBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(40, 40, 40));             // #282828
+            app.Resources["ThemeIconForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 220, 220));            // #DCDCDC
         }
 
         /// <summary>
@@ -229,6 +233,10 @@ namespace AstroImages.Wpf.Services
             // ScrollBar colors
             app.Resources["ThemeScrollBarBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));      // #F0F0F0
             app.Resources["ThemeScrollBarThumb"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(160, 160, 160));           // #A0A0A0
+
+            // Toolbar colors
+            app.Resources["ThemeToolbarBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248));        // #F8F8F8
+            app.Resources["ThemeIconForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 60, 60));              // #3C3C3C
         }
     }
 }

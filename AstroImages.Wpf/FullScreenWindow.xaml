@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Full Screen" 
         WindowStyle="None"
-        WindowState="Maximized"
+        WindowStartupLocation="Manual"
         Background="#FF2D2D30"
         Topmost="True"
         KeyDown="Window_KeyDown"

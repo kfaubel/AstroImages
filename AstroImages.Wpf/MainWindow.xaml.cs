@@ -154,6 +154,21 @@ namespace AstroImages.Wpf
                 }
             };
 
+            // Wire up enter full screen event to show full screen on the same monitor as main window
+            _viewModel.EnterFullScreenRequested += () =>
+            {
+                _loggingService.LogFullscreenToggle(true);
+                var fullScreenWindow = new FullScreenWindow(_viewModel.Files, _viewModel.SelectedIndex, _appConfig)
+                {
+                    Owner = this
+                };
+                fullScreenWindow.ShowDialog();
+                _loggingService.LogFullscreenToggle(false);
+                
+                // Update the selected index to the last viewed image in full screen
+                _viewModel.SelectedIndex = fullScreenWindow.CurrentIndex;
+            };
+
             // Wire up long operation detection to show progress dialogs
             _loggingService.LongOperationDetected += (sender, e) =>
             {
@@ -503,7 +518,7 @@ namespace AstroImages.Wpf
             if (_appConfig.ShowSplashScreen)
             {
                 // Create the splash screen window with current setting
-                var splash = new SplashWindow(_appConfig.ShowSplashScreen);
+                var splash = new SplashWindow(_appConfig.ShowSplashScreen, _appConfig);
                 
                 // Set the main window as the "owner" - this makes the splash appear on top
                 // and centers it relative to the main window
@@ -1076,6 +1091,22 @@ namespace AstroImages.Wpf
         }
 
         /// <summary>
+        /// Event handler for Open Recent toolbar button.
+        /// Shows the context menu with recent folders.
+        /// </summary>
+        /// <param name="sender">The button that was clicked</param>
+        /// <param name="e">Event arguments for the click event</param>
+        private void OpenRecentButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
+
+        /// <summary>
         /// Event handler for Help > About menu item.
         /// Reuses the splash screen window to show application information.
         /// </summary>
@@ -1084,7 +1115,7 @@ namespace AstroImages.Wpf
         private void About_Click(object sender, RoutedEventArgs e)
         {
             // Reuse the splash screen window as an "About" dialog
-            var aboutWindow = new SplashWindow(_appConfig.ShowSplashScreen);
+            var aboutWindow = new SplashWindow(_appConfig.ShowSplashScreen, _appConfig);
             
             // Set this main window as the owner
             aboutWindow.Owner = this;
@@ -1226,39 +1257,69 @@ namespace AstroImages.Wpf
         /// Opens a file dialog to select multiple image files
         /// </summary>
         /// <summary>
-        /// Event handler for the Auto Select button - opens the Auto Select dialog
+        /// Event handler for the Auto Select button - opens the Auto Mark dialog
         /// </summary>
         private void AutoSelectButton_Click(object sender, RoutedEventArgs e)
         {
             if (_viewModel == null)
                 return;
 
-            // Show the Auto Select dialog with custom keywords
-            var autoSelectDialog = new AutoSelectDialog(_appConfig.CustomKeywords)
+            // Show the Auto Mark dialog with custom keywords and FITS keywords
+            var autoMarkDialog = new AutoMarkDialog(_appConfig.CustomKeywords, _appConfig.FitsKeywords)
             {
                 Owner = this
             };
 
             // Handle the Apply event
-            autoSelectDialog.ApplyRequested += (dialogSender, ranges) =>
+            autoMarkDialog.ApplyRequested += (dialogSender, criteria) =>
             {
-                ApplyAutoSelect(ranges);
+                ApplyAutoMark(criteria);
             };
 
-            autoSelectDialog.ShowDialog();
+            autoMarkDialog.ShowDialog();
         }
 
         /// <summary>
-        /// Applies auto-select logic: selects files that don't match the criteria
+        /// Event handler for the Select All button - selects all files in the list
         /// </summary>
-        private void ApplyAutoSelect(Dictionary<string, (double? min, double? max)> ranges)
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_viewModel?.Files == null || ranges.Count == 0)
+            if (_viewModel?.Files == null)
+                return;
+
+            foreach (var fileItem in _viewModel.Files)
+            {
+                fileItem.IsSelected = true;
+            }
+            _loggingService.LogInfo($"Select All: Selected all {_viewModel.Files.Count} files");
+        }
+
+        /// <summary>
+        /// Event handler for the Clear All button - clears all selections
+        /// </summary>
+        private void ClearAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel?.Files == null)
+                return;
+
+            foreach (var fileItem in _viewModel.Files)
+            {
+                fileItem.IsSelected = false;
+            }
+            _loggingService.LogInfo("Clear All: Cleared all selections");
+        }
+
+        /// <summary>
+        /// Applies auto-mark logic: marks files for deletion that don't meet the criteria
+        /// </summary>
+        private void ApplyAutoMark(List<AutoMarkCriteria> criteriaList)
+        {
+            if (_viewModel?.Files == null || criteriaList.Count == 0)
                 return;
 
             try
             {
-                int selectedCount = 0;
+                int markedCount = 0;
 
                 // First, clear all marked boxes
                 foreach (var fileItem in _viewModel.Files)
@@ -1266,63 +1327,49 @@ namespace AstroImages.Wpf
                     fileItem.IsSelected = false;
                 }
 
-                // Then, mark only files that match the criteria
+                // Then, mark files that don't meet the criteria
                 foreach (var fileItem in _viewModel.Files)
                 {
-                    bool shouldSelect = false;
+                    bool shouldMark = false;
+                    string? failedKeyword = null;
+                    string? failedValue = null;
 
-                    // Check each keyword range
-                    foreach (var rangeKvp in ranges)
+                    // Check each enabled criteria
+                    foreach (var criteria in criteriaList)
                     {
-                        var keyword = rangeKvp.Key;
-                        var (min, max) = rangeKvp.Value;
+                        string? valueStr = null;
 
-                        // Check if the file has this keyword
-                        if (!fileItem.CustomKeywords.TryGetValue(keyword, out var valueStr))
+                        // Try to get value from CustomKeywords first, then FitsKeywords
+                        if (!fileItem.CustomKeywords.TryGetValue(criteria.Key, out valueStr))
                         {
-                            // File doesn't have this keyword - select it
-                            shouldSelect = true;
-                            break;
+                            fileItem.FitsKeywords.TryGetValue(criteria.Key, out valueStr);
                         }
 
-                        // Try to parse the value as a number
-                        if (!double.TryParse(valueStr, out var value))
+                        // Check if value passes criteria
+                        if (!criteria.IsValueAcceptable(valueStr))
                         {
-                            // Value is not a number - select the file
-                            shouldSelect = true;
-                            break;
-                        }
-
-                        // Check if value is within range
-                        if (min.HasValue && value < min.Value)
-                        {
-                            // Below minimum - select the file
-                            shouldSelect = true;
-                            break;
-                        }
-
-                        if (max.HasValue && value > max.Value)
-                        {
-                            // Above maximum - select the file
-                            shouldSelect = true;
+                            shouldMark = true;
+                            failedKeyword = criteria.Key;
+                            failedValue = valueStr ?? "(blank)";
                             break;
                         }
                     }
 
                     // Update the file's selected state
-                    if (shouldSelect)
+                    if (shouldMark)
                     {
                         fileItem.IsSelected = true;
-                        selectedCount++;
+                        markedCount++;
+                        _loggingService.LogInfo($"Auto-mark: Marked '{fileItem.Name}' - {failedKeyword}={failedValue}");
                     }
                 }
 
-                _loggingService.LogInfo($"Auto-select: Selected {selectedCount} of {_viewModel.Files.Count} files based on criteria");
+                _loggingService.LogInfo($"Auto-mark: Marked {markedCount} of {_viewModel.Files.Count} files for deletion based on criteria");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Auto Select", "Error applying auto-select criteria", ex);
-                System.Windows.MessageBox.Show($"Error applying auto-select criteria: {ex.Message}", 
+                _loggingService.LogError("Auto Mark", "Error applying auto-mark criteria", ex);
+                System.Windows.MessageBox.Show($"Error applying auto-mark criteria: {ex.Message}", 
                     "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
