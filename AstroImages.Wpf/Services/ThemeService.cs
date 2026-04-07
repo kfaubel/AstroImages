@@ -147,11 +147,12 @@ namespace AstroImages.Wpf.Services
             app.Resources["ThemeTextBoxBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 50, 50));          // #323232
 
             // Button colors
-            app.Resources["ThemeButtonBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 60, 60));           // #3C3C3C
-            app.Resources["ThemeButtonForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));        // #F0F0F0
-            app.Resources["ThemeButtonBackgroundHover"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 80, 80));      // #505050
-            app.Resources["ThemeButtonBackgroundPressed"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(40, 40, 40));    // #282828
-            app.Resources["ThemeButtonBackgroundDisabled"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 45));   // #2D2D2D
+            app.Resources["ThemeButtonBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(40, 85, 140));          // #28558C (rich blue)
+            app.Resources["ThemeButtonForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 240, 150));        // #FFF096 (vibrant golden yellow)
+            app.Resources["ThemeButtonBackgroundHover"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 100, 165));    // #3264A5 (brighter blue)
+            app.Resources["ThemeButtonBackgroundPressed"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 70, 120));   // #1E4678 (darker blue)
+            app.Resources["ThemeButtonBackgroundDisabled"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(55, 75, 100));  // #374B64 (muted blue)
+            app.Resources["ThemeButtonForegroundDisabled"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 170, 120)); // #B4AA78 (dimmed yellow)
 
             // Code block colors (for documentation)
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 60, 60));        // #3C3C3C
@@ -207,12 +208,13 @@ namespace AstroImages.Wpf.Services
             // TextBox colors
             app.Resources["ThemeTextBoxBackground"] = new SolidColorBrush(System.Windows.Media.Colors.White);                       // #FFFFFF
 
-            // Button colors
-            app.Resources["ThemeButtonBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));        // #F0F0F0
-            app.Resources["ThemeButtonForeground"] = new SolidColorBrush(System.Windows.Media.Colors.Black);                        // #000000
-            app.Resources["ThemeButtonBackgroundHover"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(230, 230, 230));   // #E6E6E6
-            app.Resources["ThemeButtonBackgroundPressed"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(210, 210, 210)); // #D2D2D2
-            app.Resources["ThemeButtonBackgroundDisabled"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248)); // #F8F8F8
+            // Button colors - match list view selection blue (#0078D7)
+            app.Resources["ThemeButtonBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 215));          // #0078D7 (Windows accent blue)
+            app.Resources["ThemeButtonForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 245, 180));        // #FFF5B4 (warm yellow - same as dark mode)
+            app.Resources["ThemeButtonBackgroundHover"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 140, 230));    // #1E8CE6 (brighter blue)
+            app.Resources["ThemeButtonBackgroundPressed"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 100, 180));   // #0064B4 (darker blue)
+            app.Resources["ThemeButtonBackgroundDisabled"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(140, 180, 220)); // #8CB4DC (muted blue)
+            app.Resources["ThemeButtonForegroundDisabled"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 175, 130)); // #B4AF82 (dimmed yellow)
 
             // Code block colors (for documentation)
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248));      // #F8F8F8

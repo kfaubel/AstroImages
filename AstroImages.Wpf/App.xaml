@@ -180,7 +180,7 @@
         
         <!-- Toolbar Button Style -->
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Background" Value="{DynamicResource ThemeButtonBackground}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="Cursor" Value="Hand" />
@@ -217,6 +217,7 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeButtonForeground}" />
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
             <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -232,7 +233,8 @@
                                             VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                             Focusable="False"
                                             RecognizesAccessKey="True"
-                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                            TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -243,7 +245,7 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemeButtonBackgroundDisabled}" />
-                                <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundDisabled}" />
+                                <Setter TargetName="contentPresenter" Property="TextElement.Foreground" Value="{DynamicResource ThemeButtonForeground}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

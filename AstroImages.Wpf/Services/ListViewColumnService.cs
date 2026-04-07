@@ -84,6 +84,15 @@ namespace AstroImages.Wpf.Services
             };
             gridView.Columns.Add(checkboxColumn);
 
+            // File column - always use fresh width calculation (no saved widths)
+            var fileColumn = new GridViewColumn
+            {
+                Header = CreateSortableHeader("File"),
+                Width = GetFileColumnWidth(), // Always calculate fresh (35% of window width)
+                DisplayMemberBinding = new System.Windows.Data.Binding("Name")
+            };
+            gridView.Columns.Add(fileColumn);
+
             // Metadata button column with info icon (no gray box)
             var buttonFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.Button));
             buttonFactory.SetValue(System.Windows.Controls.Button.ContentProperty, "ⓘ");
@@ -120,15 +129,6 @@ namespace AstroImages.Wpf.Services
                 CellTemplate = buttonTemplate
             };
             gridView.Columns.Add(metadataColumn);
-
-            // File column - always use fresh width calculation (no saved widths)
-            var fileColumn = new GridViewColumn
-            {
-                Header = CreateSortableHeader("File"),
-                Width = GetFileColumnWidth(), // Always calculate fresh (35% of window width)
-                DisplayMemberBinding = new System.Windows.Data.Binding("Name")
-            };
-            gridView.Columns.Add(fileColumn);
 
             // Size column (with converter) - always use fresh width calculation (no saved widths)
             if (_appConfig.ShowSizeColumn)

@@ -813,8 +813,8 @@ namespace AstroImages.Wpf
                 var parent = ImageScrollViewer.Parent as FrameworkElement;
                 if (parent != null)
                 {
-                    viewportW = parent.ActualWidth - 40; // Account for margins/borders
-                    viewportH = parent.ActualHeight - 40;
+                    viewportW = parent.ActualWidth - 16; // Account for margins/borders
+                    viewportH = parent.ActualHeight - 16;
                     System.Diagnostics.Debug.WriteLine($"Parent size: {viewportW}x{viewportH}");
                 }
             }
@@ -834,9 +834,9 @@ namespace AstroImages.Wpf
             
             if (imgW > 0 && imgH > 0 && viewportW > 0 && viewportH > 0)
             {
-                // Calculate fit scale with some padding
-                double scaleX = (viewportW - 20) / imgW;
-                double scaleY = (viewportH - 20) / imgH;
+                // Calculate fit scale with minimal padding (2 pixels on each side)
+                double scaleX = (viewportW - 4) / imgW;
+                double scaleY = (viewportH - 4) / imgH;
                 double fitScale = Math.Min(scaleX, scaleY);
                 
                 System.Diagnostics.Debug.WriteLine($"Calculated fit scale: {fitScale}");
