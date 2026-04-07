@@ -1,6 +1,6 @@
 # AstroImages
 
-A modern WPF application for browsing and reviewing astronomical images and FITS files. Designed specifically for astrophotographers who need to quickly review image quality and manage their captures.
+A modern WPF application for browsing and reviewing astronomical images and FITS files. Designed specifically for astrophotographers who need to quickly review image quality and manage their subexposures.
 
 ## Key Features
 
@@ -12,18 +12,18 @@ A modern WPF application for browsing and reviewing astronomical images and FITS
 - **Image statistics and analysis** - Examine pixel statistics and image properties
 - **Dark mode** - Switch between light and dark themes for comfortable viewing
 
-### Support for NINA Users
+## Support for NINA Users
 
-If you use NINA (N.I.N.A. - Nighttime Imaging 'N' Astronomy) with structured specified filenames like:
+If you use NINA (N.I.N.A. - Nighttime Imaging 'N' Astronomy) some useful data is not stored in the FITS header but can be added to the image file name with filenames like this in Options -> Imaging:
 ```
-$$SEQUENCETITLE$$\NIGHT_$$DATEMINUS12$$\$$IMAGETYPE$$\$$DATETIME$$_$$FILTER$$_RMS:$$RMS$$_HFR:$$HFR$$_Stars:$$STARCOUNT$$_$$GAIN$$_$$EXPOSURETIME$$s_$$SENSORTEMP$$C_$$FRAMENR$$
+$$TARGETNAME$$\NIGHT_$$DATEMINUS12$$\$$IMAGETYPE$$\$$DATETIME$$_$$FILTER$$_RMS:$$RMS$$_HFR:$$HFR$$_ECC_$$ECCENTRICITY$$_Stars_$$STARCOUNT$$_$$GAIN$$_$$EXPOSURETIME$$s_$$SENSORTEMP$$C_$$FRAMENR$$
 ```
 That generates filenames such as:
 ```
-2025-10-16_23-42-23_R_RMS_0.75_HFR_2.26_Stars_2029_100_10.00s_-9.60C_0052.fits
+M33 › NIGHT_2015-12-31 › LIGHT › 2016-01-01_12-00-00_L_RMS_0.35_HFR_3.25_ECC_0.66_Stars_3294_1600_10.21s_-15C_0001
 ```
 
-This app can parse RMS, HFR, star count, and other quality metrics directly from the filename for quick quality assessment.
+This app can parse RMS, HFR, ECCENTRICITY, Stars, and other quality metrics directly from the filename for quick quality assessment.  The Image Type, Filter, Exposure Time, Sensor Temperature, and other metadata are stored in the FITS file but are still helpful when sorting images to prepare for tools like PixInsight WBPP.
 
 ---
 
