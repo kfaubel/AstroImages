@@ -310,5 +310,11 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        
+        <!-- Value Converters -->
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" 
+                                                 xmlns:converters="clr-namespace:AstroImages.Wpf.Converters"/>
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" 
+                                                        xmlns:converters="clr-namespace:AstroImages.Wpf.Converters"/>
     </Application.Resources>
 </Application>

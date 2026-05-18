@@ -107,6 +107,9 @@ namespace AstroImages.Wpf
             // Connect the ViewModel to the UI through DataContext
             // This enables data binding - UI elements can bind to ViewModel properties
             this.DataContext = _viewModel;
+            
+            // Set up histogram control DataContext
+            HistogramControl.DataContext = _viewModel.HistogramViewModel;
 
             // Connect the ListView to the Files collection in the ViewModel
             // ItemsSource tells the ListView where to get its data
@@ -718,6 +721,9 @@ namespace AstroImages.Wpf
                 ImageScrollViewer.Visibility = Visibility.Collapsed;  // Hide the image viewer
                 PlaceholderText.Visibility = Visibility.Visible;      // Show "No image selected" text
                 
+                // Clear histogram
+                _viewModel?.HistogramViewModel.ClearHistogram();
+                
                 // Restore normal cursor since no image processing is needed
                 this.Cursor = System.Windows.Input.Cursors.Arrow;
                 return; // Exit early since there's nothing to display
@@ -761,6 +767,9 @@ namespace AstroImages.Wpf
                             FitImageToScrollViewer();
                             System.Diagnostics.Debug.WriteLine("Image loaded and fit mode applied");
                             
+                            // Generate histogram data
+                            GenerateHistogramForCurrentImage();
+                            
                             // Restore normal cursor after image rendering is complete
                             this.Cursor = System.Windows.Input.Cursors.Arrow;
                             
@@ -787,8 +796,122 @@ namespace AstroImages.Wpf
             ImageScrollViewer.Visibility = Visibility.Collapsed;
             PlaceholderText.Visibility = Visibility.Visible;
             
+            // Clear histogram
+            _viewModel.HistogramViewModel.ClearHistogram();
+            
             // Restore normal cursor after failed image loading
             this.Cursor = System.Windows.Input.Cursors.Arrow;
+        }
+
+        private void GenerateHistogramForCurrentImage()
+        {
+            if (_viewModel == null || DisplayImage.Source == null)
+                return;
+
+            // Get the currently selected file
+            if (_viewModel.SelectedIndex < 0 || _viewModel.SelectedIndex >= _viewModel.Files.Count)
+                return;
+
+            var currentFile = _viewModel.Files[_viewModel.SelectedIndex];
+            if (!System.IO.File.Exists(currentFile.Path))
+                return;
+
+            try
+            {
+                var histogramService = new HistogramService();
+
+                // For FITS and XISF files, generate histogram from raw data (before stretching)
+                if (AstroImages.Core.FitsUtilities.IsFitsFile(currentFile.Path))
+                {
+                    GenerateHistogramFromFitsFile(currentFile.Path, histogramService);
+                }
+                else if (AstroImages.Utils.XisfUtilities.IsXisfFile(currentFile.Path))
+                {
+                    GenerateHistogramFromXisfFile(currentFile.Path, histogramService);
+                }
+                else
+                {
+                    // For standard images, use the rendered bitmap
+                    GenerateHistogramFromBitmap(histogramService);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Histogram Generation", $"Failed to generate histogram: {ex.Message}", ex);
+                _viewModel.HistogramViewModel.ClearHistogram();
+            }
+        }
+
+        private void GenerateHistogramFromFitsFile(string filePath, HistogramService histogramService)
+        {
+            // Read the raw FITS data
+            byte[] bytes = System.IO.File.ReadAllBytes(filePath);
+            if (!AstroImages.Core.FitsUtilities.IsFitsData(bytes))
+                return;
+
+            var (width, height, pixels) = AstroImages.Core.FitsParser.ReadImage(bytes);
+            
+            // Generate histogram from raw pixel data (before any stretching)
+            var histogram = histogramService.GenerateRawHistogram(pixels);
+            _viewModel.HistogramViewModel.UpdateHistogram(histogram);
+        }
+
+        private void GenerateHistogramFromXisfFile(string filePath, HistogramService histogramService)
+        {
+            // Read the raw XISF data
+            byte[] bytes = System.IO.File.ReadAllBytes(filePath);
+            var header = AstroImages.Utils.XisfParser.ParseMetadata(bytes);
+
+            if (header.ContainsKey("Channels") && (int)header["Channels"] == 3)
+            {
+                // RGB image - read as RGB
+                var (width, height, rgbPixels) = AstroImages.Utils.XisfParser.ReadImageRgb(bytes);
+                
+                // Split RGB data into separate channels
+                int pixelCount = width * height;
+                byte[] redPixels = new byte[pixelCount];
+                byte[] greenPixels = new byte[pixelCount];
+                byte[] bluePixels = new byte[pixelCount];
+                
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    redPixels[i] = rgbPixels[i * 3];
+                    greenPixels[i] = rgbPixels[i * 3 + 1];
+                    bluePixels[i] = rgbPixels[i * 3 + 2];
+                }
+                
+                var red = histogramService.GenerateRawHistogram(redPixels);
+                var green = histogramService.GenerateRawHistogram(greenPixels);
+                var blue = histogramService.GenerateRawHistogram(bluePixels);
+                _viewModel.HistogramViewModel.UpdateHistogram(red, green, blue);
+            }
+            else
+            {
+                // Grayscale image
+                var (width, height, pixels) = AstroImages.Utils.XisfParser.ReadImage(bytes);
+                var histogram = histogramService.GenerateRawHistogram(pixels);
+                _viewModel.HistogramViewModel.UpdateHistogram(histogram);
+            }
+        }
+
+        private void GenerateHistogramFromBitmap(HistogramService histogramService)
+        {
+            var bitmap = DisplayImage.Source as System.Windows.Media.Imaging.BitmapSource;
+            if (bitmap == null)
+                return;
+
+            bool isGrayscale = histogramService.IsGrayscaleImage(bitmap);
+
+            if (isGrayscale)
+            {
+                var grayHistogram = histogramService.GenerateGrayscaleHistogram(bitmap);
+                _viewModel.HistogramViewModel.UpdateHistogram(grayHistogram);
+            }
+            else
+            {
+                var (red, green, blue) = histogramService.GenerateRgbHistogram(bitmap);
+                _viewModel.HistogramViewModel.UpdateHistogram(red, green, blue);
+            }
         }
 
         private void CalculateAndApplyFitScale()

@@ -37,6 +37,7 @@ namespace AstroImages.Wpf.ViewModels
         private double _zoomLevel = 1.0;       // Current zoom level for image display
         private double _fitScale = 1.0;        // Scale factor when fitting image to window
         private string _currentDirectory = string.Empty;  // Currently opened folder path
+        private HistogramViewModel _histogramViewModel = new HistogramViewModel();  // Histogram view model
         #endregion
 
         #region Image Display Properties
@@ -92,6 +93,11 @@ namespace AstroImages.Wpf.ViewModels
         /// The View can use this to refresh the current image with the new setting.
         /// </summary>
         public event Action? AutoStretchChanged;
+        
+        /// <summary>
+        /// Gets the histogram view model for displaying image histograms
+        /// </summary>
+        public HistogramViewModel HistogramViewModel => _histogramViewModel;
 
         private int _stretchAggressiveness;
 
