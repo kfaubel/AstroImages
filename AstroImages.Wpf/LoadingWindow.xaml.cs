@@ -27,5 +27,13 @@ namespace AstroImages.Wpf
                 MessageText.Text = $"Loading image metadata... {current} of {total}";
             }
         }
+
+        /// <summary>
+        /// Updates just the message text
+        /// </summary>
+        public void UpdateMessage(string message)
+        {
+            MessageText.Text = message;
+        }
     }
 }

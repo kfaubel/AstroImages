@@ -254,12 +254,16 @@ namespace AstroImages.Wpf.ViewModels
             var xisfCount = 0;
             var otherCount = 0;
             
+            // Track timing statistics
+            var fileTimes = new System.Collections.Concurrent.ConcurrentBag<(string fileName, long elapsedMs)>();
+            
             // Process files in parallel for better performance
             var metadataStart = totalStopwatch.ElapsedMilliseconds;
             System.Threading.Tasks.Parallel.ForEach(fileItems, 
                 new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
                 fileItem =>
                 {
+                    var fileStopwatch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
                         // Track file types
@@ -273,6 +277,15 @@ namespace AstroImages.Wpf.ViewModels
                         
                         // Extract both custom and FITS keywords for each file
                         _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords, _appConfig.ShowMedianColumn);
+                        
+                        fileStopwatch.Stop();
+                        var elapsed = fileStopwatch.ElapsedMilliseconds;
+                        
+                        // Track timing for slow files
+                        if (elapsed > 100) // Files taking more than 100ms
+                        {
+                            fileTimes.Add((fileItem.Name, elapsed));
+                        }
                         
                         // Update progress in a thread-safe manner
                         lock (progressLock)
@@ -292,12 +305,21 @@ namespace AstroImages.Wpf.ViewModels
                     }
                     catch (Exception ex)
                     {
+                        fileStopwatch.Stop();
                         _loggingService.LogError("Metadata Extraction", $"Failed to process {fileItem.Name}: {ex.Message}", ex);
                     }
                 });
             
             var metadataTime = totalStopwatch.ElapsedMilliseconds - metadataStart;
-            _loggingService.LogInfo($"Metadata extraction took {metadataTime}ms ({fitsCount} FITS, {xisfCount} XISF, {otherCount} other files)");
+            var avgTimePerFile = total > 0 ? metadataTime / (double)total : 0;
+            _loggingService.LogInfo($"Metadata extraction: {metadataTime}ms total, {avgTimePerFile:F1}ms avg per file ({fitsCount} FITS, {xisfCount} XISF, {otherCount} other)");
+            
+            // Log slowest files if any were slow
+            if (!fileTimes.IsEmpty)
+            {
+                var slowFiles = fileTimes.OrderByDescending(f => f.elapsedMs).Take(5).ToList();
+                _loggingService.LogInfo($"Slowest files: {string.Join(", ", slowFiles.Select(f => $"{f.fileName} ({f.elapsedMs}ms)"))}");
+            }
             
             // Check if median calculation is enabled but medians are missing
             // This can happen if the setting was just enabled or if calculation failed
@@ -306,6 +328,7 @@ namespace AstroImages.Wpf.ViewModels
                 var filesWithoutMedian = fileItems.Where(f => !f.Median.HasValue).ToList();
                 if (filesWithoutMedian.Count > 0)
                 {
+                    var medianStart = totalStopwatch.ElapsedMilliseconds;
                     _loggingService.LogInfo($"Recalculating medians for {filesWithoutMedian.Count} files that are missing median values...");
                     
                     // Calculate missing medians
@@ -323,8 +346,10 @@ namespace AstroImages.Wpf.ViewModels
                                 _loggingService.LogError("Median Calculation", $"Failed to calculate median for {fileItem.Name}: {ex.Message}", ex);
                             }
                         });
-                        
-                    _loggingService.LogInfo($"Median recalculation complete");
+                    
+                    var medianTime = totalStopwatch.ElapsedMilliseconds - medianStart;
+                    var avgMedianTime = filesWithoutMedian.Count > 0 ? medianTime / (double)filesWithoutMedian.Count : 0;
+                    _loggingService.LogInfo($"Median recalculation: {medianTime}ms total, {avgMedianTime:F1}ms avg per file");
                 }
             }
         }

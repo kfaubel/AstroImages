@@ -257,9 +257,12 @@ namespace AstroImages.Wpf
         private async Task LoadFilesWithProgressAsync(string directoryPath, bool isStartup = false)
         {
             LoadingWindow? loadingWindow = null;
+            var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
             
             try
             {
+                _loggingService?.LogInfo($"=== Starting folder load: {System.IO.Path.GetFileName(directoryPath)} ===");
+                
                 // Show loading dialog on UI thread
                 loadingWindow = new LoadingWindow(isStartup ? "Loading images..." : "Loading images in new folder...");
                 loadingWindow.Owner = this;
@@ -269,6 +272,8 @@ namespace AstroImages.Wpf
                 await Task.Delay(50);
                 
                 // Step 1: Load file list (fast - just filenames)
+                loadingWindow.UpdateMessage("Scanning directory for image files...");
+                var step1Start = totalStopwatch.ElapsedMilliseconds;
                 System.Collections.Generic.List<Models.FileItem>? loadedFiles = null;
                 
                 await Task.Run(() =>
@@ -279,7 +284,12 @@ namespace AstroImages.Wpf
                     }
                 });
                 
+                var step1Time = totalStopwatch.ElapsedMilliseconds - step1Start;
+                _loggingService?.LogInfo($"Phase 1 (File scan): {step1Time}ms for {loadedFiles?.Count ?? 0} files");
+                
                 // Step 2: Clear old list and show filenames immediately on UI thread
+                loadingWindow.UpdateMessage($"Loading {loadedFiles?.Count ?? 0} files...");
+                var step2Start = totalStopwatch.ElapsedMilliseconds;
                 if (_viewModel != null && loadedFiles != null)
                 {
                     _viewModel.UpdateFilesCollection(loadedFiles);
@@ -293,8 +303,11 @@ namespace AstroImages.Wpf
                     // Auto-resize columns
                     _listViewColumnService?.AutoResizeColumns();
                 }
+                var step2Time = totalStopwatch.ElapsedMilliseconds - step2Start;
+                _loggingService?.LogInfo($"Phase 2 (UI update): {step2Time}ms");
                 
                 // Step 3: Populate metadata in background (slow - reads file headers)
+                var step3Start = totalStopwatch.ElapsedMilliseconds;
                 await Task.Run(() =>
                 {
                     if (_viewModel != null && loadedFiles != null)
@@ -309,12 +322,21 @@ namespace AstroImages.Wpf
                         });
                     }
                 });
+                var step3Time = totalStopwatch.ElapsedMilliseconds - step3Start;
+                _loggingService?.LogInfo($"Phase 3 (Metadata extraction): {step3Time}ms");
                 
                 // Refresh the UI to show updated metadata
+                loadingWindow.UpdateMessage("Finalizing...");
+                var step4Start = totalStopwatch.ElapsedMilliseconds;
                 if (_listViewColumnService != null)
                 {
                     _listViewColumnService.AutoResizeColumns();
                 }
+                var step4Time = totalStopwatch.ElapsedMilliseconds - step4Start;
+                _loggingService?.LogInfo($"Phase 4 (Column resize): {step4Time}ms");
+                
+                var totalTime = totalStopwatch.ElapsedMilliseconds;
+                _loggingService?.LogInfo($"=== Total folder load time: {totalTime}ms ({totalTime / 1000.0:F1}s) ===");
                 
                 // Start background warming to pre-trigger antivirus scans
                 _ = WarmupFilesAsync(loadedFiles);
@@ -1223,6 +1245,37 @@ namespace AstroImages.Wpf
         {
             if (sender is System.Windows.Controls.Button button && button.ContextMenu != null)
             {
+                // Clear any existing recent folder menu items (keep the first 3: Open Folder, Separator, Header)
+                while (button.ContextMenu.Items.Count > 3)
+                {
+                    button.ContextMenu.Items.RemoveAt(3);
+                }
+                
+                // Add recent folder menu items dynamically
+                if (_viewModel != null && _viewModel.RecentFolders.Count > 0)
+                {
+                    foreach (var folder in _viewModel.RecentFolders)
+                    {
+                        var menuItem = new System.Windows.Controls.MenuItem
+                        {
+                            Header = folder,
+                            Command = _viewModel.OpenRecentFolderCommand,
+                            CommandParameter = folder
+                        };
+                        button.ContextMenu.Items.Add(menuItem);
+                    }
+                }
+                else
+                {
+                    // Show a disabled item if no recent folders
+                    var noItemsMenuItem = new System.Windows.Controls.MenuItem
+                    {
+                        Header = "(No recent folders)",
+                        IsEnabled = false
+                    };
+                    button.ContextMenu.Items.Add(noItemsMenuItem);
+                }
+                
                 button.ContextMenu.PlacementTarget = button;
                 button.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
                 button.ContextMenu.IsOpen = true;
