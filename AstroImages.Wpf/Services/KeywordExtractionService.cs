@@ -91,7 +91,18 @@ namespace AstroImages.Wpf.Services
 
         public void PopulateKeywords(Models.FileItem fileItem, IEnumerable<string> customKeywords, IEnumerable<string> fitsKeywords, bool skipXisf = false)
         {
+            PopulateKeywords(fileItem, customKeywords, fitsKeywords, skipXisf, calculateMedian: false);
+        }
+
+        public void PopulateKeywords(Models.FileItem fileItem, IEnumerable<string> customKeywords, IEnumerable<string> fitsKeywords, bool skipXisf, bool calculateMedian)
+        {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
+            // Debug: Log median calculation flag
+            if (calculateMedian)
+            {
+                System.Diagnostics.Debug.WriteLine($"PopulateKeywords for {fileItem.Name}: calculateMedian=true");
+            }
             
             // Extract custom keywords from filename
             if (customKeywords.Any())
@@ -119,6 +130,12 @@ namespace AstroImages.Wpf.Services
                 }
             }
             
+            // Calculate median value for the image (only if requested)
+            if (calculateMedian)
+            {
+                fileItem.Median = CalculateMedian(fileItem.Path);
+            }
+            
             stopwatch.Stop();
             
             // Log all files asynchronously to avoid blocking
@@ -132,6 +149,141 @@ namespace AstroImages.Wpf.Services
             {
                 App.LoggingService?.LogInfo($"Loaded metadata: {fileItem.Name} ({ext}) in {elapsed}ms - {customCount} custom, {fitsCount} FITS keywords");
             });
+        }
+
+        /// <summary>
+        /// Calculate the median pixel value for an image file (0.0-1.0 range).
+        /// Public method for calculating median on demand.
+        /// </summary>
+        public double? CalculateMedianForFile(string filePath)
+        {
+            return CalculateMedian(filePath);
+        }
+
+        /// <summary>
+        /// Calculate the median pixel value for an image file (0.0-1.0 range).
+        /// Supports FITS, XISF, and standard image formats.
+        /// </summary>
+        private double? CalculateMedian(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    App.LoggingService?.LogWarning("Median Calculation", $"File not found: {System.IO.Path.GetFileName(filePath)}");
+                    return null;
+                }
+
+                // Handle FITS files
+                if (FitsUtilities.IsFitsFile(filePath))
+                {
+                    byte[] bytes = File.ReadAllBytes(filePath);
+                    if (!FitsUtilities.IsFitsData(bytes))
+                    {
+                        App.LoggingService?.LogWarning("Median Calculation", $"Invalid FITS data: {System.IO.Path.GetFileName(filePath)}");
+                        return null;
+                    }
+
+                    var (width, height, pixels) = AstroImages.Core.FitsParser.ReadImage(bytes);
+                    var median = CalculateMedianFromBytes(pixels);
+                    System.Diagnostics.Debug.WriteLine($"Calculated median for FITS {System.IO.Path.GetFileName(filePath)}: {median:F3}");
+                    return median;
+                }
+                // Handle XISF files
+                else if (XisfUtilities.IsXisfFile(filePath))
+                {
+                    byte[] bytes = File.ReadAllBytes(filePath);
+                    var (width, height, pixels) = AstroImages.Utils.XisfParser.ReadImage(bytes);
+                    var median = CalculateMedianFromBytes(pixels);
+                    System.Diagnostics.Debug.WriteLine($"Calculated median for XISF {System.IO.Path.GetFileName(filePath)}: {median:F3}");
+                    return median;
+                }
+                // Handle standard image formats (JPEG, PNG, etc.)
+                else
+                {
+                    var bitmap = new System.Windows.Media.Imaging.BitmapImage(new Uri(filePath));
+                    var median = CalculateMedianFromBitmap(bitmap);
+                    System.Diagnostics.Debug.WriteLine($"Calculated median for image {System.IO.Path.GetFileName(filePath)}: {median:F3}");
+                    return median;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't throw - median is optional
+                App.LoggingService?.LogWarning("Median Calculation", $"Failed to calculate median for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Median calculation error for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Calculate median from byte array (0-255 range) normalized to 0.0-1.0
+        /// </summary>
+        private double CalculateMedianFromBytes(byte[] pixels)
+        {
+            if (pixels == null || pixels.Length == 0)
+                return 0.0;
+
+            var sorted = pixels.OrderBy(p => p).ToArray();
+            int middle = sorted.Length / 2;
+            
+            double median;
+            if (sorted.Length % 2 == 0)
+            {
+                median = (sorted[middle - 1] + sorted[middle]) / 2.0;
+            }
+            else
+            {
+                median = sorted[middle];
+            }
+            
+            // Normalize to 0.0-1.0 range
+            return median / 255.0;
+        }
+
+        /// <summary>
+        /// Calculate median from a BitmapSource (standard image)
+        /// </summary>
+        private double? CalculateMedianFromBitmap(System.Windows.Media.Imaging.BitmapSource bitmap)
+        {
+            if (bitmap == null)
+                return null;
+
+            try
+            {
+                // Convert bitmap to a known format (Bgra32) for consistent pixel reading
+                var convertedBitmap = new System.Windows.Media.Imaging.FormatConvertedBitmap(
+                    bitmap, 
+                    System.Windows.Media.PixelFormats.Bgra32, 
+                    null, 
+                    0);
+
+                int width = convertedBitmap.PixelWidth;
+                int height = convertedBitmap.PixelHeight;
+                int stride = width * 4; // 4 bytes per pixel (BGRA)
+                byte[] pixels = new byte[stride * height];
+                
+                convertedBitmap.CopyPixels(pixels, stride, 0);
+                
+                // Convert BGRA to grayscale and calculate median
+                var grayscalePixels = new List<byte>(width * height);
+                for (int i = 0; i < pixels.Length; i += 4)
+                {
+                    byte b = pixels[i];
+                    byte g = pixels[i + 1];
+                    byte r = pixels[i + 2];
+                    // Standard grayscale conversion (ITU-R BT.601)
+                    byte gray = (byte)(0.299 * r + 0.587 * g + 0.114 * b);
+                    grayscalePixels.Add(gray);
+                }
+                
+                return CalculateMedianFromBytes(grayscalePixels.ToArray());
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in CalculateMedianFromBitmap: {ex.Message}");
+                return null;
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ namespace AstroImages.Wpf.ViewModels
     /// </summary>
     public class HistogramViewModel : INotifyPropertyChanged
     {
-        private bool _isLinearScale = true;
+        private bool _isLinearScale = false;
         private bool _hasHistogramData = false;
         private int[]? _redHistogram;
         private int[]? _greenHistogram;

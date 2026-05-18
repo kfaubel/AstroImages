@@ -50,6 +50,12 @@ namespace AstroImages.Wpf
         public bool ShowSizeColumn { get; set; } = false;
         
         /// <summary>
+        /// Whether to show the median column in the file list.
+        /// Default is false to keep the interface cleaner.
+        /// </summary>
+        public bool ShowMedianColumn { get; set; } = false;
+        
+        /// <summary>
         /// Whether to scan XISF files for FITS keywords.
         /// Default is false because XISF scanning can be slow for large files.
         /// When enabled, FITS keywords will be extracted from XISF file headers.

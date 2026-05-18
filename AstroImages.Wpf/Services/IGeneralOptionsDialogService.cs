@@ -9,6 +9,7 @@ namespace AstroImages.Wpf.Services
         /// Also handles FITS Keywords and Custom Keywords sub-dialogs.
         /// </summary>
         /// <param name="currentShowSizeColumn">The current ShowSizeColumn value.</param>
+        /// <param name="currentShowMedianColumn">The current ShowMedianColumn value.</param>
         /// <param name="currentTheme">The current theme mode.</param>
         /// <param name="currentShowFullScreenHelp">The current ShowFullScreenHelp value.</param>
         /// <param name="currentPlayPauseInterval">The current play pause interval in seconds.</param>
@@ -16,8 +17,9 @@ namespace AstroImages.Wpf.Services
         /// <param name="currentFitsKeywords">The current FITS keywords list.</param>
         /// <param name="currentCustomKeywords">The current custom keywords list.</param>
         /// <returns>A tuple with the new settings, or null values if cancelled.</returns>
-        (bool? showSizeColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
-            bool currentShowSizeColumn, 
+        (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
+            bool currentShowSizeColumn,
+            bool currentShowMedianColumn,
             ThemeMode currentTheme, 
             bool currentShowFullScreenHelp,
             double currentPlayPauseInterval,

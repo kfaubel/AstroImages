@@ -23,6 +23,11 @@ namespace AstroImages.Wpf
         public bool ShowSizeColumn { get; set; }
         
         /// <summary>
+        /// Property to track whether the median column should be shown in the main ListView.
+        /// </summary>
+        public bool ShowMedianColumn { get; set; }
+        
+        /// <summary>
         /// Property to track whether to scan XISF files for FITS keywords.
         /// </summary>
         public bool ScanXisfForFitsKeywords { get; set; }
@@ -77,14 +82,16 @@ namespace AstroImages.Wpf
         /// This ensures InitializeComponent() is always called first.
         /// </summary>
         /// <param name="showSizeColumn">Current value of the ShowSizeColumn setting</param>
+        /// <param name="showMedianColumn">Current value of the ShowMedianColumn setting</param>
         /// <param name="theme">Current theme mode setting</param>
         /// <param name="showFullScreenHelp">Current value of the ShowFullScreenHelp setting</param>
         /// <param name="playPauseInterval">Current pause interval for play mode in seconds</param>
         /// <param name="scanXisfForFitsKeywords">Current value of the ScanXisfForFitsKeywords setting</param>
-        public GeneralOptionsDialog(bool showSizeColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords) : this()
+        public GeneralOptionsDialog(bool showSizeColumn, bool showMedianColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords) : this()
         {
             // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
+            ShowMedianColumn = showMedianColumn;
             SelectedTheme = theme;
             ShowFullScreenHelp = showFullScreenHelp;
             PlayPauseInterval = playPauseInterval;
@@ -93,6 +100,7 @@ namespace AstroImages.Wpf
             // Set the checkbox state to match the current setting
             // ShowSizeColumnCheckBox is a UI control defined in the XAML file
             ShowSizeColumnCheckBox.IsChecked = showSizeColumn;
+            ShowMedianColumnCheckBox.IsChecked = showMedianColumn;
             ScanXisfForFitsKeywordsCheckBox.IsChecked = scanXisfForFitsKeywords;
             
             // Set the theme combo box selection
@@ -164,6 +172,7 @@ namespace AstroImages.Wpf
             // The ?? operator means "if left side is null, use right side"
             // IsChecked is nullable bool (bool?) so it can be true, false, or null
             ShowSizeColumn = ShowSizeColumnCheckBox.IsChecked ?? false;
+            ShowMedianColumn = ShowMedianColumnCheckBox.IsChecked ?? false;
             ScanXisfForFitsKeywords = ScanXisfForFitsKeywordsCheckBox.IsChecked ?? false;
             
             // Read the selected theme from the combo box

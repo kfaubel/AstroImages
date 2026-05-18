@@ -8,9 +8,22 @@ namespace AstroImages.Wpf.Models
         private Dictionary<string, string> _customKeywords = new Dictionary<string, string>();
         private Dictionary<string, string> _fitsKeywords = new Dictionary<string, string>();
         private bool _isSelected = false;
+        private double? _median;
 
         public string Name { get; set; } = string.Empty;
         public long Size { get; set; }
+        public double? Median 
+        { 
+            get => _median;
+            set
+            {
+                if (_median != value)
+                {
+                    _median = value;
+                    OnPropertyChanged(nameof(Median));
+                }
+            }
+        }
         public string Path { get; set; } = string.Empty;
         
         public bool IsSelected 

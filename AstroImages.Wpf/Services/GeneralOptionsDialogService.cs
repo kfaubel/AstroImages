@@ -6,8 +6,9 @@ namespace AstroImages.Wpf.Services
 {
     public class GeneralOptionsDialogService : IGeneralOptionsDialogService
     {
-        public (bool? showSizeColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
-            bool currentShowSizeColumn, 
+        public (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
+            bool currentShowSizeColumn,
+            bool currentShowMedianColumn,
             ThemeMode currentTheme, 
             bool currentShowFullScreenHelp,
             double currentPlayPauseInterval,
@@ -19,7 +20,7 @@ namespace AstroImages.Wpf.Services
             List<string>? newFitsKeywords = null;
             List<string>? newCustomKeywords = null;
 
-            var dialog = new GeneralOptionsDialog(currentShowSizeColumn, currentTheme, currentShowFullScreenHelp, currentPlayPauseInterval, currentScanXisfForFitsKeywords);
+            var dialog = new GeneralOptionsDialog(currentShowSizeColumn, currentShowMedianColumn, currentTheme, currentShowFullScreenHelp, currentPlayPauseInterval, currentScanXisfForFitsKeywords);
             
             // Wire up the FITS Keywords button
             dialog.FitsKeywordsRequested += () =>
@@ -49,9 +50,9 @@ namespace AstroImages.Wpf.Services
             
             if (dialog.ShowDialog() == true)
             {
-                return (dialog.ShowSizeColumn, dialog.SelectedTheme, dialog.ShowFullScreenHelp, dialog.PlayPauseInterval, dialog.ScanXisfForFitsKeywords, newFitsKeywords, newCustomKeywords);
+                return (dialog.ShowSizeColumn, dialog.ShowMedianColumn, dialog.SelectedTheme, dialog.ShowFullScreenHelp, dialog.PlayPauseInterval, dialog.ScanXisfForFitsKeywords, newFitsKeywords, newCustomKeywords);
             }
-            return (null, null, null, null, null, null, null);
+            return (null, null, null, null, null, null, null, null);
         }
     }
 }

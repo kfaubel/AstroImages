@@ -130,16 +130,54 @@ namespace AstroImages.Wpf.Services
             };
             gridView.Columns.Add(metadataColumn);
 
-            // Size column (with converter) - always use fresh width calculation (no saved widths)
+            // Size column (purple, with converter) - always use fresh width calculation (no saved widths)
             if (_appConfig.ShowSizeColumn)
             {
-                var sizeColumn2 = new GridViewColumn
+                var sizeFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
+                var sizeBinding = new System.Windows.Data.Binding("Size");
+                sizeBinding.Converter = new AstroImages.Wpf.Converters.FileSizeConverter();
+                sizeFactory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, sizeBinding);
+                
+                // Bind to purple theme resource
+                var purpleForegroundBinding = new System.Windows.Data.Binding();
+                purpleForegroundBinding.Source = System.Windows.Application.Current;
+                purpleForegroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentPurple]");
+                sizeFactory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, purpleForegroundBinding);
+                sizeFactory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
+                
+                var sizeTemplate = new DataTemplate { VisualTree = sizeFactory };
+                var sizeColumn = new GridViewColumn
                 {
                     Header = CreateSortableHeader("Size"),
                     Width = 80, // Wider to prevent cutoff
-                    DisplayMemberBinding = new System.Windows.Data.Binding("Size") { Converter = new AstroImages.Wpf.Converters.FileSizeConverter() }
+                    CellTemplate = sizeTemplate
                 };
-                gridView.Columns.Add(sizeColumn2);
+                gridView.Columns.Add(sizeColumn);
+            }
+
+            // Median column (purple, with converter)
+            if (_appConfig.ShowMedianColumn)
+            {
+                var medianFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
+                var medianBinding = new System.Windows.Data.Binding("Median");
+                medianBinding.Converter = new AstroImages.Wpf.Converters.MedianConverter();
+                medianFactory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, medianBinding);
+                
+                // Bind to purple theme resource
+                var purpleForegroundBinding = new System.Windows.Data.Binding();
+                purpleForegroundBinding.Source = System.Windows.Application.Current;
+                purpleForegroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentPurple]");
+                medianFactory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, purpleForegroundBinding);
+                medianFactory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
+                
+                var medianTemplate = new DataTemplate { VisualTree = medianFactory };
+                var medianColumn = new GridViewColumn
+                {
+                    Header = CreateSortableHeader("Median"),
+                    Width = 70,
+                    CellTemplate = medianTemplate
+                };
+                gridView.Columns.Add(medianColumn);
             }
 
             // Custom keyword columns (green) - each has individual width based on keyword length

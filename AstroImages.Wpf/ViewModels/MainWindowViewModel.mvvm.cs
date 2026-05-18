@@ -272,7 +272,7 @@ namespace AstroImages.Wpf.ViewModels
                             System.Threading.Interlocked.Increment(ref otherCount);
                         
                         // Extract both custom and FITS keywords for each file
-                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords);
+                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords, _appConfig.ShowMedianColumn);
                         
                         // Update progress in a thread-safe manner
                         lock (progressLock)
@@ -298,6 +298,35 @@ namespace AstroImages.Wpf.ViewModels
             
             var metadataTime = totalStopwatch.ElapsedMilliseconds - metadataStart;
             _loggingService.LogInfo($"Metadata extraction took {metadataTime}ms ({fitsCount} FITS, {xisfCount} XISF, {otherCount} other files)");
+            
+            // Check if median calculation is enabled but medians are missing
+            // This can happen if the setting was just enabled or if calculation failed
+            if (_appConfig.ShowMedianColumn)
+            {
+                var filesWithoutMedian = fileItems.Where(f => !f.Median.HasValue).ToList();
+                if (filesWithoutMedian.Count > 0)
+                {
+                    _loggingService.LogInfo($"Recalculating medians for {filesWithoutMedian.Count} files that are missing median values...");
+                    
+                    // Calculate missing medians
+                    System.Threading.Tasks.Parallel.ForEach(
+                        filesWithoutMedian,
+                        new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        fileItem =>
+                        {
+                            try
+                            {
+                                fileItem.Median = _keywordExtractionService.CalculateMedianForFile(fileItem.Path);
+                            }
+                            catch (Exception ex)
+                            {
+                                _loggingService.LogError("Median Calculation", $"Failed to calculate median for {fileItem.Name}: {ex.Message}", ex);
+                            }
+                        });
+                        
+                    _loggingService.LogInfo($"Median recalculation complete");
+                }
+            }
         }
         
         /// <summary>
@@ -376,7 +405,7 @@ namespace AstroImages.Wpf.ViewModels
                         var fileItem = _fileManagementService.GetFileInfo(filePath);
                         
                         // Extract both custom and FITS keywords for the file
-                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords);
+                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, skipXisf: false, _appConfig.ShowMedianColumn);
                         
                         // Add to thread-safe collection
                         processedItems.Add(fileItem);
@@ -1175,7 +1204,8 @@ namespace AstroImages.Wpf.ViewModels
         private void ShowGeneralOptionsDialog()
         {
             var result = _generalOptionsDialogService.ShowGeneralOptionsDialog(
-                _appConfig.ShowSizeColumn, 
+                _appConfig.ShowSizeColumn,
+                _appConfig.ShowMedianColumn,
                 _appConfig.Theme, 
                 _appConfig.ShowFullScreenHelp,
                 _appConfig.PlayPauseInterval,
@@ -1186,6 +1216,20 @@ namespace AstroImages.Wpf.ViewModels
             if (result.showSizeColumn.HasValue)
             {
                 _appConfig.ShowSizeColumn = result.showSizeColumn.Value;
+                
+                // Track if median column was just enabled
+                bool shouldCalculateMedians = false;
+                if (result.showMedianColumn.HasValue)
+                {
+                    bool wasEnabled = _appConfig.ShowMedianColumn;
+                    _appConfig.ShowMedianColumn = result.showMedianColumn.Value;
+                    
+                    // If median column was just enabled, calculate medians for existing files
+                    if (!wasEnabled && result.showMedianColumn.Value && Files.Count > 0)
+                    {
+                        shouldCalculateMedians = true;
+                    }
+                }
                 
                 if (result.theme.HasValue)
                 {
@@ -1224,7 +1268,43 @@ namespace AstroImages.Wpf.ViewModels
                 _listViewColumnService.UpdateListViewColumns();
                 // Auto-resize columns after configuration change
                 _listViewColumnService.AutoResizeColumns();
+                
+                // Calculate medians for existing files if the option was just enabled
+                if (shouldCalculateMedians)
+                {
+                    CalculateMediansForAllFiles();
+                }
             }
+        }
+
+        private void CalculateMediansForAllFiles()
+        {
+            if (Files.Count == 0)
+                return;
+
+            _loggingService.LogInfo($"Calculating medians for {Files.Count} files...");
+
+            // Calculate medians in parallel for better performance
+            System.Threading.Tasks.Parallel.ForEach(
+                Files,
+                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                fileItem =>
+                {
+                    try
+                    {
+                        // Only calculate if not already calculated
+                        if (!fileItem.Median.HasValue)
+                        {
+                            fileItem.Median = _keywordExtractionService.CalculateMedianForFile(fileItem.Path);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService.LogError("Median Calculation", $"Failed to calculate median for {fileItem.Name}: {ex.Message}", ex);
+                    }
+                });
+
+            _loggingService.LogInfo($"Median calculation complete");
         }
 
         private void EnterFullScreen()
@@ -1281,7 +1361,7 @@ namespace AstroImages.Wpf.ViewModels
                         (fileItem.FitsKeywords == null || fileItem.FitsKeywords.Count == 0))
                     {
                         // Load FITS keywords from XISF file on-demand
-                        _keywordExtractionService.PopulateKeywords(fileItem, Enumerable.Empty<string>(), _appConfig.FitsKeywords, skipXisf: false);
+                        _keywordExtractionService.PopulateKeywords(fileItem, Enumerable.Empty<string>(), _appConfig.FitsKeywords, skipXisf: false, calculateMedian: false);
                     }
                     
                     var dialog = new FileMetadataDialog(fileItem);
