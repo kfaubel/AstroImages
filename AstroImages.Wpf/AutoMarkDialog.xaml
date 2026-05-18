@@ -46,9 +46,9 @@
                     <TextBlock Grid.Column="0" Text="" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6"/>
                     <TextBlock Grid.Column="1" Text="Keyword" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6"/>
                     <TextBlock Grid.Column="2" Text="Allow Blank" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6"/>
-                    <TextBlock Grid.Column="3" Text="Min" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6"/>
-                    <TextBlock Grid.Column="4" Text="Max" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6"/>
-                    <TextBlock Grid.Column="5" Text="Allowed Values (comma-separated)" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6"/>
+                    <TextBlock Grid.Column="3" Text="Min" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6" TextAlignment="Center"/>
+                    <TextBlock Grid.Column="4" Text="Max" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6" TextAlignment="Center"/>
+                    <TextBlock Grid.Column="5" Text="Allowed Values (comma-separated)" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}" Padding="4,6" TextAlignment="Center"/>
                 </Grid>
             </Border>
 

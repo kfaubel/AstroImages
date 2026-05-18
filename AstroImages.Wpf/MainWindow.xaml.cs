@@ -1515,10 +1515,23 @@ namespace AstroImages.Wpf
                     {
                         string? valueStr = null;
 
-                        // Try to get value from CustomKeywords first, then FitsKeywords
-                        if (!fileItem.CustomKeywords.TryGetValue(criteria.Key, out valueStr))
+                        // Handle special keywords
+                        if (criteria.Key.Equals("Median", StringComparison.OrdinalIgnoreCase))
                         {
-                            fileItem.FitsKeywords.TryGetValue(criteria.Key, out valueStr);
+                            // Get Median value from FileItem property
+                            if (fileItem.Median.HasValue)
+                            {
+                                valueStr = fileItem.Median.Value.ToString("F4");
+                            }
+                            // If no median value, valueStr stays null (will be treated as blank)
+                        }
+                        else
+                        {
+                            // Try to get value from CustomKeywords first, then FitsKeywords
+                            if (!fileItem.CustomKeywords.TryGetValue(criteria.Key, out valueStr))
+                            {
+                                fileItem.FitsKeywords.TryGetValue(criteria.Key, out valueStr);
+                            }
                         }
 
                         // Check if value passes criteria

@@ -30,7 +30,15 @@ namespace AstroImages.Wpf
 
             _criteria = new List<AutoMarkCriteriaViewModel>();
 
-            // Add custom keywords first
+            // Add Median as a special keyword at the top
+            var medianVm = new AutoMarkCriteriaViewModel { Key = "Median", IsCustomKeyword = false };
+            medianVm.IsEnabled = false;  // Default to unchecked
+            medianVm.AllowBlank = true;
+            medianVm.MinValue = "";
+            medianVm.MaxValue = "";
+            _criteria.Add(medianVm);
+
+            // Add custom keywords
             foreach (var keyword in customKeywords)
             {
                 var vm = new AutoMarkCriteriaViewModel { Key = keyword, IsCustomKeyword = true };

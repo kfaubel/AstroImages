@@ -24,7 +24,7 @@
                    MouseLeftButtonDown="DisplayImage_MouseLeftButtonDown"
                    MouseLeftButtonUp="DisplayImage_MouseLeftButtonUp"
                    MouseMove="DisplayImage_MouseMove"
-                   RenderOptions.BitmapScalingMode="HighQuality">
+                   RenderOptions.BitmapScalingMode="Fant">
                 <Image.LayoutTransform>
                     <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1" />
                 </Image.LayoutTransform>
