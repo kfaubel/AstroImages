@@ -35,9 +35,26 @@
                          Margin="0,5"/>
                 <CheckBox Name="ShowMedianColumnCheckBox" 
                          Content="Show median in the file list" 
-                         Margin="0,5"/>
+                         Margin="0,5"
+                         Checked="ShowMedianColumnCheckBox_CheckedChanged"
+                         Unchecked="ShowMedianColumnCheckBox_CheckedChanged"/>
+                <StackPanel Name="MedianFormatPanel" Margin="25,5,0,5" IsEnabled="False">
+                    <RadioButton Name="MedianNormalizedRadioButton" 
+                                 Content="Normalized (0.0-1.0)" 
+                                 GroupName="MedianFormat"
+                                 Margin="0,2"
+                                 Foreground="{DynamicResource ThemeForeground}"/>
+                    <RadioButton Name="Median16BitRadioButton" 
+                                 Content="16-bit range (0-65535)" 
+                                 GroupName="MedianFormat"
+                                 Margin="0,2"
+                                 Foreground="{DynamicResource ThemeForeground}"/>
+                </StackPanel>
                 <CheckBox Name="ScanXisfForFitsKeywordsCheckBox" 
                          Content="Scan XISF files for FITS keywords (slower)" 
+                         Margin="0,5"/>
+                <CheckBox Name="ShowHistogramCheckBox" 
+                         Content="Show histogram panel" 
                          Margin="0,5"/>
             </StackPanel>
         </GroupBox>

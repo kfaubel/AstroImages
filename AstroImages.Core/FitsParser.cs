@@ -634,5 +634,179 @@ namespace AstroImages.Core
                 Array.Fill(pixels, constValue);
             }
         }
+
+        /// <summary>
+        /// Calculate the median pixel value from FITS data.
+        /// Returns the median in the 0.0-1.0 range based on the actual pixel values
+        /// after applying BZERO and BSCALE, normalized by the theoretical maximum for the bit depth.
+        /// </summary>
+        public static double? CalculateMedian(byte[] buffer)
+        {
+            try
+            {
+                var (header, headerSize) = ParseHeaderWithSize(buffer);
+                
+                // Validate required header keywords
+                if (!header.TryGetValue("NAXIS", out var naxisObj))
+                    return null;
+                
+                int naxis = Convert.ToInt32(naxisObj);
+                if (naxis < 2)
+                    return null;
+                
+                if (!header.TryGetValue("NAXIS1", out var wObj) || !header.TryGetValue("NAXIS2", out var hObj))
+                    return null;
+                
+                int width = Convert.ToInt32(wObj);
+                int height = Convert.ToInt32(hObj);
+                
+                if (width <= 0 || height <= 0)
+                    return null;
+                
+                if (!header.TryGetValue("BITPIX", out var bitpixObj))
+                    return null;
+                
+                int bitpix = Convert.ToInt32(bitpixObj);
+                
+                // Get scaling parameters (FITS standard)
+                double bzero = header.TryGetValue("BZERO", out var bzeroObj) ? Convert.ToDouble(bzeroObj) : 0.0;
+                double bscale = header.TryGetValue("BSCALE", out var bscaleObj) ? Convert.ToDouble(bscaleObj) : 1.0;
+                
+                // Calculate expected data size
+                int bytesPerPixel = Math.Abs(bitpix) / 8;
+                long expectedDataSize = (long)width * height * bytesPerPixel;
+                
+                if (buffer.Length < headerSize + expectedDataSize)
+                    return null;
+                
+                // Read pixel values and calculate median
+                return CalculateMedianFromRawData(buffer, headerSize, width, height, bitpix, bzero, bscale);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Calculate median from raw FITS data
+        /// </summary>
+        private static double CalculateMedianFromRawData(byte[] buffer, int dataOffset, 
+            int width, int height, int bitpix, double bzero, double bscale)
+        {
+            int pixelCount = width * height;
+            var values = new List<double>(pixelCount);
+            
+            switch (bitpix)
+            {
+                case 8:   // Unsigned 8-bit integer
+                    for (int i = 0; i < pixelCount && dataOffset + i < buffer.Length; i++)
+                    {
+                        double val = buffer[dataOffset + i] * bscale + bzero;
+                        values.Add(val);
+                    }
+                    break;
+                    
+                case 16:  // Signed 16-bit integer
+                    for (int i = 0; i < pixelCount && dataOffset + i * 2 + 1 < buffer.Length; i++)
+                    {
+                        // FITS uses big-endian byte order
+                        short rawValue = (short)((buffer[dataOffset + i * 2] << 8) | buffer[dataOffset + i * 2 + 1]);
+                        double scaledValue = rawValue * bscale + bzero;
+                        values.Add(scaledValue);
+                    }
+                    break;
+                    
+                case 32:  // Signed 32-bit integer
+                    for (int i = 0; i < pixelCount && dataOffset + i * 4 + 3 < buffer.Length; i++)
+                    {
+                        // FITS uses big-endian byte order
+                        int rawValue = (buffer[dataOffset + i * 4] << 24) | 
+                                      (buffer[dataOffset + i * 4 + 1] << 16) | 
+                                      (buffer[dataOffset + i * 4 + 2] << 8) | 
+                                       buffer[dataOffset + i * 4 + 3];
+                        
+                        double scaledValue = rawValue * bscale + bzero;
+                        values.Add(scaledValue);
+                    }
+                    break;
+                    
+                case -32: // 32-bit floating point
+                    for (int i = 0; i < pixelCount && dataOffset + i * 4 + 3 < buffer.Length; i++)
+                    {
+                        // Convert big-endian bytes to float
+                        byte[] floatBytes = new byte[4];
+                        floatBytes[3] = buffer[dataOffset + i * 4];
+                        floatBytes[2] = buffer[dataOffset + i * 4 + 1];
+                        floatBytes[1] = buffer[dataOffset + i * 4 + 2];
+                        floatBytes[0] = buffer[dataOffset + i * 4 + 3];
+                        
+                        float rawValue = BitConverter.ToSingle(floatBytes, 0);
+                        
+                        if (float.IsFinite(rawValue))
+                        {
+                            double scaledValue = rawValue * bscale + bzero;
+                            values.Add(scaledValue);
+                        }
+                    }
+                    break;
+                    
+                case -64: // 64-bit floating point
+                    for (int i = 0; i < pixelCount && dataOffset + i * 8 + 7 < buffer.Length; i++)
+                    {
+                        // Convert big-endian bytes to double
+                        byte[] doubleBytes = new byte[8];
+                        for (int j = 0; j < 8; j++)
+                            doubleBytes[7 - j] = buffer[dataOffset + i * 8 + j];
+                        
+                        double rawValue = BitConverter.ToDouble(doubleBytes, 0);
+                        
+                        if (double.IsFinite(rawValue))
+                        {
+                            double scaledValue = rawValue * bscale + bzero;
+                            values.Add(scaledValue);
+                        }
+                    }
+                    break;
+                    
+                default:
+                    return 0.0;
+            }
+            
+            if (values.Count == 0)
+                return 0.0;
+            
+            // Sort and find median
+            values.Sort();
+            int middle = values.Count / 2;
+            
+            double median;
+            if (values.Count % 2 == 0)
+            {
+                median = (values[middle - 1] + values[middle]) / 2.0;
+            }
+            else
+            {
+                median = values[middle];
+            }
+            
+            // Return the median value directly (already in 0.0-1.0 range for normalized FITS)
+            // For 16-bit FITS with typical BZERO=32768, BSCALE=1, values range from 0-65535
+            // For floating point FITS, values are typically already in 0.0-1.0 range
+            // We'll assume floating point data is already normalized, but scale integer data
+            if (bitpix > 0)
+            {
+                // Integer data - normalize based on bit depth
+                // Typical 16-bit FITS has pixel values from 0-65535 after BZERO/BSCALE
+                double maxValue = Math.Pow(2, Math.Abs(bitpix)) - 1;
+                return Math.Clamp(median / maxValue, 0.0, 1.0);
+            }
+            else
+            {
+                // Floating point data - typically already normalized to 0.0-1.0
+                // But clamp just in case
+                return Math.Clamp(median, 0.0, 1.0);
+            }
+        }
     }
 }

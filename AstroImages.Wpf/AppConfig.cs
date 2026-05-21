@@ -25,6 +25,22 @@ namespace AstroImages.Wpf
     }
 
     /// <summary>
+    /// Median display mode enumeration for choosing how to display median values
+    /// </summary>
+    public enum MedianDisplayMode
+    {
+        /// <summary>
+        /// Display as normalized value (0.0-1.0)
+        /// </summary>
+        Normalized = 0,
+        
+        /// <summary>
+        /// Display as 16-bit range (0-65535)
+        /// </summary>
+        SixteenBit = 1
+    }
+
+    /// <summary>
     /// Application configuration class that stores user preferences and settings.
     /// This class can be serialized to/from JSON to persist settings between application runs.
     /// Uses properties with automatic getters/setters for easy JSON serialization.
@@ -51,9 +67,21 @@ namespace AstroImages.Wpf
         
         /// <summary>
         /// Whether to show the median column in the file list.
+        /// Default is true.
+        /// </summary>
+        public bool ShowMedianColumn { get; set; } = true;
+        
+        /// <summary>
+        /// Display mode for median values (Normalized or 16-bit range).
+        /// Default is Normalized (0.0-1.0).
+        /// </summary>
+        public MedianDisplayMode MedianDisplayMode { get; set; } = MedianDisplayMode.Normalized;
+        
+        /// <summary>
+        /// Whether to show the histogram panel.
         /// Default is false to keep the interface cleaner.
         /// </summary>
-        public bool ShowMedianColumn { get; set; } = false;
+        public bool ShowHistogram { get; set; } = false;
         
         /// <summary>
         /// Whether to scan XISF files for FITS keywords.

@@ -28,6 +28,16 @@ namespace AstroImages.Wpf
         public bool ShowMedianColumn { get; set; }
         
         /// <summary>
+        /// Property to track the median display mode (Normalized or 16-bit).
+        /// </summary>
+        public MedianDisplayMode MedianDisplayMode { get; set; }
+        
+        /// <summary>
+        /// Property to track whether to show the histogram panel.
+        /// </summary>
+        public bool ShowHistogram { get; set; }
+        
+        /// <summary>
         /// Property to track whether to scan XISF files for FITS keywords.
         /// </summary>
         public bool ScanXisfForFitsKeywords { get; set; }
@@ -87,7 +97,9 @@ namespace AstroImages.Wpf
         /// <param name="showFullScreenHelp">Current value of the ShowFullScreenHelp setting</param>
         /// <param name="playPauseInterval">Current pause interval for play mode in seconds</param>
         /// <param name="scanXisfForFitsKeywords">Current value of the ScanXisfForFitsKeywords setting</param>
-        public GeneralOptionsDialog(bool showSizeColumn, bool showMedianColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords) : this()
+        /// <param name="medianDisplayMode">Current median display mode setting</param>
+        /// <param name="showHistogram">Current value of the ShowHistogram setting</param>
+        public GeneralOptionsDialog(bool showSizeColumn, bool showMedianColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords, MedianDisplayMode medianDisplayMode, bool showHistogram) : this()
         {
             // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
@@ -96,12 +108,28 @@ namespace AstroImages.Wpf
             ShowFullScreenHelp = showFullScreenHelp;
             PlayPauseInterval = playPauseInterval;
             ScanXisfForFitsKeywords = scanXisfForFitsKeywords;
+            MedianDisplayMode = medianDisplayMode;
+            ShowHistogram = showHistogram;
             
             // Set the checkbox state to match the current setting
             // ShowSizeColumnCheckBox is a UI control defined in the XAML file
             ShowSizeColumnCheckBox.IsChecked = showSizeColumn;
             ShowMedianColumnCheckBox.IsChecked = showMedianColumn;
             ScanXisfForFitsKeywordsCheckBox.IsChecked = scanXisfForFitsKeywords;
+            ShowHistogramCheckBox.IsChecked = showHistogram;
+            
+            // Set the median display mode radio buttons
+            if (medianDisplayMode == MedianDisplayMode.Normalized)
+            {
+                MedianNormalizedRadioButton.IsChecked = true;
+            }
+            else
+            {
+                Median16BitRadioButton.IsChecked = true;
+            }
+            
+            // Enable/disable median format panel based on checkbox state
+            MedianFormatPanel.IsEnabled = showMedianColumn;
             
             // Set the theme combo box selection
             ThemeComboBox.SelectedIndex = (int)theme;
@@ -174,6 +202,12 @@ namespace AstroImages.Wpf
             ShowSizeColumn = ShowSizeColumnCheckBox.IsChecked ?? false;
             ShowMedianColumn = ShowMedianColumnCheckBox.IsChecked ?? false;
             ScanXisfForFitsKeywords = ScanXisfForFitsKeywordsCheckBox.IsChecked ?? false;
+            ShowHistogram = ShowHistogramCheckBox.IsChecked ?? false;
+            
+            // Read the median display mode from radio buttons
+            MedianDisplayMode = (MedianNormalizedRadioButton.IsChecked ?? true) 
+                ? MedianDisplayMode.Normalized 
+                : MedianDisplayMode.SixteenBit;
             
             // Read the selected theme from the combo box
             SelectedTheme = (ThemeMode)(ThemeComboBox.SelectedIndex);
@@ -221,6 +255,16 @@ namespace AstroImages.Wpf
             
             // Close the dialog window without saving any changes
             Close();
+        }
+        
+        /// <summary>
+        /// Event handler for ShowMedianColumnCheckBox checked/unchecked events.
+        /// Enables or disables the median format radio buttons based on checkbox state.
+        /// </summary>
+        private void ShowMedianColumnCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            // Enable the format panel only when the checkbox is checked
+            MedianFormatPanel.IsEnabled = ShowMedianColumnCheckBox.IsChecked ?? false;
         }
     } // End of GeneralOptionsDialog class
 } // End of AstroImages.Wpf namespace

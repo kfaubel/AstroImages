@@ -184,18 +184,22 @@ namespace AstroImages.Wpf.Services
                         return null;
                     }
 
-                    var (width, height, pixels) = AstroImages.Core.FitsParser.ReadImage(bytes);
-                    var median = CalculateMedianFromBytes(pixels);
-                    System.Diagnostics.Debug.WriteLine($"Calculated median for FITS {System.IO.Path.GetFileName(filePath)}: {median:F3}");
+                    var median = AstroImages.Core.FitsParser.CalculateMedian(bytes);
+                    if (median.HasValue)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Calculated median for FITS {System.IO.Path.GetFileName(filePath)}: {median.Value:F8}");
+                    }
                     return median;
                 }
                 // Handle XISF files
                 else if (XisfUtilities.IsXisfFile(filePath))
                 {
                     byte[] bytes = File.ReadAllBytes(filePath);
-                    var (width, height, pixels) = AstroImages.Utils.XisfParser.ReadImage(bytes);
-                    var median = CalculateMedianFromBytes(pixels);
-                    System.Diagnostics.Debug.WriteLine($"Calculated median for XISF {System.IO.Path.GetFileName(filePath)}: {median:F3}");
+                    var median = AstroImages.Utils.XisfParser.CalculateMedian(bytes);
+                    if (median.HasValue)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Calculated median for XISF {System.IO.Path.GetFileName(filePath)}: {median.Value:F8}");
+                    }
                     return median;
                 }
                 // Handle standard image formats (JPEG, PNG, etc.)
@@ -203,7 +207,10 @@ namespace AstroImages.Wpf.Services
                 {
                     var bitmap = new System.Windows.Media.Imaging.BitmapImage(new Uri(filePath));
                     var median = CalculateMedianFromBitmap(bitmap);
-                    System.Diagnostics.Debug.WriteLine($"Calculated median for image {System.IO.Path.GetFileName(filePath)}: {median:F3}");
+                    if (median.HasValue)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Calculated median for image {System.IO.Path.GetFileName(filePath)}: {median.Value:F8}");
+                    }
                     return median;
                 }
             }

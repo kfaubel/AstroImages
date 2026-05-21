@@ -161,6 +161,7 @@ namespace AstroImages.Wpf.Services
                 var medianFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
                 var medianBinding = new System.Windows.Data.Binding("Median");
                 medianBinding.Converter = new AstroImages.Wpf.Converters.MedianConverter();
+                medianBinding.ConverterParameter = _appConfig; // Pass AppConfig to converter
                 medianFactory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, medianBinding);
                 
                 // Bind to purple theme resource

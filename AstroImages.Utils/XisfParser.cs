@@ -1524,5 +1524,300 @@ namespace AstroImages.Utils
                 Array.Fill(pixels, constValue);
             }
         }
+
+        /// <summary>
+        /// Calculate the median pixel value from XISF data.
+        /// Returns the median in the 0.0-1.0 range based on the actual pixel values.
+        /// </summary>
+        public static double? CalculateMedian(byte[] buffer)
+        {
+            try
+            {
+                var metadata = ParseMetadata(buffer);
+                
+                if (!metadata.TryGetValue("width", out var widthObj) || 
+                    !metadata.TryGetValue("height", out var heightObj))
+                    return null;
+                
+                string widthStr = widthObj?.ToString() ?? "";
+                string heightStr = heightObj?.ToString() ?? "";
+                
+                if (!int.TryParse(widthStr, out int width) || !int.TryParse(heightStr, out int height))
+                    return null;
+                
+                if (width <= 0 || height <= 0)
+                    return null;
+                
+                // Get sample format and channels
+                string sampleFormat = metadata.TryGetValue("sampleFormat", out var fmtObj) ? (fmtObj?.ToString() ?? "UInt16") : "UInt16";
+                
+                string channelsStr = metadata.TryGetValue("channels", out var chObj) ? (chObj?.ToString() ?? "1") : "1";
+                int channels = int.TryParse(channelsStr, out int ch) ? ch : 1;
+                
+                // Find image data offset and size
+                if (!metadata.TryGetValue("dataOffset", out var offsetObj) || 
+                    !metadata.TryGetValue("dataSize", out var sizeObj))
+                    return null;
+                
+                string offsetStr = offsetObj?.ToString() ?? "";
+                string sizeStr = sizeObj?.ToString() ?? "";
+                
+                if (!long.TryParse(offsetStr, out long position) || !long.TryParse(sizeStr, out long size))
+                    return null;
+                
+                // Calculate median from raw data
+                return CalculateMedianFromRawData(buffer, (int)position, width, height, channels, sampleFormat);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Calculate median from raw XISF data
+        /// </summary>
+        private static double CalculateMedianFromRawData(byte[] buffer, int offset, 
+            int width, int height, int channels, string sampleFormat)
+        {
+            int totalPixels = width * height;
+            var values = new List<double>(totalPixels);
+            
+            switch (sampleFormat.ToUpperInvariant())
+            {
+                case "UINT8":
+                    ReadUInt8Values(buffer, offset, totalPixels, channels, values);
+                    break;
+                case "UINT16":
+                    ReadUInt16Values(buffer, offset, totalPixels, channels, values);
+                    break;
+                case "UINT32":
+                    ReadUInt32Values(buffer, offset, totalPixels, channels, values);
+                    break;
+                case "FLOAT32":
+                    ReadFloat32Values(buffer, offset, totalPixels, channels, values);
+                    break;
+                case "FLOAT64":
+                    ReadFloat64Values(buffer, offset, totalPixels, channels, values);
+                    break;
+                default:
+                    return 0.0;
+            }
+            
+            if (values.Count == 0)
+                return 0.0;
+            
+            // Sort and find median
+            values.Sort();
+            int middle = values.Count / 2;
+            
+            double median;
+            if (values.Count % 2 == 0)
+            {
+                median = (values[middle - 1] + values[middle]) / 2.0;
+            }
+            else
+            {
+                median = values[middle];
+            }
+            
+            // Normalize to 0.0-1.0 range based on sample format
+            switch (sampleFormat.ToUpperInvariant())
+            {
+                case "UINT8":
+                    return Math.Clamp(median / 255.0, 0.0, 1.0);
+                case "UINT16":
+                    return Math.Clamp(median / 65535.0, 0.0, 1.0);
+                case "UINT32":
+                    return Math.Clamp(median / 4294967295.0, 0.0, 1.0);
+                case "FLOAT32":
+                case "FLOAT64":
+                    // Floating point data is typically already in 0.0-1.0 range
+                    return Math.Clamp(median, 0.0, 1.0);
+                default:
+                    return Math.Clamp(median, 0.0, 1.0);
+            }
+        }
+
+        private static void ReadUInt8Values(byte[] buffer, int offset, int totalPixels, int channels, List<double> values)
+        {
+            if (channels == 1)
+            {
+                for (int i = 0; i < totalPixels && offset + i < buffer.Length; i++)
+                {
+                    values.Add(buffer[offset + i]);
+                }
+            }
+            else
+            {
+                int pixelsPerChannel = totalPixels;
+                for (int i = 0; i < totalPixels; i++)
+                {
+                    double sum = 0;
+                    int validChannels = 0;
+                    for (int c = 0; c < channels; c++)
+                    {
+                        int channelOffset = offset + c * pixelsPerChannel + i;
+                        if (channelOffset < buffer.Length)
+                        {
+                            sum += buffer[channelOffset];
+                            validChannels++;
+                        }
+                    }
+                    if (validChannels > 0)
+                        values.Add(sum / validChannels);
+                }
+            }
+        }
+
+        private static void ReadUInt16Values(byte[] buffer, int offset, int totalPixels, int channels, List<double> values)
+        {
+            if (channels == 1)
+            {
+                for (int i = 0; i < totalPixels && offset + i * 2 + 1 < buffer.Length; i++)
+                {
+                    ushort value = (ushort)(buffer[offset + i * 2] | (buffer[offset + i * 2 + 1] << 8));
+                    values.Add(value);
+                }
+            }
+            else
+            {
+                int pixelsPerChannel = totalPixels;
+                int bytesPerChannel = pixelsPerChannel * 2;
+                for (int i = 0; i < totalPixels; i++)
+                {
+                    double sum = 0;
+                    int validChannels = 0;
+                    for (int c = 0; c < channels; c++)
+                    {
+                        int channelOffset = offset + c * bytesPerChannel + i * 2;
+                        if (channelOffset + 1 < buffer.Length)
+                        {
+                            ushort value = (ushort)(buffer[channelOffset] | (buffer[channelOffset + 1] << 8));
+                            sum += value;
+                            validChannels++;
+                        }
+                    }
+                    if (validChannels > 0)
+                        values.Add(sum / validChannels);
+                }
+            }
+        }
+
+        private static void ReadUInt32Values(byte[] buffer, int offset, int totalPixels, int channels, List<double> values)
+        {
+            if (channels == 1)
+            {
+                for (int i = 0; i < totalPixels && offset + i * 4 + 3 < buffer.Length; i++)
+                {
+                    uint value = (uint)(buffer[offset + i * 4] | 
+                                       (buffer[offset + i * 4 + 1] << 8) | 
+                                       (buffer[offset + i * 4 + 2] << 16) | 
+                                       (buffer[offset + i * 4 + 3] << 24));
+                    values.Add(value);
+                }
+            }
+            else
+            {
+                int pixelsPerChannel = totalPixels;
+                int bytesPerChannel = pixelsPerChannel * 4;
+                for (int i = 0; i < totalPixels; i++)
+                {
+                    double sum = 0;
+                    int validChannels = 0;
+                    for (int c = 0; c < channels; c++)
+                    {
+                        int channelOffset = offset + c * bytesPerChannel + i * 4;
+                        if (channelOffset + 3 < buffer.Length)
+                        {
+                            uint value = (uint)(buffer[channelOffset] | 
+                                               (buffer[channelOffset + 1] << 8) | 
+                                               (buffer[channelOffset + 2] << 16) | 
+                                               (buffer[channelOffset + 3] << 24));
+                            sum += value;
+                            validChannels++;
+                        }
+                    }
+                    if (validChannels > 0)
+                        values.Add(sum / validChannels);
+                }
+            }
+        }
+
+        private static void ReadFloat32Values(byte[] buffer, int offset, int totalPixels, int channels, List<double> values)
+        {
+            if (channels == 1)
+            {
+                for (int i = 0; i < totalPixels && offset + i * 4 + 3 < buffer.Length; i++)
+                {
+                    float value = BitConverter.ToSingle(buffer, offset + i * 4);
+                    if (float.IsFinite(value))
+                        values.Add(value);
+                }
+            }
+            else
+            {
+                int pixelsPerChannel = totalPixels;
+                int bytesPerChannel = pixelsPerChannel * 4;
+                for (int i = 0; i < totalPixels; i++)
+                {
+                    double sum = 0;
+                    int validChannels = 0;
+                    for (int c = 0; c < channels; c++)
+                    {
+                        int channelOffset = offset + c * bytesPerChannel + i * 4;
+                        if (channelOffset + 3 < buffer.Length)
+                        {
+                            float value = BitConverter.ToSingle(buffer, channelOffset);
+                            if (float.IsFinite(value))
+                            {
+                                sum += value;
+                                validChannels++;
+                            }
+                        }
+                    }
+                    if (validChannels > 0)
+                        values.Add(sum / validChannels);
+                }
+            }
+        }
+
+        private static void ReadFloat64Values(byte[] buffer, int offset, int totalPixels, int channels, List<double> values)
+        {
+            if (channels == 1)
+            {
+                for (int i = 0; i < totalPixels && offset + i * 8 + 7 < buffer.Length; i++)
+                {
+                    double value = BitConverter.ToDouble(buffer, offset + i * 8);
+                    if (double.IsFinite(value))
+                        values.Add(value);
+                }
+            }
+            else
+            {
+                int pixelsPerChannel = totalPixels;
+                int bytesPerChannel = pixelsPerChannel * 8;
+                for (int i = 0; i < totalPixels; i++)
+                {
+                    double sum = 0;
+                    int validChannels = 0;
+                    for (int c = 0; c < channels; c++)
+                    {
+                        int channelOffset = offset + c * bytesPerChannel + i * 8;
+                        if (channelOffset + 7 < buffer.Length)
+                        {
+                            double value = BitConverter.ToDouble(buffer, channelOffset);
+                            if (double.IsFinite(value))
+                            {
+                                sum += value;
+                                validChannels++;
+                            }
+                        }
+                    }
+                    if (validChannels > 0)
+                        values.Add(sum / validChannels);
+                }
+            }
+        }
     }
 }

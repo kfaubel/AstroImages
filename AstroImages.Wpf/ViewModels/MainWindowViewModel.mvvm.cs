@@ -766,6 +766,10 @@ namespace AstroImages.Wpf.ViewModels
                     ? files.OrderBy(f => f.Size).ToList()
                     : files.OrderByDescending(f => f.Size).ToList(),
                     
+                "Median" => direction == ListSortDirection.Ascending 
+                    ? files.OrderBy(f => f.Median ?? double.MaxValue).ToList()
+                    : files.OrderByDescending(f => f.Median ?? double.MinValue).ToList(),
+                    
                 "Mark" => direction == ListSortDirection.Ascending 
                     ? files.OrderBy(f => f.IsSelected).ToList()
                     : files.OrderByDescending(f => f.IsSelected).ToList(),
@@ -1055,6 +1059,12 @@ namespace AstroImages.Wpf.ViewModels
         public event Action? EnterFullScreenRequested;
 
         /// <summary>
+        /// Event that notifies the View when histogram visibility should change.
+        /// The View handles this to show/hide the histogram panel.
+        /// </summary>
+        public event Action<bool>? HistogramVisibilityChanged;
+
+        /// <summary>
         /// Called by the View when an image has finished rendering.
         /// Used for play mode to start the delay after image rendering is complete.
         /// </summary>
@@ -1235,6 +1245,8 @@ namespace AstroImages.Wpf.ViewModels
                 _appConfig.ShowFullScreenHelp,
                 _appConfig.PlayPauseInterval,
                 _appConfig.ScanXisfForFitsKeywords,
+                _appConfig.MedianDisplayMode,
+                _appConfig.ShowHistogram,
                 _appConfig.FitsKeywords,
                 _appConfig.CustomKeywords);
                 
@@ -1271,6 +1283,20 @@ namespace AstroImages.Wpf.ViewModels
                 if (result.playPauseInterval.HasValue)
                 {
                     _appConfig.PlayPauseInterval = result.playPauseInterval.Value;
+                }
+                
+                if (result.medianDisplayMode.HasValue)
+                {
+                    _appConfig.MedianDisplayMode = result.medianDisplayMode.Value;
+                    // Trigger column refresh to update displayed values
+                    _listViewColumnService?.UpdateListViewColumns();
+                }
+                
+                if (result.showHistogram.HasValue)
+                {
+                    _appConfig.ShowHistogram = result.showHistogram.Value;
+                    // Notify MainWindow to update histogram visibility
+                    HistogramVisibilityChanged?.Invoke(_appConfig.ShowHistogram);
                 }
                 
                 if (result.scanXisfForFitsKeywords.HasValue)

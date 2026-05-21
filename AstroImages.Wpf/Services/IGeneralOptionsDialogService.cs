@@ -14,16 +14,20 @@ namespace AstroImages.Wpf.Services
         /// <param name="currentShowFullScreenHelp">The current ShowFullScreenHelp value.</param>
         /// <param name="currentPlayPauseInterval">The current play pause interval in seconds.</param>
         /// <param name="currentScanXisfForFitsKeywords">The current ScanXisfForFitsKeywords value.</param>
+        /// <param name="currentMedianDisplayMode">The current median display mode.</param>
+        /// <param name="currentShowHistogram">The current ShowHistogram value.</param>
         /// <param name="currentFitsKeywords">The current FITS keywords list.</param>
         /// <param name="currentCustomKeywords">The current custom keywords list.</param>
         /// <returns>A tuple with the new settings, or null values if cancelled.</returns>
-        (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
+        (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
             bool currentShowSizeColumn,
             bool currentShowMedianColumn,
             ThemeMode currentTheme, 
             bool currentShowFullScreenHelp,
             double currentPlayPauseInterval,
             bool currentScanXisfForFitsKeywords,
+            MedianDisplayMode currentMedianDisplayMode,
+            bool currentShowHistogram,
             IEnumerable<string> currentFitsKeywords,
             IEnumerable<string> currentCustomKeywords);
     }

@@ -37,6 +37,11 @@ namespace AstroImages.Wpf
         // Background warming task to pre-scan files and trigger antivirus
         private System.Threading.CancellationTokenSource? _warmupCancellation;
 
+        // Floating windows for image and histogram
+        private FloatingImageWindow? _floatingImageWindow;
+        private FloatingHistogramWindow? _floatingHistogramWindow;
+        private bool _isFloating = false;
+
         /// <summary>
         /// Constructor - called when creating a new MainWindow instance.
         /// This sets up all the services and connects the UI to the ViewModel.
@@ -120,6 +125,9 @@ namespace AstroImages.Wpf
             
             // Auto-resize columns to fit content after initial setup
             _listViewColumnService.AutoResizeColumns();
+            
+            // Set initial histogram visibility based on configuration
+            SetHistogramVisibility(_appConfig.ShowHistogram);
 
             // Wire up fit request event
             _viewModel.FitRequested += () => FitImageToScrollViewer();
@@ -170,6 +178,12 @@ namespace AstroImages.Wpf
                 
                 // Update the selected index to the last viewed image in full screen
                 _viewModel.SelectedIndex = fullScreenWindow.CurrentIndex;
+            };
+
+            // Wire up histogram visibility changed event
+            _viewModel.HistogramVisibilityChanged += (show) =>
+            {
+                SetHistogramVisibility(show);
             };
 
             // Wire up long operation detection to show progress dialogs
@@ -772,6 +786,12 @@ namespace AstroImages.Wpf
                         // Set the image source to our loaded bitmap
                         DisplayImage.Source = image;
                         
+                        // Update floating window if it exists
+                        if (_isFloating && _floatingImageWindow != null)
+                        {
+                            _floatingImageWindow.UpdateImage(image);
+                        }
+                        
                         // Show the image immediately
                         ImageScrollViewer.Visibility = Visibility.Visible;
                         PlaceholderText.Visibility = Visibility.Collapsed;
@@ -1353,6 +1373,133 @@ namespace AstroImages.Wpf
             }
         }
 
+        /// <summary>
+        /// Event handler for Float button - floats image and histogram windows
+        /// </summary>
+        private void FloatButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel == null)
+                return;
+
+            if (!_isFloating)
+            {
+                // Capture the current width of the image area before undocking
+                double imageAreaWidth = ImageContentGrid.ActualWidth;
+                
+                // Create and show floating image window
+                _floatingImageWindow = new FloatingImageWindow(_viewModel, DockBack, imageAreaWidth);
+                _floatingImageWindow.Show();
+
+                // Only create and show floating histogram window if histogram is enabled
+                if (_appConfig.ShowHistogram)
+                {
+                    _floatingHistogramWindow = new FloatingHistogramWindow(_viewModel.HistogramViewModel, DockBack);
+                    _floatingHistogramWindow.Show();
+                    // Histogram is automatically synced through shared ViewModel
+                }
+
+                // Update floating image window with current image
+                if (DisplayImage.Source is System.Windows.Media.Imaging.BitmapSource currentImage)
+                {
+                    _floatingImageWindow.UpdateImage(currentImage);
+                }
+
+                // Hide docked image and histogram in main window
+                // Collapse the entire right column to give full space to file list
+                // Use Pixel-based sizing (not Star) so columns don't participate in resize
+                ImageColumn.Width = new GridLength(0, GridUnitType.Pixel);
+                ImageColumn.MinWidth = 0;
+                ImageColumn.MaxWidth = 0; // Prevent column from expanding during layout/resize
+                SplitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
+                ImageContentGrid.Visibility = Visibility.Collapsed;
+                ColumnSplitter.Visibility = Visibility.Collapsed;
+                ColumnSplitter.IsEnabled = false; // Disable splitter to prevent any interaction
+
+                // Show the re-dock button in the toolbar
+                RedockButton.Visibility = Visibility.Visible;
+
+                _isFloating = true;
+                _loggingService.LogInfo("Floated image and histogram windows");
+            }
+        }
+
+        /// <summary>
+        /// Event handler for Re-dock button - docks the floating windows back into the main window
+        /// </summary>
+        private void RedockButton_Click(object sender, RoutedEventArgs e)
+        {
+            DockBack();
+        }
+
+        /// <summary>
+        /// Dock the floating windows back into the main window
+        /// </summary>
+        private void DockBack()
+        {
+            if (!_isFloating)
+                return;
+
+            // Set flag first to prevent recursion
+            _isFloating = false;
+
+            // Close floating windows (but check if they're still valid)
+            var imageWindow = _floatingImageWindow;
+            var histogramWindow = _floatingHistogramWindow;
+            
+            _floatingImageWindow = null;
+            _floatingHistogramWindow = null;
+
+            // Close windows if they're not already closing
+            if (imageWindow != null)
+            {
+                try
+                {
+                    imageWindow.CloseWindow();
+                }
+                catch { /* Window may already be closing */ }
+            }
+
+            if (histogramWindow != null)
+            {
+                try
+                {
+                    histogramWindow.CloseWindow();
+                }
+                catch { /* Window may already be closing */ }
+            }
+
+            // Show docked image and histogram in main window
+            // Restore the right column to 25% width (1* vs 3* for file list)
+            ImageColumn.Width = new GridLength(1, GridUnitType.Star);
+            ImageColumn.MinWidth = 200;
+            ImageColumn.MaxWidth = double.PositiveInfinity; // Remove max width constraint
+            SplitterColumn.Width = GridLength.Auto;
+            ImageContentGrid.Visibility = Visibility.Visible;
+            ColumnSplitter.Visibility = Visibility.Visible;
+            ColumnSplitter.IsEnabled = true; // Re-enable splitter
+            
+            // Restore histogram visibility based on current setting
+            SetHistogramVisibility(_appConfig.ShowHistogram);
+
+            // Hide the re-dock button in the toolbar
+            RedockButton.Visibility = Visibility.Collapsed;
+
+            // Refresh the display
+            if (_viewModel != null && _viewModel.SelectedIndex >= 0 && _viewModel.SelectedIndex < _viewModel.Files.Count)
+            {
+                ImageScrollViewer.Visibility = Visibility.Visible;
+                PlaceholderText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                ImageScrollViewer.Visibility = Visibility.Collapsed;
+                PlaceholderText.Text = "Select an image from the file list";
+                PlaceholderText.Visibility = Visibility.Visible;
+            }
+
+            _loggingService.LogInfo("Docked image and histogram windows back to main window");
+        }
+
         #region File Progress Dialog
         // These methods handle showing a progress dialog while loading files
 
@@ -1680,6 +1827,13 @@ namespace AstroImages.Wpf
             _warmupCancellation?.Cancel();
             _warmupCancellation?.Dispose();
             
+            // Close floating windows if they're open
+            if (_isFloating)
+            {
+                _floatingImageWindow?.CloseWindow();
+                _floatingHistogramWindow?.CloseWindow();
+            }
+            
             // Save current window state
             if (this.WindowState == WindowState.Normal)
             {
@@ -1693,5 +1847,32 @@ namespace AstroImages.Wpf
             _appConfig.Save();
         }
         #endregion
+
+        /// <summary>
+        /// Sets the visibility of the histogram panel and its splitter.
+        /// When hidden, the histogram row collapses to save space.
+        /// </summary>
+        /// <param name="visible">True to show the histogram, false to hide it</param>
+        private void SetHistogramVisibility(bool visible)
+        {
+            if (visible)
+            {
+                // Show histogram splitter and control
+                HistogramSplitter.Visibility = Visibility.Visible;
+                HistogramControl.Visibility = Visibility.Visible;
+                // Restore row heights
+                HistogramSplitterRow.Height = GridLength.Auto;
+                HistogramRow.Height = new GridLength(200, GridUnitType.Pixel);
+            }
+            else
+            {
+                // Hide histogram splitter and control
+                HistogramSplitter.Visibility = Visibility.Collapsed;
+                HistogramControl.Visibility = Visibility.Collapsed;
+                // Collapse rows completely to prevent grey areas
+                HistogramSplitterRow.Height = new GridLength(0, GridUnitType.Pixel);
+                HistogramRow.Height = new GridLength(0, GridUnitType.Pixel);
+            }
+        }
     }
 }
