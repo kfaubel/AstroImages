@@ -5,25 +5,27 @@ A modern WPF application for browsing and reviewing astronomical images and FITS
 ## Key Features
 
 - **View FITS and XISF astronomical images** - Includes display of metadata for these file formats
-- **View other common image foramts** - JPG, PNG, BMP, GIF, WEBP and TIFF
+- **View other common image formats** - JPG, PNG, BMP, GIF, WEBP and TIFF
 - **Zoom and pan controls** - Navigate through your images with mouse wheel zoom and drag-to-pan functionality
 - **File metadata display** - View filename metadata as well as info in FITS/XISF headers
 - **Select and move images** - Select images and then move them to a processing folder or the recycle bin
-- **Image statistics and analysis** - Examine pixel statistics and image properties
+- **Image statistics and analysis** - Examine pixel statistics and image properties including median values (normalized or 16-bit)
+- **Histogram display** - Optional histogram panel with linear and logarithmic scales
+- **Floating windows** - Detach image and histogram viewers to separate windows for multi-monitor setups
 - **Dark mode** - Switch between light and dark themes for comfortable viewing
 
 ## Support for NINA Users
 
 If you use NINA (N.I.N.A. - Nighttime Imaging 'N' Astronomy) some useful data is not stored in the FITS header but can be added to the image file name with filenames like this in Options -> Imaging:
 ```
-$$TARGETNAME$$\NIGHT_$$DATEMINUS12$$\$$IMAGETYPE$$\$$DATETIME$$_$$FILTER$$_RMS:$$RMS$$_HFR:$$HFR$$_ECC_$$ECCENTRICITY$$_Stars_$$STARCOUNT$$_$$GAIN$$_$$EXPOSURETIME$$s_$$SENSORTEMP$$C_$$FRAMENR$$
+$$TARGETNAME$$\NIGHT_$$DATEMINUS12$$\$$IMAGETYPE$$\$$DATETIME$$_$$FILTER$$_RMS:$$RMSARCSEC$$_HFR:$$HFR$$_ECC_$$ECCENTRICITY$$_FWHM_$$FWHM$$_Stars_$$STARCOUNT$$_$$GAIN$$_$$EXPOSURETIME$$s_$$SENSORTEMP$$C_$$FRAMENR$$
 ```
 That generates filenames such as:
 ```
-M33 › NIGHT_2015-12-31 › LIGHT › 2016-01-01_12-00-00_L_RMS_0.35_HFR_3.25_ECC_0.66_Stars_3294_1600_10.21s_-15C_0001
+M33 › NIGHT_2015-12-31 › LIGHT › 2016-01-01_12-00-00_L_RMS_0.35_HFR_3.25_ECC_0.66_FWHM_0.00_Stars_3294_1600_10.21s_-15C_0001
 ```
 
-This app can parse RMS, HFR, ECCENTRICITY, Stars, and other quality metrics directly from the filename for quick quality assessment.  The Image Type, Filter, Exposure Time, Sensor Temperature, and other metadata are stored in the FITS file but are still helpful when sorting images to prepare for tools like PixInsight WBPP.
+This app can parse RMS, HFR, ECCENTRICITY, FWHM, Stars, and other quality metrics directly from the filename for quick quality assessment. Custom keyword values are displayed in green in the file list. The Image Type, Filter, Exposure Time, Sensor Temperature, and other metadata are stored in the FITS file and displayed in blue when added as columns. The median value (shown in purple) can be displayed as normalized (0.0-1.0) or 16-bit range (0-65535) format.
 
 ---
 
@@ -126,7 +128,7 @@ dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained
 
 ### Publishing to GitHub Releases
 
-See the .gethub/wrokflow/release.yaml for setup to deploy a release to github 
+See the .github/workflow/release.yaml for setup to deploy a release to github 
 
 #### Manually publish a new version
 
@@ -142,7 +144,7 @@ git push origin v1.0.0
 
 ---
 
-## Code Signing
+## Code Signing (Future)
 
 ### Why Sign Your Application?
 
@@ -230,6 +232,15 @@ MIT License - see LICENSE file for details.
 ---
 
 ## Attribution
+
+### Third-Party Components
+
+This application uses the following open-source libraries:
+
+- **[MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet)** (v2.8.1) by Drew Noakes - Apache License 2.0
+  - Used for extracting EXIF and other metadata from image files
+
+### Development Tools
 
 This application was developed with significant assistance from **GitHub Copilot**, demonstrating the collaborative potential between human creativity and AI-powered development tools.  <-- Said the AI bot 😀
 
