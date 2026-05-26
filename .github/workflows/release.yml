@@ -9,10 +9,10 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.2.2
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v4.2.0
       with:
         dotnet-version: 8.0.x
         
@@ -46,7 +46,7 @@ jobs:
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
         
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v2.2.0
       with:
         files: |
           AstroImages-win-x64.zip
