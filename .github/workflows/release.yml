@@ -7,6 +7,8 @@ on:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
     - uses: actions/checkout@v4.2.2
@@ -44,13 +46,15 @@ jobs:
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         # Compile the installer script
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+        # Copy installer to root with fixed name for easier upload
+        Copy-Item installer-output\AstroImages-Setup-*.exe .\AstroImages-Setup.exe
         
     - name: Create Release
       uses: softprops/action-gh-release@v2.2.0
       with:
         files: |
           AstroImages-win-x64.zip
-          installer-output/AstroImages-Setup-*.exe
+          AstroImages-Setup.exe
         generate_release_notes: true
         draft: false
         prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
@@ -65,7 +69,7 @@ jobs:
           ### Installation Options
           
           #### Option 1: Installer (Recommended)
-          1. Download `AstroImages-Setup-x.x.x.exe`
+          1. Download `AstroImages-Setup.exe`
           2. Run the installer
           3. The installer will:
              - Check for .NET 8 Desktop Runtime
