@@ -35,8 +35,19 @@ This app can parse RMS, HFR, ECCENTRICITY, FWHM, Stars, and other quality metric
 - **Windows 10/11** (64-bit)
 - **.NET 8 Desktop Runtime** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0) (choose "Desktop Runtime")
 
-### Quick Install
-1. **Download** the latest release ZIP from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
+### Installation
+
+#### Option 1: Installer (Recommended)
+1. **Download** `AstroImages-Setup-x.x.x.exe` from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
+2. **Run** the installer
+3. The installer will:
+   - Check for .NET 8 Desktop Runtime (offers to download if missing)
+   - Install to `%LOCALAPPDATA%\AstroImages`
+   - Create Start Menu shortcuts
+   - Optionally create a Desktop shortcut
+
+#### Option 2: Portable ZIP
+1. **Download** `AstroImages-win-x64.zip` from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
 2. **Extract** all files to a folder of your choice
 3. **Run** `AstroImages.exe`
 
@@ -128,19 +139,86 @@ dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained
 
 ### Publishing to GitHub Releases
 
-See the .github/workflow/release.yaml for setup to deploy a release to github 
+See the [.github/workflows/release.yml](.github/workflows/release.yml) for the automated release workflow.
 
-#### Manually publish a new version
+The workflow automatically creates both a ZIP file and an installer when you push a version tag.
 
-Update the version number in the project files in AstroImages.Wpf.cproj
+#### Release Checklist
 
+Follow these steps to publish a new version:
+
+1. **Update Version Numbers** (use the same version in all locations):
+   - [ ] `AstroImages.Wpf/AstroImages.Wpf.csproj` - Update `<Version>` property (e.g., `1.5.0`)
+   - [ ] `installer.iss` - Update `#define MyAppVersion` (e.g., `"1.5.0"`)
+
+2. **Update Release Notes**:
+   - [ ] Edit `RELEASE_NOTES.txt` with new features, improvements, and bug fixes
+   - [ ] Update version number in the first line of `RELEASE_NOTES.txt`
+
+3. **Test Locally** (optional but recommended):
+   ```powershell
+   # Build and test the application
+   dotnet build -c Release
+   dotnet run --project AstroImages.Wpf -c Release
+   
+   # Test the installer build (requires Inno Setup installed)
+   dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
+   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+   ```
+
+4. **Commit Changes**:
+   ```powershell
+   git add .
+   git commit -m "Release v1.5.0"
+   ```
+
+5. **Create and Push Tag**:
+   ```powershell
+   # Create a version tag (must start with 'v')
+   git tag v1.5.0
+   
+   # Push commits and tag to trigger GitHub Actions
+   git push origin main
+   git push origin v1.5.0
+   
+   # Or push everything at once:
+   git push origin main --tags
+   ```
+
+6. **Monitor GitHub Actions**:
+   - [ ] Go to https://github.com/kfaubel/AstroImages/actions
+   - [ ] Wait for the build to complete (~5-10 minutes)
+   - [ ] Check for any errors in the workflow
+
+7. **Verify Release**:
+   - [ ] Go to https://github.com/kfaubel/AstroImages/releases
+   - [ ] Verify both `AstroImages-win-x64.zip` and `AstroImages-Setup-x.x.x.exe` are present
+   - [ ] Download and test the installer
+   - [ ] Check that release notes are displayed correctly
+
+**Quick Release Command** (after completing steps 1-2):
 ```powershell
-# Apply a tag starting with a 'v'
-git tag v1.0.0
-
-# Push the tag to the remote repository to trigger a release
-git push origin v1.0.0
+git add . && git commit -m "Release v1.5.0" && git tag v1.5.0 && git push origin main --tags
 ```
+
+### Building the Installer Locally (Testing)
+
+To test the installer before pushing a release:
+
+1. **Prerequisites**: Install Inno Setup from [jrsoftware.org/isdl.php](https://jrsoftware.org/isdl.php)
+
+2. **Build and create installer**:
+   ```powershell
+   # Build the application
+   dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
+   
+   # Compile the installer (command line)
+   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+   
+   # Or open installer.iss in Inno Setup GUI and click Build -> Compile
+   ```
+
+3. **Test the installer**: Find it at `installer-output/AstroImages-Setup-x.x.x.exe`
 
 ---
 

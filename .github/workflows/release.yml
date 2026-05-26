@@ -33,11 +33,24 @@ jobs:
         # Create release package
         Compress-Archive -Path * -DestinationPath ../AstroImages-win-x64.zip
         cd ..
+    
+    - name: Install Inno Setup
+      run: |
+        choco install innosetup -y
+        
+    - name: Build Installer
+      run: |
+        # Refresh PATH to include Inno Setup
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        # Compile the installer script
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
         
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        files: AstroImages-win-x64.zip
+        files: |
+          AstroImages-win-x64.zip
+          installer-output/AstroImages-Setup-*.exe
         generate_release_notes: true
         draft: false
         prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
@@ -49,10 +62,22 @@ jobs:
           - Windows 10/11 (64-bit)
           - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
           
-          ### Installation
+          ### Installation Options
+          
+          #### Option 1: Installer (Recommended)
+          1. Download `AstroImages-Setup-x.x.x.exe`
+          2. Run the installer
+          3. The installer will:
+             - Check for .NET 8 Desktop Runtime
+             - Install to `%LOCALAPPDATA%\AstroImages`
+             - Create Start Menu shortcuts
+             - Optionally create a Desktop shortcut
+          
+          #### Option 2: Portable ZIP
           1. Download `AstroImages-win-x64.zip`
-          2. Extract all files to a folder
+          2. Extract all files to a folder of your choice
           3. Run `AstroImages.exe`
+          4. Ensure .NET 8 Desktop Runtime is installed
           
           ### What's New
           See the automatically generated release notes below.

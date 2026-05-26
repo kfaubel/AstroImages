@@ -1,0 +1,20 @@
+AstroImages v1.5.0 - What's New
+
+NEW FEATURES:
+* Added median display format options (normalized 0.0-1.0 or 16-bit 0-65535)
+* Added optional histogram panel (can be shown/hidden via Options)
+* Added floating window support for multi-monitor setups
+* Added column color coding (green=custom keywords, blue=FITS keywords, purple=median)
+
+IMPROVEMENTS:
+* Improved dark mode text visibility throughout the application
+* Enhanced column sizing for better data display
+* Fixed layout issues when floating/docking windows
+* Improved NINA filename pattern support (added FWHM, RMSARCSEC)
+
+BUG FIXES:
+* Fixed grey areas appearing when histogram is disabled
+* Fixed window resize behavior with floating windows
+* Fixed column width when image viewer is re-docked
+
+For full details, visit: https://github.com/kfaubel/AstroImages/releases
