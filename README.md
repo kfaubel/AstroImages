@@ -35,7 +35,7 @@ This app can parse RMS, HFR, ECCENTRICITY, FWHM, Stars, and other quality metric
 - **Windows 10/11** (64-bit)
 - **.NET 8 Desktop Runtime** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0) (choose "Desktop Runtime")
 
-### Installation
++### Installation
 
 #### Option 1: Installer (Recommended)
 1. **Download** `AstroImages-Setup-x.x.x.exe` from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)

@@ -85,6 +85,8 @@ begin
 end;
 
 function InitializeSetup: Boolean;
+var
+  ResultCode: Integer;
 begin
   Result := True;
   
