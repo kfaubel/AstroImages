@@ -46,20 +46,23 @@ jobs:
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         # Compile the installer script
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
-        # Copy installer to root with fixed name for easier upload
-        Copy-Item installer-output\AstroImages-Setup-*.exe .\AstroImages-Setup.exe
+        # Copy installer with version in filename (includes 'v' prefix)
+        $VERSION = "${{ github.ref_name }}"
+        Copy-Item installer-output\AstroImages-Setup-*.exe .\AstroImages-Setup-$VERSION.exe
     
     - name: Verify files
       run: |
+        $VERSION = "${{ github.ref_name }}"
         Write-Host "Files to upload:"
         Get-Item AstroImages-win-x64.zip | Format-List Name, Length
-        Get-Item AstroImages-Setup.exe | Format-List Name, Length
+        Get-Item AstroImages-Setup-$VERSION.exe | Format-List Name, Length
         
     - name: Create Release
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         $TAG = "${{ github.ref_name }}"
+        $VERSION = $TAG
         $RELEASE_NOTES = @"
         ## AstroImages $TAG
         
@@ -70,7 +73,7 @@ jobs:
         ### Installation Options
         
         #### Option 1: Installer (Recommended)
-        1. Download ``AstroImages-Setup.exe``
+        1. Download ``AstroImages-Setup-$VERSION.exe``
         2. Run the installer
         3. The installer will:
            - Check for .NET 8 Desktop Runtime
@@ -91,7 +94,7 @@ jobs:
         # Create release with gh CLI
         gh release create $TAG `
           AstroImages-win-x64.zip `
-          AstroImages-Setup.exe `
+          AstroImages-Setup-$VERSION.exe `
           --title "AstroImages $TAG" `
           --notes "$RELEASE_NOTES" `
           --generate-notes
