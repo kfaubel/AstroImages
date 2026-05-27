@@ -48,40 +48,53 @@ jobs:
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
         # Copy installer to root with fixed name for easier upload
         Copy-Item installer-output\AstroImages-Setup-*.exe .\AstroImages-Setup.exe
+    
+    - name: Verify files
+      run: |
+        Write-Host "Files to upload:"
+        Get-Item AstroImages-win-x64.zip | Format-List Name, Length
+        Get-Item AstroImages-Setup.exe | Format-List Name, Length
         
     - name: Create Release
-      uses: softprops/action-gh-release@v2.2.0
-      with:
-        files: |
-          AstroImages-win-x64.zip
-          AstroImages-Setup.exe
-        generate_release_notes: true
-        draft: false
-        prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
-        name: AstroImages ${{ github.ref_name }}
-        body: |
-          ## AstroImages ${{ github.ref_name }}
-          
-          ### System Requirements
-          - Windows 10/11 (64-bit)
-          - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
-          
-          ### Installation Options
-          
-          #### Option 1: Installer (Recommended)
-          1. Download `AstroImages-Setup.exe`
-          2. Run the installer
-          3. The installer will:
-             - Check for .NET 8 Desktop Runtime
-             - Install to `%LOCALAPPDATA%\AstroImages`
-             - Create Start Menu shortcuts
-             - Optionally create a Desktop shortcut
-          
-          #### Option 2: Portable ZIP
-          1. Download `AstroImages-win-x64.zip`
-          2. Extract all files to a folder of your choice
-          3. Run `AstroImages.exe`
-          4. Ensure .NET 8 Desktop Runtime is installed
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        $TAG = "${{ github.ref_name }}"
+        $RELEASE_NOTES = @"
+        ## AstroImages $TAG
+        
+        ### System Requirements
+        - Windows 10/11 (64-bit)
+        - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
+        
+        ### Installation Options
+        
+        #### Option 1: Installer (Recommended)
+        1. Download ``AstroImages-Setup.exe``
+        2. Run the installer
+        3. The installer will:
+           - Check for .NET 8 Desktop Runtime
+           - Install to ``%LOCALAPPDATA%\AstroImages``
+           - Create Start Menu shortcuts
+           - Optionally create a Desktop shortcut
+        
+        #### Option 2: Portable ZIP
+        1. Download ``AstroImages-win-x64.zip``
+        2. Extract all files to a folder of your choice
+        3. Run ``AstroImages.exe``
+        4. Ensure .NET 8 Desktop Runtime is installed
+        
+        ### What's New
+        See the automatically generated release notes below.
+        "@
+        
+        # Create release with gh CLI
+        gh release create $TAG `
+          AstroImages-win-x64.zip `
+          AstroImages-Setup.exe `
+          --title "AstroImages $TAG" `
+          --notes "$RELEASE_NOTES" `
+          --generate-notes
           
           ### What's New
           See the automatically generated release notes below.
