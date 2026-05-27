@@ -95,8 +95,3 @@ jobs:
           --title "AstroImages $TAG" `
           --notes "$RELEASE_NOTES" `
           --generate-notes
-          
-          ### What's New
-          See the automatically generated release notes below.
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
