@@ -63,6 +63,10 @@ jobs:
       run: |
         $TAG = "${{ github.ref_name }}"
         $VERSION = $TAG
+        
+        # Read release notes from RELEASE_NOTES.txt
+        $CUSTOM_NOTES = Get-Content -Path "RELEASE_NOTES.txt" -Raw
+        
         $RELEASE_NOTES = @"
         ## AstroImages $TAG
         
@@ -76,10 +80,10 @@ jobs:
         1. Download ``AstroImages-Setup-$VERSION.exe``
         2. Run the installer
         3. The installer will:
-           - Check for .NET 8 Desktop Runtime
+           - Check for .NET 8 Desktop Runtime (prompts to download if missing)
            - Install to ``%LOCALAPPDATA%\AstroImages``
            - Create Start Menu shortcuts
-           - Optionally create a Desktop shortcut
+           - Use streamlined setup (only 2-3 clicks required)
         
         #### Option 2: Portable ZIP
         1. Download ``AstroImages-win-x64.zip``
@@ -88,7 +92,8 @@ jobs:
         4. Ensure .NET 8 Desktop Runtime is installed
         
         ### What's New
-        See the automatically generated release notes below.
+        
+        $CUSTOM_NOTES
         "@
         
         # Create release with gh CLI
@@ -96,5 +101,4 @@ jobs:
           AstroImages-win-x64.zip `
           AstroImages-Setup-$VERSION.exe `
           --title "AstroImages $TAG" `
-          --notes "$RELEASE_NOTES" `
-          --generate-notes
+          --notes "$RELEASE_NOTES"

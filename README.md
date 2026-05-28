@@ -44,12 +44,38 @@ This app can parse RMS, HFR, ECCENTRICITY, FWHM, Stars, and other quality metric
    - Check for .NET 8 Desktop Runtime (offers to download if missing)
    - Install to `%LOCALAPPDATA%\AstroImages`
    - Create Start Menu shortcuts
-   - Optionally create a Desktop shortcut
+   - Use streamlined installation (only 2-3 clicks required)
 
 #### Option 2: Portable ZIP
 1. **Download** `AstroImages-win-x64.zip` from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
 2. **Extract** all files to a folder of your choice
 3. **Run** `AstroImages.exe`
+
+#### Advanced: Silent/Automated Installation
+
+The installer supports command-line flags for automated deployment:
+
+```powershell
+# Silent installation (shows progress bar)
+AstroImages-Setup-v1.5.0.exe /SILENT
+
+# Very silent installation (no UI at all)
+AstroImages-Setup-v1.5.0.exe /VERYSILENT
+
+# Silent with custom directory
+AstroImages-Setup-v1.5.0.exe /VERYSILENT /DIR="C:\MyApps\AstroImages"
+
+# Complete silent installation with logging
+AstroImages-Setup-v1.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="install.log"
+```
+
+**Common flags:**
+- `/SILENT` - Silent mode with progress window
+- `/VERYSILENT` - Completely silent (no UI)
+- `/SUPPRESSMSGBOXES` - Suppress message boxes during installation
+- `/NORESTART` - Prevent automatic restart
+- `/DIR="path"` - Specify installation directory
+- `/LOG="file"` - Create installation log file
 
 *First-time users: If you don't have .NET 8 Desktop Runtime, Windows will prompt you to install it automatically.*
 
@@ -154,6 +180,7 @@ Follow these steps to publish a new version:
 2. **Update Release Notes**:
    - [ ] Edit `RELEASE_NOTES.txt` with new features, improvements, and bug fixes
    - [ ] Update version number in the first line of `RELEASE_NOTES.txt`
+   - [ ] This file is displayed in both the installer and the "What's New" section of the update dialog
 
 3. **Test Locally** (optional but recommended):
    ```powershell
@@ -205,7 +232,29 @@ git add . && git commit -m "Release v1.5.0" && git tag v1.5.0 && git push origin
 
 To test the installer before pushing a release:
 
-1. **Prerequisites**: Install Inno Setup from [jrsoftware.org/isdl.php](https://jrsoftware.org/isdl.php)
+1. **Install Inno Setup** (if not already installed):
+
+   **Option A: Direct Download** (Recommended)
+   - Go to [jrsoftware.org/isdl.php](https://jrsoftware.org/isdl.php)
+   - Download "Inno Setup 6.x.x" (first download link)
+   - Run the installer
+   - Follow the installation wizard
+   
+   **Option B: Using Chocolatey** (if you have Chocolatey installed)
+   ```powershell
+   choco install innosetup -y
+   ```
+   
+   **Option C: Install Chocolatey first, then Inno Setup**
+   ```powershell
+   # Run PowerShell as Administrator, then:
+   Set-ExecutionPolicy Bypass -Scope Process -Force
+   [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+   iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+   
+   # Then install Inno Setup:
+   choco install innosetup -y
+   ```
 
 2. **Build and create installer**:
    ```powershell
