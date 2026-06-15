@@ -179,6 +179,28 @@ namespace AstroImages.Wpf.Services
                     CellTemplate = medianTemplate
                 };
                 gridView.Columns.Add(medianColumn);
+
+                // Mean column (purple, same converter as median)
+                var meanFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
+                var meanBinding = new System.Windows.Data.Binding("Mean");
+                meanBinding.Converter = new AstroImages.Wpf.Converters.MedianConverter();
+                meanBinding.ConverterParameter = _appConfig; // Use same display mode as median
+                meanFactory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, meanBinding);
+                
+                var meanPurpleBinding = new System.Windows.Data.Binding();
+                meanPurpleBinding.Source = System.Windows.Application.Current;
+                meanPurpleBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentPurple]");
+                meanFactory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, meanPurpleBinding);
+                meanFactory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
+                
+                var meanTemplate = new DataTemplate { VisualTree = meanFactory };
+                var meanColumn = new GridViewColumn
+                {
+                    Header = CreateSortableHeader("Mean"),
+                    Width = 70,
+                    CellTemplate = meanTemplate
+                };
+                gridView.Columns.Add(meanColumn);
             }
 
             // FITS keyword columns (blue) - each has individual width based on keyword length

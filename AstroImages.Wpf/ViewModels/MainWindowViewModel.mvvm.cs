@@ -346,7 +346,9 @@ namespace AstroImages.Wpf.ViewModels
                         {
                             try
                             {
-                                fileItem.Median = _keywordExtractionService.CalculateMedianForFile(fileItem.Path);
+                                var (median, mean) = _keywordExtractionService.CalculateStatsForFile(fileItem.Path);
+                                fileItem.Median = median;
+                                fileItem.Mean = mean;
                             }
                             catch (Exception ex)
                             {
@@ -792,6 +794,10 @@ namespace AstroImages.Wpf.ViewModels
                 "Median" => direction == ListSortDirection.Ascending 
                     ? files.OrderBy(f => f.Median ?? double.MaxValue).ToList()
                     : files.OrderByDescending(f => f.Median ?? double.MinValue).ToList(),
+                    
+                "Mean" => direction == ListSortDirection.Ascending 
+                    ? files.OrderBy(f => f.Mean ?? double.MaxValue).ToList()
+                    : files.OrderByDescending(f => f.Mean ?? double.MinValue).ToList(),
                     
                 "Mark" => direction == ListSortDirection.Ascending 
                     ? files.OrderBy(f => f.IsSelected).ToList()
@@ -1391,7 +1397,9 @@ namespace AstroImages.Wpf.ViewModels
                         // Only calculate if not already calculated
                         if (!fileItem.Median.HasValue)
                         {
-                            fileItem.Median = _keywordExtractionService.CalculateMedianForFile(fileItem.Path);
+                            var (median, mean) = _keywordExtractionService.CalculateStatsForFile(fileItem.Path);
+                            fileItem.Median = median;
+                            fileItem.Mean = mean;
                         }
                     }
                     catch (Exception ex)
@@ -1546,15 +1554,56 @@ namespace AstroImages.Wpf.ViewModels
                     // Refresh the StatusBarText to reset the selection count
                     OnPropertyChanged(nameof(StatusBarText));
                     
-                    System.Windows.MessageBox.Show($"Successfully moved {selectedFiles.Count} file(s).", 
-                        "Move Complete", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    // Show a silent, auto-dismissing success notification that fades out after 3 seconds
+                    ShowAutoClosingMessage($"Successfully moved {selectedFiles.Count} file(s).", "Move Complete");
                 }
                 catch (Exception ex)
                 {
+                    // No sound (None instead of Error) per user preference
                     System.Windows.MessageBox.Show($"Error moving files: {ex.Message}", 
-                        "Move Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        "Move Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.None);
                 }
             }
+        }
+
+        /// <summary>
+        /// Shows a silent, auto-dismissing message window that fades out after the specified duration.
+        /// </summary>
+        private static void ShowAutoClosingMessage(string message, string title, int displayMs = 3000, int fadeDurationMs = 600)
+        {
+            var window = new System.Windows.Window
+            {
+                Title = title,
+                Width = 380,
+                SizeToContent = System.Windows.SizeToContent.Height,
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+                ResizeMode = System.Windows.ResizeMode.NoResize,
+                WindowStyle = System.Windows.WindowStyle.ToolWindow,
+                ShowInTaskbar = false,
+                Topmost = true
+            };
+
+            window.Content = new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                TextWrapping = System.Windows.TextWrapping.Wrap,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Margin = new System.Windows.Thickness(20),
+                FontSize = 14
+            };
+
+            // Fade-out animation starts (displayMs - fadeDurationMs) in and completes at displayMs
+            var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.0,
+                new System.Windows.Duration(TimeSpan.FromMilliseconds(fadeDurationMs)))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(displayMs - fadeDurationMs)
+            };
+            fadeOut.Completed += (s, e) => window.Close();
+
+            window.Loaded += (s, e) => window.BeginAnimation(System.Windows.UIElement.OpacityProperty, fadeOut);
+
+            window.ShowDialog();
         }
 
         /// <summary>

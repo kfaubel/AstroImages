@@ -130,10 +130,12 @@ namespace AstroImages.Wpf.Services
                 }
             }
             
-            // Calculate median value for the image (only if requested)
+            // Calculate median and mean values for the image (only if requested)
             if (calculateMedian)
             {
-                fileItem.Median = CalculateMedian(fileItem.Path);
+                var (median, mean) = CalculateStats(fileItem.Path);
+                fileItem.Median = median;
+                fileItem.Mean = mean;
             }
             
             stopwatch.Stop();
@@ -157,21 +159,30 @@ namespace AstroImages.Wpf.Services
         /// </summary>
         public double? CalculateMedianForFile(string filePath)
         {
-            return CalculateMedian(filePath);
+            return CalculateStats(filePath).median;
         }
 
         /// <summary>
-        /// Calculate the median pixel value for an image file (0.0-1.0 range).
+        /// Calculate both median and mean pixel values for an image file (0.0-1.0 range).
+        /// Public method for calculating stats on demand.
+        /// </summary>
+        public (double? median, double? mean) CalculateStatsForFile(string filePath)
+        {
+            return CalculateStats(filePath);
+        }
+
+        /// <summary>
+        /// Calculate both median and mean pixel values for an image file (0.0-1.0 range).
         /// Supports FITS, XISF, and standard image formats.
         /// </summary>
-        private double? CalculateMedian(string filePath)
+        private (double? median, double? mean) CalculateStats(string filePath)
         {
             try
             {
                 if (!File.Exists(filePath))
                 {
                     App.LoggingService?.LogWarning("Median Calculation", $"File not found: {System.IO.Path.GetFileName(filePath)}");
-                    return null;
+                    return (null, null);
                 }
 
                 // Handle FITS files
@@ -181,55 +192,52 @@ namespace AstroImages.Wpf.Services
                     if (!FitsUtilities.IsFitsData(bytes))
                     {
                         App.LoggingService?.LogWarning("Median Calculation", $"Invalid FITS data: {System.IO.Path.GetFileName(filePath)}");
-                        return null;
+                        return (null, null);
                     }
 
-                    var median = AstroImages.Core.FitsParser.CalculateMedian(bytes);
-                    if (median.HasValue)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Calculated median for FITS {System.IO.Path.GetFileName(filePath)}: {median.Value:F8}");
-                    }
-                    return median;
+                    var (median, mean) = AstroImages.Core.FitsParser.CalculateStats(bytes);
+                    System.Diagnostics.Debug.WriteLine($"Calculated stats for FITS {System.IO.Path.GetFileName(filePath)}: median={median:F8}, mean={mean:F8}");
+                    return (median, mean);
                 }
                 // Handle XISF files
                 else if (XisfUtilities.IsXisfFile(filePath))
                 {
                     byte[] bytes = File.ReadAllBytes(filePath);
-                    var median = AstroImages.Utils.XisfParser.CalculateMedian(bytes);
-                    if (median.HasValue)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Calculated median for XISF {System.IO.Path.GetFileName(filePath)}: {median.Value:F8}");
-                    }
-                    return median;
+                    var (median, mean) = AstroImages.Utils.XisfParser.CalculateStats(bytes);
+                    System.Diagnostics.Debug.WriteLine($"Calculated stats for XISF {System.IO.Path.GetFileName(filePath)}: median={median:F8}, mean={mean:F8}");
+                    return (median, mean);
                 }
                 // Handle standard image formats (JPEG, PNG, etc.)
                 else
                 {
                     var bitmap = new System.Windows.Media.Imaging.BitmapImage(new Uri(filePath));
-                    var median = CalculateMedianFromBitmap(bitmap);
-                    if (median.HasValue)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Calculated median for image {System.IO.Path.GetFileName(filePath)}: {median.Value:F8}");
-                    }
-                    return median;
+                    var (median, mean) = CalculateStatsFromBitmap(bitmap);
+                    System.Diagnostics.Debug.WriteLine($"Calculated stats for image {System.IO.Path.GetFileName(filePath)}: median={median:F8}, mean={mean:F8}");
+                    return (median, mean);
                 }
             }
             catch (Exception ex)
             {
-                // Log but don't throw - median is optional
-                App.LoggingService?.LogWarning("Median Calculation", $"Failed to calculate median for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Median calculation error for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
-                return null;
+                // Log but don't throw - stats are optional
+                App.LoggingService?.LogWarning("Median Calculation", $"Failed to calculate stats for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stats calculation error for {System.IO.Path.GetFileName(filePath)}: {ex.Message}");
+                return (null, null);
             }
         }
 
         /// <summary>
         /// Calculate median from byte array (0-255 range) normalized to 0.0-1.0
         /// </summary>
-        private double CalculateMedianFromBytes(byte[] pixels)
+        private (double median, double mean) CalculateStatsFromBytes(byte[] pixels)
         {
             if (pixels == null || pixels.Length == 0)
-                return 0.0;
+                return (0.0, 0.0);
+
+            // Calculate mean in one pass
+            double sum = 0.0;
+            for (int i = 0; i < pixels.Length; i++)
+                sum += pixels[i];
+            double mean = sum / pixels.Length / 255.0;
 
             var sorted = pixels.OrderBy(p => p).ToArray();
             int middle = sorted.Length / 2;
@@ -245,16 +253,16 @@ namespace AstroImages.Wpf.Services
             }
             
             // Normalize to 0.0-1.0 range
-            return median / 255.0;
+            return (median / 255.0, mean);
         }
 
         /// <summary>
-        /// Calculate median from a BitmapSource (standard image)
+        /// Calculate both median and mean from a BitmapSource (standard image)
         /// </summary>
-        private double? CalculateMedianFromBitmap(System.Windows.Media.Imaging.BitmapSource bitmap)
+        private (double? median, double? mean) CalculateStatsFromBitmap(System.Windows.Media.Imaging.BitmapSource bitmap)
         {
             if (bitmap == null)
-                return null;
+                return (null, null);
 
             try
             {
@@ -272,7 +280,7 @@ namespace AstroImages.Wpf.Services
                 
                 convertedBitmap.CopyPixels(pixels, stride, 0);
                 
-                // Convert BGRA to grayscale and calculate median
+                // Convert BGRA to grayscale and calculate stats
                 var grayscalePixels = new List<byte>(width * height);
                 for (int i = 0; i < pixels.Length; i += 4)
                 {
@@ -284,12 +292,13 @@ namespace AstroImages.Wpf.Services
                     grayscalePixels.Add(gray);
                 }
                 
-                return CalculateMedianFromBytes(grayscalePixels.ToArray());
+                var (median, mean) = CalculateStatsFromBytes(grayscalePixels.ToArray());
+                return (median, mean);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in CalculateMedianFromBitmap: {ex.Message}");
-                return null;
+                System.Diagnostics.Debug.WriteLine($"Error in CalculateStatsFromBitmap: {ex.Message}");
+                return (null, null);
             }
         }
     }

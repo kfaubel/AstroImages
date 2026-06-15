@@ -642,29 +642,39 @@ namespace AstroImages.Core
         /// </summary>
         public static double? CalculateMedian(byte[] buffer)
         {
+            var (median, _) = CalculateStats(buffer);
+            return median;
+        }
+
+        /// <summary>
+        /// Calculate both median and mean pixel values from FITS data in a single pass.
+        /// Returns both values in the 0.0-1.0 range.
+        /// </summary>
+        public static (double? median, double? mean) CalculateStats(byte[] buffer)
+        {
             try
             {
                 var (header, headerSize) = ParseHeaderWithSize(buffer);
                 
                 // Validate required header keywords
                 if (!header.TryGetValue("NAXIS", out var naxisObj))
-                    return null;
+                    return (null, null);
                 
                 int naxis = Convert.ToInt32(naxisObj);
                 if (naxis < 2)
-                    return null;
+                    return (null, null);
                 
                 if (!header.TryGetValue("NAXIS1", out var wObj) || !header.TryGetValue("NAXIS2", out var hObj))
-                    return null;
+                    return (null, null);
                 
                 int width = Convert.ToInt32(wObj);
                 int height = Convert.ToInt32(hObj);
                 
                 if (width <= 0 || height <= 0)
-                    return null;
+                    return (null, null);
                 
                 if (!header.TryGetValue("BITPIX", out var bitpixObj))
-                    return null;
+                    return (null, null);
                 
                 int bitpix = Convert.ToInt32(bitpixObj);
                 
@@ -677,14 +687,14 @@ namespace AstroImages.Core
                 long expectedDataSize = (long)width * height * bytesPerPixel;
                 
                 if (buffer.Length < headerSize + expectedDataSize)
-                    return null;
+                    return (null, null);
                 
-                // Read pixel values and calculate median
-                return CalculateMedianFromRawData(buffer, headerSize, width, height, bitpix, bzero, bscale);
+                // Read pixel values and calculate both median and mean
+                return CalculateStatsFromRawData(buffer, headerSize, width, height, bitpix, bzero, bscale);
             }
             catch (Exception)
             {
-                return null;
+                return (null, null);
             }
         }
 
@@ -692,6 +702,16 @@ namespace AstroImages.Core
         /// Calculate median from raw FITS data
         /// </summary>
         private static double CalculateMedianFromRawData(byte[] buffer, int dataOffset, 
+            int width, int height, int bitpix, double bzero, double bscale)
+        {
+            var (median, _) = CalculateStatsFromRawData(buffer, dataOffset, width, height, bitpix, bzero, bscale);
+            return median;
+        }
+
+        /// <summary>
+        /// Calculate both median and mean from raw FITS data in a single pass.
+        /// </summary>
+        private static (double median, double mean) CalculateStatsFromRawData(byte[] buffer, int dataOffset,
             int width, int height, int bitpix, double bzero, double bscale)
         {
             int pixelCount = width * height;
@@ -770,12 +790,18 @@ namespace AstroImages.Core
                     break;
                     
                 default:
-                    return 0.0;
+                    return (0.0, 0.0);
             }
             
             if (values.Count == 0)
-                return 0.0;
+                return (0.0, 0.0);
             
+            // Calculate mean in one pass before sorting
+            double sum = 0.0;
+            for (int i = 0; i < values.Count; i++)
+                sum += values[i];
+            double mean = sum / values.Count;
+
             // Sort and find median
             values.Sort();
             int middle = values.Count / 2;
@@ -790,22 +816,19 @@ namespace AstroImages.Core
                 median = values[middle];
             }
             
-            // Return the median value directly (already in 0.0-1.0 range for normalized FITS)
+            // Normalize based on data type
             // For 16-bit FITS with typical BZERO=32768, BSCALE=1, values range from 0-65535
             // For floating point FITS, values are typically already in 0.0-1.0 range
-            // We'll assume floating point data is already normalized, but scale integer data
             if (bitpix > 0)
             {
                 // Integer data - normalize based on bit depth
-                // Typical 16-bit FITS has pixel values from 0-65535 after BZERO/BSCALE
                 double maxValue = Math.Pow(2, Math.Abs(bitpix)) - 1;
-                return Math.Clamp(median / maxValue, 0.0, 1.0);
+                return (Math.Clamp(median / maxValue, 0.0, 1.0), Math.Clamp(mean / maxValue, 0.0, 1.0));
             }
             else
             {
                 // Floating point data - typically already normalized to 0.0-1.0
-                // But clamp just in case
-                return Math.Clamp(median, 0.0, 1.0);
+                return (Math.Clamp(median, 0.0, 1.0), Math.Clamp(mean, 0.0, 1.0));
             }
         }
     }

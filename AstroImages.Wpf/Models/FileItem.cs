@@ -10,6 +10,7 @@ namespace AstroImages.Wpf.Models
         private Dictionary<string, string> _csvKeywords = new Dictionary<string, string>();
         private bool _isSelected = false;
         private double? _median;
+        private double? _mean;
 
         public string Name { get; set; } = string.Empty;
         public long Size { get; set; }
@@ -22,6 +23,18 @@ namespace AstroImages.Wpf.Models
                 {
                     _median = value;
                     OnPropertyChanged(nameof(Median));
+                }
+            }
+        }
+        public double? Mean
+        {
+            get => _mean;
+            set
+            {
+                if (_mean != value)
+                {
+                    _mean = value;
+                    OnPropertyChanged(nameof(Mean));
                 }
             }
         }

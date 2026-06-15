@@ -1531,22 +1531,32 @@ namespace AstroImages.Utils
         /// </summary>
         public static double? CalculateMedian(byte[] buffer)
         {
+            var (median, _) = CalculateStats(buffer);
+            return median;
+        }
+
+        /// <summary>
+        /// Calculate both median and mean pixel values from XISF data in a single pass.
+        /// Returns both values in the 0.0-1.0 range.
+        /// </summary>
+        public static (double? median, double? mean) CalculateStats(byte[] buffer)
+        {
             try
             {
                 var metadata = ParseMetadata(buffer);
                 
                 if (!metadata.TryGetValue("width", out var widthObj) || 
                     !metadata.TryGetValue("height", out var heightObj))
-                    return null;
+                    return (null, null);
                 
                 string widthStr = widthObj?.ToString() ?? "";
                 string heightStr = heightObj?.ToString() ?? "";
                 
                 if (!int.TryParse(widthStr, out int width) || !int.TryParse(heightStr, out int height))
-                    return null;
+                    return (null, null);
                 
                 if (width <= 0 || height <= 0)
-                    return null;
+                    return (null, null);
                 
                 // Get sample format and channels
                 string sampleFormat = metadata.TryGetValue("sampleFormat", out var fmtObj) ? (fmtObj?.ToString() ?? "UInt16") : "UInt16";
@@ -1557,20 +1567,20 @@ namespace AstroImages.Utils
                 // Find image data offset and size
                 if (!metadata.TryGetValue("dataOffset", out var offsetObj) || 
                     !metadata.TryGetValue("dataSize", out var sizeObj))
-                    return null;
+                    return (null, null);
                 
                 string offsetStr = offsetObj?.ToString() ?? "";
                 string sizeStr = sizeObj?.ToString() ?? "";
                 
                 if (!long.TryParse(offsetStr, out long position) || !long.TryParse(sizeStr, out long size))
-                    return null;
+                    return (null, null);
                 
-                // Calculate median from raw data
-                return CalculateMedianFromRawData(buffer, (int)position, width, height, channels, sampleFormat);
+                // Calculate median and mean from raw data
+                return CalculateStatsFromRawData(buffer, (int)position, width, height, channels, sampleFormat);
             }
             catch (Exception)
             {
-                return null;
+                return (null, null);
             }
         }
 
@@ -1578,6 +1588,16 @@ namespace AstroImages.Utils
         /// Calculate median from raw XISF data
         /// </summary>
         private static double CalculateMedianFromRawData(byte[] buffer, int offset, 
+            int width, int height, int channels, string sampleFormat)
+        {
+            var (median, _) = CalculateStatsFromRawData(buffer, offset, width, height, channels, sampleFormat);
+            return median;
+        }
+
+        /// <summary>
+        /// Calculate both median and mean from raw XISF data in a single pass.
+        /// </summary>
+        private static (double median, double mean) CalculateStatsFromRawData(byte[] buffer, int offset,
             int width, int height, int channels, string sampleFormat)
         {
             int totalPixels = width * height;
@@ -1601,12 +1621,18 @@ namespace AstroImages.Utils
                     ReadFloat64Values(buffer, offset, totalPixels, channels, values);
                     break;
                 default:
-                    return 0.0;
+                    return (0.0, 0.0);
             }
             
             if (values.Count == 0)
-                return 0.0;
+                return (0.0, 0.0);
             
+            // Calculate mean before sorting
+            double sum = 0.0;
+            for (int i = 0; i < values.Count; i++)
+                sum += values[i];
+            double mean = sum / values.Count;
+
             // Sort and find median
             values.Sort();
             int middle = values.Count / 2;
@@ -1625,17 +1651,17 @@ namespace AstroImages.Utils
             switch (sampleFormat.ToUpperInvariant())
             {
                 case "UINT8":
-                    return Math.Clamp(median / 255.0, 0.0, 1.0);
+                    return (Math.Clamp(median / 255.0, 0.0, 1.0), Math.Clamp(mean / 255.0, 0.0, 1.0));
                 case "UINT16":
-                    return Math.Clamp(median / 65535.0, 0.0, 1.0);
+                    return (Math.Clamp(median / 65535.0, 0.0, 1.0), Math.Clamp(mean / 65535.0, 0.0, 1.0));
                 case "UINT32":
-                    return Math.Clamp(median / 4294967295.0, 0.0, 1.0);
+                    return (Math.Clamp(median / 4294967295.0, 0.0, 1.0), Math.Clamp(mean / 4294967295.0, 0.0, 1.0));
                 case "FLOAT32":
                 case "FLOAT64":
                     // Floating point data is typically already in 0.0-1.0 range
-                    return Math.Clamp(median, 0.0, 1.0);
+                    return (Math.Clamp(median, 0.0, 1.0), Math.Clamp(mean, 0.0, 1.0));
                 default:
-                    return Math.Clamp(median, 0.0, 1.0);
+                    return (Math.Clamp(median, 0.0, 1.0), Math.Clamp(mean, 0.0, 1.0));
             }
         }
 
