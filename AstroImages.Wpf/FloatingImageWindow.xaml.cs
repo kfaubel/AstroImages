@@ -317,23 +317,39 @@ namespace AstroImages.Wpf
             }
             else
             {
+                // Capture zoom state before loading the new image
+                bool previousFitMode = _viewModel?.FitMode ?? true;
+                double previousZoomLevel = _viewModel?.ZoomLevel ?? 1.0;
+                double previousFitScale = _viewModel?.FitScale ?? 1.0;
+
                 DisplayImage.Source = imageSource;
                 ImageScrollViewer.Visibility = Visibility.Visible;
                 PlaceholderText.Visibility = Visibility.Collapsed;
-                
-                // Force fit mode and recalculate fit scale for this window's size
-                // This is important for both normal and full screen modes
+
                 if (_viewModel != null)
                 {
-                    _viewModel.FitMode = true;
-                    
-                    // Force layout update to ensure ScrollViewer dimensions are current
                     UpdateLayout();
-                    
-                    // Use ContextIdle priority to ensure layout is complete before fitting
+
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        FitImageToScrollViewer();
+                        if (previousFitMode)
+                        {
+                            _viewModel.FitMode = true;
+                            FitImageToScrollViewer();
+                        }
+                        else
+                        {
+                            // Recalculate fit scale for the new image, then restore zoom proportionally
+                            FitImageToScrollViewer();  // sets FitScale
+                            double newFitScale = _viewModel.FitScale;
+                            double restoredZoom = (previousFitScale > 0.0001)
+                                ? previousZoomLevel * (newFitScale / previousFitScale)
+                                : previousZoomLevel;
+                            restoredZoom = Math.Max(0.01, Math.Min(5.0, restoredZoom));
+                            _viewModel.FitMode = false;
+                            _viewModel.ZoomLevel = restoredZoom;
+                            CenterImageAfterZoom();
+                        }
                     }), System.Windows.Threading.DispatcherPriority.ContextIdle);
                 }
             }

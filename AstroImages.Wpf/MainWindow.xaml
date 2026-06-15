@@ -141,7 +141,8 @@
                     
                     <!-- Move Selected Button - Left Aligned -->
                     <Button Name="MoveSelectedButton" Grid.Column="1" Content="Move selected..." 
-                            Command="{Binding MoveSelectedCommand}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,4,4,4" />
+                            Command="{Binding MoveSelectedCommand}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,4,4,4"
+                            ToolTip="Move marked files to a folder or the Recycle Bin" />
                     
                     <!-- Select All Button -->
                     <Button Name="SelectAllButton" Grid.Column="2" Content="Select All" 
@@ -155,16 +156,16 @@
                     
                     <!-- Navigation Buttons - Center Aligned -->
                     <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4">
-                        <Button Name="GotoFirst" Width="40" Margin="2" Command="{Binding GotoFirstCommand}">
+                        <Button Name="GotoFirst" Width="40" Margin="2" Command="{Binding GotoFirstCommand}" ToolTip="Go to first image">
                             <Grid Width="20" Height="16">
                                 <Rectangle Width="2" Height="14" Fill="{DynamicResource ThemeButtonForeground}" HorizontalAlignment="Left" Margin="2,0,0,0"/>
                                 <Path Width="12" Height="14" Stretch="Uniform" Fill="{DynamicResource ThemeButtonForeground}" Data="M 10,2 L 2,8 L 10,14 Z" HorizontalAlignment="Right" Margin="0,0,2,0"/>
                             </Grid>
                         </Button>
-                        <Button Name="GotoPrevious" Width="40" Margin="2" Command="{Binding GotoPreviousCommand}">
+                        <Button Name="GotoPrevious" Width="40" Margin="2" Command="{Binding GotoPreviousCommand}" ToolTip="Go to previous image">
                             <Path Width="20" Height="20" Stretch="Uniform" Fill="{DynamicResource ThemeButtonForeground}" Data="M 15,2 L 5,10 L 15,18" />
                         </Button>
-                        <Button Name="PlayPause" Width="40" Margin="2" Command="{Binding PlayPauseCommand}">
+                        <Button Name="PlayPause" Width="40" Margin="2" Command="{Binding PlayPauseCommand}" ToolTip="Play / pause slideshow">
                             <ContentControl>
                                 <ContentControl.Style>
                                     <Style TargetType="ContentControl">
@@ -189,10 +190,10 @@
                                 </ContentControl.Style>
                             </ContentControl>
                         </Button>
-                        <Button Name="GotoNext" Width="40" Margin="2" Command="{Binding GotoNextCommand}">
+                        <Button Name="GotoNext" Width="40" Margin="2" Command="{Binding GotoNextCommand}" ToolTip="Go to next image">
                             <Path Width="20" Height="20" Stretch="Uniform" Fill="{DynamicResource ThemeButtonForeground}" Data="M 5,2 L 15,10 L 5,18" />
                         </Button>
-                        <Button Name="GotoLast" Width="40" Margin="2" Command="{Binding GotoLastCommand}">
+                        <Button Name="GotoLast" Width="40" Margin="2" Command="{Binding GotoLastCommand}" ToolTip="Go to last image">
                             <Grid Width="20" Height="16">
                                 <Path Width="12" Height="14" Stretch="Uniform" Fill="{DynamicResource ThemeButtonForeground}" Data="M 2,2 L 10,8 L 2,14 Z" HorizontalAlignment="Left" Margin="2,0,0,0"/>
                                 <Rectangle Width="2" Height="14" Fill="{DynamicResource ThemeButtonForeground}" HorizontalAlignment="Right" Margin="0,0,2,0"/>
@@ -234,10 +235,10 @@
                 <!-- Image View Controls -->
                 <Grid Name="ImageControlsGrid" Grid.Row="0" Margin="8,8,8,8">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button Content="-" Width="40" Margin="4" Command="{Binding ZoomOutCommand}" />
-                        <Button Content="+" Width="40" Margin="4" Command="{Binding ZoomInCommand}" />
-                        <Button Content="1:1" Width="50" Margin="4" Command="{Binding ZoomActualCommand}" />
-                        <Button Content="Fit" Width="50" Margin="4" Command="{Binding FitToWindowCommand}" />
+                        <Button Content="-" Width="40" Margin="4" Command="{Binding ZoomOutCommand}" ToolTip="Zoom out" />
+                        <Button Content="+" Width="40" Margin="4" Command="{Binding ZoomInCommand}" ToolTip="Zoom in" />
+                        <Button Content="1:1" Width="50" Margin="4" Command="{Binding ZoomActualCommand}" ToolTip="Zoom to 100%" />
+                        <Button Content="Fit" Width="50" Margin="4" Command="{Binding FitToWindowCommand}" ToolTip="Fit image to window" />
                         <TextBlock Text="{Binding ZoomDisplayText}" VerticalAlignment="Center" Margin="8"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

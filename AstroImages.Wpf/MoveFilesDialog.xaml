@@ -26,7 +26,7 @@
         <GroupBox Grid.Row="2" Header="Move Options" Margin="0,0,0,10"
                   Foreground="{DynamicResource ThemeForeground}">
             <StackPanel Margin="10">
-                <RadioButton Name="MoveToDirectoryRadio" Content="Move to directory:" IsChecked="True" Margin="0,5"
+                <RadioButton Name="MoveToDirectoryRadio" Content="Move to directory:" IsChecked="False" Margin="0,5"
                              Foreground="{DynamicResource ThemeForeground}"/>
                 <Grid Margin="20,5,0,10">
                     <Grid.ColumnDefinitions>
@@ -38,7 +38,7 @@
                     <Button Name="BrowseButton" Grid.Column="1" Content="Browse..." Width="80" 
                             IsEnabled="{Binding IsChecked, ElementName=MoveToDirectoryRadio}" Click="BrowseButton_Click"/>
                 </Grid>
-                <RadioButton Name="MoveToTrashRadio" Content="Move to Recycle Bin" Margin="0,5"
+                <RadioButton Name="MoveToTrashRadio" Content="Move to Recycle Bin" IsChecked="True" Margin="0,5"
                              Foreground="{DynamicResource ThemeForeground}"/>
             </StackPanel>
         </GroupBox>

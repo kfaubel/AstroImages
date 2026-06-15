@@ -228,6 +228,56 @@ Follow these steps to publish a new version:
 git add . && git commit -m "Release v1.5.0" && git tag v1.5.0 && git push origin main --tags
 ```
 
+---
+
+## Release Scripts
+
+Two convenience scripts automate the most tedious parts of a release: bumping version numbers in the `.csproj`, committing, tagging, and pushing to GitHub.
+
+### `release.cmd` — Quick patch release
+
+The simplest way to ship a patch:
+
+```cmd
+release.cmd
+```
+
+This calls `release.ps1 patch` for you (bypassing any PowerShell execution-policy restrictions).  
+It bumps the **patch** component (e.g. `1.5.2` → `1.5.3`), commits, tags, and pushes.
+
+### `release.ps1` — Full control
+
+```powershell
+# Bump the patch version (default, same as release.cmd)
+.\release.ps1
+
+# Bump the minor version  (e.g. 1.5.2 → 1.6.0)
+.\release.ps1 minor
+
+# Bump the major version  (e.g. 1.5.2 → 2.0.0)
+.\release.ps1 major
+```
+
+**What the script does, step by step:**
+
+1. Reads the current `<Version>` from `AstroImages.Wpf/AstroImages.Wpf.csproj`.
+2. Calculates the new version according to the chosen bump type.
+3. Asks for confirmation before making any changes.
+4. Updates `<Version>`, `<AssemblyVersion>`, and `<FileVersion>` in the `.csproj`.
+5. Runs `git add`, `git commit`, `git tag`, and `git push` for both the commit and the new tag.
+6. Prints the GitHub Actions URL so you can watch the build.
+
+**Before running the script, make sure you have:**
+
+- [ ] Edited `RELEASE_NOTES.txt` with what changed in this version.
+- [ ] All code changes committed (the script only touches the `.csproj` version fields).
+
+**After the script completes:**
+
+- GitHub Actions picks up the new `vX.Y.Z` tag and builds the installer and ZIP automatically (~5–10 minutes).
+- Check progress at <https://github.com/kfaubel/AstroImages/actions>.
+- The finished assets appear at <https://github.com/kfaubel/AstroImages/releases>.
+
 ### Building the Installer Locally (Testing)
 
 To test the installer before pushing a release:
