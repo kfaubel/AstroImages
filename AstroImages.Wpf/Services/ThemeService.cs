@@ -161,6 +161,7 @@ namespace AstroImages.Wpf.Services
             app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(135, 206, 255));               // #87CEFF (brighter blue for dark mode)
             app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144));              // #90EE90 (medium light green for dark mode)
             app.Resources["ThemeAccentPurple"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 162, 255));             // #C8A2FF (bright purple for dark mode)
+            app.Resources["ThemeAccentOrange"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 180, 80));              // #FFB450 (warm orange for dark mode)
             app.Resources["ThemeAccent"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 215));                      // #0078D7 (Windows accent blue for headers)
 
             // ListView item selection and hover colors
@@ -224,6 +225,7 @@ namespace AstroImages.Wpf.Services
             app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 120, 180));                   // #3278B4 (brighter blue for light mode)
             app.Resources["ThemeAccentGreen"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 150, 0));                    // #009600 (brighter green for light mode)
             app.Resources["ThemeAccentPurple"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(120, 50, 180));                // #7832B4 (rich purple for light mode)
+            app.Resources["ThemeAccentOrange"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 100, 0));                 // #C86400 (dark orange for light mode)
             app.Resources["ThemeAccent"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 115, 207));                      // #0073CF (medium blue for light mode - good contrast for headers)
 
             // ListView item selection and hover colors

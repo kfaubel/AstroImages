@@ -181,37 +181,6 @@ namespace AstroImages.Wpf.Services
                 gridView.Columns.Add(medianColumn);
             }
 
-            // Custom keyword columns (green) - each has individual width based on keyword length
-            foreach (var keyword in _appConfig.CustomKeywords)
-            {
-                var factory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
-                
-                // Use SafeDictionaryConverter with parameter to avoid KeyNotFoundException
-                var binding = new System.Windows.Data.Binding("CustomKeywords");
-                binding.Converter = new SafeDictionaryConverter();
-                binding.ConverterParameter = keyword;
-                
-                factory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, binding);
-                // Bind to theme resource so foreground color updates when theme changes
-                var foregroundBinding = new System.Windows.Data.Binding();
-                foregroundBinding.Source = System.Windows.Application.Current;
-                foregroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentGreen]");
-                factory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, foregroundBinding);
-                factory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
-                var template = new DataTemplate { VisualTree = factory };
-                
-                // Calculate width based on actual data content - different for each keyword
-                double calculatedWidth = CalculateDataDrivenColumnWidth(keyword, true);
-                
-                var column = new GridViewColumn
-                {
-                    Header = CreateSortableHeader(keyword),
-                    Width = calculatedWidth,
-                    CellTemplate = template
-                };
-                gridView.Columns.Add(column);
-            }
-
             // FITS keyword columns (blue) - each has individual width based on keyword length
             foreach (var keyword in _appConfig.FitsKeywords)
             {
@@ -233,6 +202,65 @@ namespace AstroImages.Wpf.Services
                 
                 // Calculate width based on actual data content - different for each keyword
                 double calculatedWidth = CalculateDataDrivenColumnWidth(keyword, false);
+                
+                var column = new GridViewColumn
+                {
+                    Header = CreateSortableHeader(keyword),
+                    Width = calculatedWidth,
+                    CellTemplate = template
+                };
+                gridView.Columns.Add(column);
+            }
+
+            // CSV metadata columns (orange) - data from ImageMetaData.csv in the current folder
+            foreach (var keyword in _appConfig.CsvKeywords)
+            {
+                var factory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
+
+                var binding = new System.Windows.Data.Binding("CsvKeywords");
+                binding.Converter = new SafeDictionaryConverter();
+                binding.ConverterParameter = keyword;
+
+                factory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, binding);
+                var foregroundBinding = new System.Windows.Data.Binding();
+                foregroundBinding.Source = System.Windows.Application.Current;
+                foregroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentOrange]");
+                factory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, foregroundBinding);
+                factory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
+                var template = new DataTemplate { VisualTree = factory };
+
+                double calculatedWidth = CalculateDataDrivenColumnWidth(keyword, false);
+
+                var column = new GridViewColumn
+                {
+                    Header = CreateSortableHeader(keyword),
+                    Width = calculatedWidth,
+                    CellTemplate = template
+                };
+                gridView.Columns.Add(column);
+            }
+
+            // Custom keyword columns (green) - each has individual width based on keyword length
+            foreach (var keyword in _appConfig.CustomKeywords)
+            {
+                var factory = new FrameworkElementFactory(typeof(System.Windows.Controls.TextBlock));
+                
+                // Use SafeDictionaryConverter with parameter to avoid KeyNotFoundException
+                var binding = new System.Windows.Data.Binding("CustomKeywords");
+                binding.Converter = new SafeDictionaryConverter();
+                binding.ConverterParameter = keyword;
+                
+                factory.SetBinding(System.Windows.Controls.TextBlock.TextProperty, binding);
+                // Bind to theme resource so foreground color updates when theme changes
+                var foregroundBinding = new System.Windows.Data.Binding();
+                foregroundBinding.Source = System.Windows.Application.Current;
+                foregroundBinding.Path = new System.Windows.PropertyPath("Resources[ThemeAccentGreen]");
+                factory.SetBinding(System.Windows.Controls.TextBlock.ForegroundProperty, foregroundBinding);
+                factory.SetValue(System.Windows.Controls.TextBlock.TextTrimmingProperty, System.Windows.TextTrimming.CharacterEllipsis);
+                var template = new DataTemplate { VisualTree = factory };
+                
+                // Calculate width based on actual data content - different for each keyword
+                double calculatedWidth = CalculateDataDrivenColumnWidth(keyword, true);
                 
                 var column = new GridViewColumn
                 {
@@ -466,6 +494,11 @@ namespace AstroImages.Wpf.Services
                 widths[$"Custom_{keyword}"] = CalculateDataDrivenColumnWidth(keyword, true);
             }
             
+            foreach (var keyword in _appConfig.CsvKeywords)
+            {
+                widths[$"CSV_{keyword}"] = CalculateDataDrivenColumnWidth(keyword, false);
+            }
+
             foreach (var keyword in _appConfig.FitsKeywords)
             {
                 widths[$"FITS_{keyword}"] = CalculateDataDrivenColumnWidth(keyword, false);

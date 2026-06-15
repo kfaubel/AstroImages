@@ -6,7 +6,7 @@ namespace AstroImages.Wpf.Services
 {
     public class GeneralOptionsDialogService : IGeneralOptionsDialogService
     {
-        public (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
+        public (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords, List<string>? csvKeywords) ShowGeneralOptionsDialog(
             bool currentShowSizeColumn,
             bool currentShowMedianColumn,
             ThemeMode currentTheme, 
@@ -16,11 +16,13 @@ namespace AstroImages.Wpf.Services
             MedianDisplayMode currentMedianDisplayMode,
             bool currentShowHistogram,
             IEnumerable<string> currentFitsKeywords,
-            IEnumerable<string> currentCustomKeywords)
+            IEnumerable<string> currentCustomKeywords,
+            IEnumerable<string> currentCsvKeywords)
         {
             // Track keyword changes from sub-dialogs
             List<string>? newFitsKeywords = null;
             List<string>? newCustomKeywords = null;
+            List<string>? newCsvKeywords = null;
 
             var dialog = new GeneralOptionsDialog(currentShowSizeColumn, currentShowMedianColumn, currentTheme, currentShowFullScreenHelp, currentPlayPauseInterval, currentScanXisfForFitsKeywords, currentMedianDisplayMode, currentShowHistogram);
             
@@ -49,12 +51,24 @@ namespace AstroImages.Wpf.Services
                     currentCustomKeywords = newCustomKeywords;
                 }
             };
+
+            // Wire up the CSV Keywords button
+            dialog.CsvKeywordsRequested += () =>
+            {
+                var csvDialog = new CsvKeywordsDialog(currentCsvKeywords);
+                csvDialog.Owner = dialog;
+                if (csvDialog.ShowDialog() == true)
+                {
+                    newCsvKeywords = csvDialog.GetSelectedKeywords();
+                    currentCsvKeywords = newCsvKeywords;
+                }
+            };
             
             if (dialog.ShowDialog() == true)
             {
-                return (dialog.ShowSizeColumn, dialog.ShowMedianColumn, dialog.SelectedTheme, dialog.ShowFullScreenHelp, dialog.PlayPauseInterval, dialog.ScanXisfForFitsKeywords, dialog.MedianDisplayMode, dialog.ShowHistogram, newFitsKeywords, newCustomKeywords);
+                return (dialog.ShowSizeColumn, dialog.ShowMedianColumn, dialog.SelectedTheme, dialog.ShowFullScreenHelp, dialog.PlayPauseInterval, dialog.ScanXisfForFitsKeywords, dialog.MedianDisplayMode, dialog.ShowHistogram, newFitsKeywords, newCustomKeywords, newCsvKeywords);
             }
-            return (null, null, null, null, null, null, null, null, null, null);
+            return (null, null, null, null, null, null, null, null, null, null, null);
         }
     }
 }

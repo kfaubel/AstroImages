@@ -228,6 +228,9 @@ namespace AstroImages.Wpf.ViewModels
             // Set the current directory for display in title and status bar
             CurrentDirectory = directoryPath;
             
+            // Load ImageMetaData.csv from the folder (fast I/O, done synchronously)
+            _csvMetadataService.Load(directoryPath);
+            
             // Use the file management service to get file information
             var loadDirStart = totalStopwatch.ElapsedMilliseconds;
             var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
@@ -277,6 +280,10 @@ namespace AstroImages.Wpf.ViewModels
                         
                         // Extract both custom and FITS keywords for each file
                         _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords, _appConfig.ShowMedianColumn);
+                        
+                        // Populate CSV keywords from ImageMetaData.csv (if any columns are configured)
+                        if (_appConfig.CsvKeywords.Count > 0)
+                            fileItem.CsvKeywords = _csvMetadataService.GetValues(fileItem.Name, _appConfig.CsvKeywords);
                         
                         fileStopwatch.Stop();
                         var elapsed = fileStopwatch.ElapsedMilliseconds;
@@ -410,6 +417,8 @@ namespace AstroImages.Wpf.ViewModels
             if (filePaths.Length > 0)
             {
                 CurrentDirectory = System.IO.Path.GetDirectoryName(filePaths[0]) ?? "";
+                // Load ImageMetaData.csv from the folder
+                _csvMetadataService.Load(CurrentDirectory);
             }
             
             int total = filePaths.Length;
@@ -431,6 +440,10 @@ namespace AstroImages.Wpf.ViewModels
                         
                         // Extract both custom and FITS keywords for the file
                         _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, skipXisf: false, _appConfig.ShowMedianColumn);
+                        
+                        // Populate CSV keywords
+                        if (_appConfig.CsvKeywords.Count > 0)
+                            fileItem.CsvKeywords = _csvMetadataService.GetValues(fileItem.Name, _appConfig.CsvKeywords);
                         
                         // Add to thread-safe collection
                         processedItems.Add(fileItem);
@@ -527,6 +540,16 @@ namespace AstroImages.Wpf.ViewModels
                 current++;
                 progressCallback?.Invoke(current, total);
             }
+        }
+
+        /// <summary>
+        /// Refreshes the CSV keywords for all files in the current list.
+        /// Called when CSV keyword configuration changes.
+        /// </summary>
+        public void RefreshFileListCsvKeywords()
+        {
+            foreach (var fileItem in Files)
+                fileItem.CsvKeywords = _csvMetadataService.GetValues(fileItem.Name, _appConfig.CsvKeywords);
         }
         #endregion
         #region Navigation and Playback Properties
@@ -777,6 +800,9 @@ namespace AstroImages.Wpf.ViewModels
                 _ when _appConfig.CustomKeywords.Contains(columnName) =>
                     SortByDictionaryValue(files, f => f.CustomKeywords, columnName, direction),
                     
+                _ when _appConfig.CsvKeywords.Contains(columnName) =>
+                    SortByDictionaryValue(files, f => f.CsvKeywords, columnName, direction),
+
                 _ when _appConfig.FitsKeywords.Contains(columnName) =>
                     SortByDictionaryValue(files, f => f.FitsKeywords, columnName, direction),
                     
@@ -858,6 +884,7 @@ namespace AstroImages.Wpf.ViewModels
         private readonly IFitsKeywordsDialogService _fitsKeywordsDialogService;     // Shows FITS keywords dialog
         private readonly IListViewColumnService _listViewColumnService;         // Manages ListView column visibility
         private readonly ILoggingService _loggingService;                       // Logging service for tracking actions and errors
+        private readonly CsvMetadataService _csvMetadataService;               // Loads ImageMetaData.csv from the current folder
         #endregion
         #region Main Application Commands
         // These commands handle the primary application functionality
@@ -911,6 +938,7 @@ namespace AstroImages.Wpf.ViewModels
             _appConfig = appConfig;
             _folderDialogService = folderDialogService;
             _loggingService = loggingService;
+            _csvMetadataService = new CsvMetadataService();
             
             // Initialize AutoStretch from configuration
             _autoStretch = _appConfig.AutoStretch;
@@ -1248,7 +1276,8 @@ namespace AstroImages.Wpf.ViewModels
                 _appConfig.MedianDisplayMode,
                 _appConfig.ShowHistogram,
                 _appConfig.FitsKeywords,
-                _appConfig.CustomKeywords);
+                _appConfig.CustomKeywords,
+                _appConfig.CsvKeywords);
                 
             if (result.showSizeColumn.HasValue)
             {
@@ -1313,12 +1342,28 @@ namespace AstroImages.Wpf.ViewModels
                 if (result.customKeywords != null)
                 {
                     _appConfig.CustomKeywords = result.customKeywords;
+                    // Custom keywords come from filenames — re-extract immediately (instant)
+                    RefreshFileListKeywords();
+                }
+
+                if (result.csvKeywords != null)
+                {
+                    _appConfig.CsvKeywords = result.csvKeywords;
+                    // CSV data is already in memory — re-populate immediately (instant)
+                    RefreshFileListCsvKeywords();
                 }
                 
                 _appConfig.Save();
                 _listViewColumnService.UpdateListViewColumns();
                 // Auto-resize columns after configuration change
                 _listViewColumnService.AutoResizeColumns();
+
+                // FITS keyword re-read requires reading file headers — trigger the progress-based
+                // rescan after columns are already rebuilt so the values populate correctly.
+                if (result.fitsKeywords != null)
+                {
+                    RefreshFitsKeywordsWithProgressRequested?.Invoke();
+                }
                 
                 // Calculate medians for existing files if the option was just enabled
                 if (shouldCalculateMedians)

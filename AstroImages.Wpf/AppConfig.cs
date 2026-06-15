@@ -60,6 +60,12 @@ namespace AstroImages.Wpf
         public List<string> FitsKeywords { get; set; } = new List<string>();
         
         /// <summary>
+        /// List of ImageMetaData.csv columns to display as columns (e.g., "HFR", "FWHM", "GuidingRMS").
+        /// These are fields from the ImageMetaData.csv file in the current image folder.
+        /// </summary>
+        public List<string> CsvKeywords { get; set; } = new List<string>();
+        
+        /// <summary>
         /// Whether to show the file size column in the file list.
         /// Default is false to keep the interface cleaner.
         /// </summary>

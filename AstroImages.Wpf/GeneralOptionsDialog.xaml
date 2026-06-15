@@ -24,6 +24,9 @@
                     Padding="15,8" Margin="0,0,10,0"/>
             <Button Name="CustomKeywordsButton" Content="Custom Keywords..." 
                     Click="CustomKeywordsButton_Click" 
+                    Padding="15,8" Margin="0,0,10,0"/>
+            <Button Name="CsvKeywordsButton" Content="CSV Keywords..." 
+                    Click="CsvKeywordsButton_Click" 
                     Padding="15,8"/>
         </StackPanel>
         

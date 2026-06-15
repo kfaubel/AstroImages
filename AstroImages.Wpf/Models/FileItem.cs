@@ -7,6 +7,7 @@ namespace AstroImages.Wpf.Models
     {
         private Dictionary<string, string> _customKeywords = new Dictionary<string, string>();
         private Dictionary<string, string> _fitsKeywords = new Dictionary<string, string>();
+        private Dictionary<string, string> _csvKeywords = new Dictionary<string, string>();
         private bool _isSelected = false;
         private double? _median;
 
@@ -79,6 +80,19 @@ namespace AstroImages.Wpf.Models
                 {
                     OnPropertyChanged(key);
                 }
+            }
+        }
+
+        public Dictionary<string, string> CsvKeywords
+        {
+            get => _csvKeywords;
+            set
+            {
+                _csvKeywords = value;
+                OnPropertyChanged(nameof(CsvKeywords));
+
+                foreach (var key in value.Keys)
+                    OnPropertyChanged(key);
             }
         }
 

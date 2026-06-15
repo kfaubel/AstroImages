@@ -42,6 +42,9 @@ namespace AstroImages.Wpf
         private FloatingHistogramWindow? _floatingHistogramWindow;
         private bool _isFloating = false;
 
+        // Tracks the anchor row for shift-click checkbox range selection
+        private int _lastCheckedIndex = -1;
+
         /// <summary>
         /// Constructor - called when creating a new MainWindow instance.
         /// This sets up all the services and connects the UI to the ViewModel.
@@ -222,6 +225,7 @@ namespace AstroImages.Wpf
             // Wire up file selection to image display
             FileListView.SelectionChanged += FileListView_SelectionChanged;
             FileListView.PreviewKeyDown += FileListView_PreviewKeyDown;
+            FileListView.PreviewMouseLeftButtonDown += FileListView_PreviewMouseLeftButtonDown;
             UpdateImageDisplay();
 
             // Handle pane resize for Fit mode
@@ -285,6 +289,9 @@ namespace AstroImages.Wpf
                 // Allow UI to update
                 await Task.Delay(50);
                 
+                // Reset shift-click anchor whenever a new folder is loaded
+                _lastCheckedIndex = -1;
+
                 // Step 1: Load file list (fast - just filenames)
                 loadingWindow.UpdateMessage("Scanning directory for image files...");
                 var step1Start = totalStopwatch.ElapsedMilliseconds;
@@ -717,6 +724,57 @@ namespace AstroImages.Wpf
         /// <summary>
         /// Handles keyboard input in the file list to toggle checkbox selection with spacebar.
         /// </summary>
+        /// <summary>
+        /// Handles shift+click on the Mark checkbox to select a range of files.
+        /// </summary>
+        private void FileListView_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_viewModel == null) return;
+
+            // Walk up the visual tree from the clicked element to see if it is (inside) a CheckBox
+            var source = e.OriginalSource as System.Windows.DependencyObject;
+            bool isOnCheckbox = false;
+            var walk = source;
+            while (walk != null && !ReferenceEquals(walk, FileListView))
+            {
+                if (walk is System.Windows.Controls.CheckBox) { isOnCheckbox = true; break; }
+                walk = System.Windows.Media.VisualTreeHelper.GetParent(walk);
+            }
+            if (!isOnCheckbox) return;
+
+            // Find the containing ListViewItem
+            walk = source;
+            System.Windows.Controls.ListViewItem? lvi = null;
+            while (walk != null && !ReferenceEquals(walk, FileListView))
+            {
+                if (walk is System.Windows.Controls.ListViewItem item) { lvi = item; break; }
+                walk = System.Windows.Media.VisualTreeHelper.GetParent(walk);
+            }
+            if (lvi == null) return;
+
+            int clickedIndex = FileListView.ItemContainerGenerator.IndexFromContainer(lvi);
+            if (clickedIndex < 0) return;
+
+            bool shiftHeld = System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift)
+                          || System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightShift);
+
+            if (shiftHeld && _lastCheckedIndex >= 0 && _lastCheckedIndex != clickedIndex)
+            {
+                // Toggle state is the opposite of the clicked item's current state
+                bool newState = !_viewModel.Files[clickedIndex].IsSelected;
+                int start = Math.Min(_lastCheckedIndex, clickedIndex);
+                int end   = Math.Max(_lastCheckedIndex, clickedIndex);
+                for (int i = start; i <= end; i++)
+                    _viewModel.Files[i].IsSelected = newState;
+                // Prevent the CheckBox from also toggling just the one clicked item
+                e.Handled = true;
+                return;
+            }
+
+            // No shift (or no anchor yet) — record this as the new anchor after the click proceeds
+            _lastCheckedIndex = clickedIndex;
+        }
+
         private void FileListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.Space)

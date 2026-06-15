@@ -69,6 +69,11 @@ namespace AstroImages.Wpf
         public event Action? CustomKeywordsRequested;
 
         /// <summary>
+        /// Event raised when user clicks the CSV Keywords button.
+        /// </summary>
+        public event Action? CsvKeywordsRequested;
+
+        /// <summary>
         /// Default constructor - creates the dialog with default settings.
         /// This constructor is required for XAML support and is called by other constructors.
         /// 
@@ -181,6 +186,14 @@ namespace AstroImages.Wpf
         private void CustomKeywordsButton_Click(object sender, RoutedEventArgs e)
         {
             CustomKeywordsRequested?.Invoke();
+        }
+
+        /// <summary>
+        /// Event handler for the CSV Keywords button click.
+        /// </summary>
+        private void CsvKeywordsButton_Click(object sender, RoutedEventArgs e)
+        {
+            CsvKeywordsRequested?.Invoke();
         }
 
         /// <summary>

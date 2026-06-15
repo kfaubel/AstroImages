@@ -19,7 +19,7 @@ namespace AstroImages.Wpf.Services
         /// <param name="currentFitsKeywords">The current FITS keywords list.</param>
         /// <param name="currentCustomKeywords">The current custom keywords list.</param>
         /// <returns>A tuple with the new settings, or null values if cancelled.</returns>
-        (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords) ShowGeneralOptionsDialog(
+        (bool? showSizeColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords, List<string>? csvKeywords) ShowGeneralOptionsDialog(
             bool currentShowSizeColumn,
             bool currentShowMedianColumn,
             ThemeMode currentTheme, 
@@ -29,6 +29,7 @@ namespace AstroImages.Wpf.Services
             MedianDisplayMode currentMedianDisplayMode,
             bool currentShowHistogram,
             IEnumerable<string> currentFitsKeywords,
-            IEnumerable<string> currentCustomKeywords);
+            IEnumerable<string> currentCustomKeywords,
+            IEnumerable<string> currentCsvKeywords);
     }
 }
