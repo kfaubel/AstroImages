@@ -17,6 +17,8 @@ namespace AstroImages.Wpf
         private readonly AppConfig _appConfig;
         private int _currentIndex;
         private double _zoomLevel = 1.0;
+        private double _fitScale = 1.0;        // Fit-to-window scale for the current image
+        private bool _fitMode = true;          // True = fit to window; false = manual zoom
         private System.Windows.Point? _lastMousePos;
         private bool _isPanning = false;
 
@@ -79,6 +81,11 @@ namespace AstroImages.Wpf
             if (_currentIndex < 0 || _currentIndex >= _files.Count)
                 return;
 
+            // Capture zoom state before loading so it can be restored
+            bool previousFitMode = _fitMode;
+            double previousZoomLevel = _zoomLevel;
+            double previousFitScale = _fitScale;
+
             var fileItem = _files[_currentIndex];
             
             try
@@ -88,14 +95,60 @@ namespace AstroImages.Wpf
                 
                 // Update info text with selection status
                 UpdateInfoText();
-                
-                // Reset zoom to fit
-                FitImageToWindow();
+
+                if (previousFitMode)
+                {
+                    // Was fitting to window — keep doing that for the new image
+                    FitImageToWindow();
+                }
+                else
+                {
+                    // Was in manual zoom — recalculate the new image's fit scale,
+                    // then restore the zoom proportionally
+                    CalculateFitScale();
+                    double restoredZoom = (previousFitScale > 0.0001)
+                        ? previousZoomLevel * (_fitScale / previousFitScale)
+                        : previousZoomLevel;
+                    restoredZoom = Math.Max(0.1, Math.Min(10.0, restoredZoom));
+                    _zoomLevel = restoredZoom;
+                    ScaleTransform.ScaleX = _zoomLevel;
+                    ScaleTransform.ScaleY = _zoomLevel;
+                    // Center the image
+                    ImageScrollViewer.UpdateLayout();
+                    CenterImage();
+                    UpdateInfoText();
+                }
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"Error loading image: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// Calculates and stores the fit-to-window scale for the current image without changing _zoomLevel.
+        /// </summary>
+        private void CalculateFitScale()
+        {
+            if (DisplayImage.Source == null) return;
+            var bmp = DisplayImage.Source as BitmapSource;
+            if (bmp == null) return;
+
+            double viewportWidth = ImageScrollViewer.ActualWidth > 0 ? ImageScrollViewer.ActualWidth : ActualWidth;
+            double viewportHeight = ImageScrollViewer.ActualHeight > 0 ? ImageScrollViewer.ActualHeight : ActualHeight;
+            if (viewportWidth <= 0 || viewportHeight <= 0) return;
+
+            double scaleX = viewportWidth / bmp.PixelWidth;
+            double scaleY = viewportHeight / bmp.PixelHeight;
+            _fitScale = Math.Min(Math.Min(scaleX, scaleY), 1.0);
+        }
+
+        private void CenterImage()
+        {
+            ImageScrollViewer.ScrollToHorizontalOffset(
+                Math.Max(0, (ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth) / 2));
+            ImageScrollViewer.ScrollToVerticalOffset(
+                Math.Max(0, (ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight) / 2));
         }
 
         private void UpdateInfoText()
@@ -122,23 +175,16 @@ namespace AstroImages.Wpf
             if (bmp == null)
                 return;
 
-            double imageWidth = bmp.PixelWidth;
-            double imageHeight = bmp.PixelHeight;
-            
-            double viewportWidth = ImageScrollViewer.ActualWidth;
-            double viewportHeight = ImageScrollViewer.ActualHeight;
+            double viewportWidth = ImageScrollViewer.ActualWidth > 0 ? ImageScrollViewer.ActualWidth : ActualWidth;
+            double viewportHeight = ImageScrollViewer.ActualHeight > 0 ? ImageScrollViewer.ActualHeight : ActualHeight;
 
-            if (viewportWidth <= 0 || viewportHeight <= 0)
-            {
-                viewportWidth = ActualWidth;
-                viewportHeight = ActualHeight;
-            }
-
-            double scaleX = viewportWidth / imageWidth;
-            double scaleY = viewportHeight / imageHeight;
+            double scaleX = viewportWidth / bmp.PixelWidth;
+            double scaleY = viewportHeight / bmp.PixelHeight;
             
-            _zoomLevel = Math.Min(scaleX, scaleY);
-            _zoomLevel = Math.Min(_zoomLevel, 1.0); // Don't zoom in beyond 100%
+            _fitScale = Math.Min(scaleX, scaleY);
+            _fitScale = Math.Min(_fitScale, 1.0); // Don't zoom in beyond 100%
+            _zoomLevel = _fitScale;
+            _fitMode = true;
             
             ScaleTransform.ScaleX = _zoomLevel;
             ScaleTransform.ScaleY = _zoomLevel;
@@ -161,6 +207,7 @@ namespace AstroImages.Wpf
             double ratioX = centerX / ImageScrollViewer.ExtentWidth;
             double ratioY = centerY / ImageScrollViewer.ExtentHeight;
             
+            _fitMode = false;
             _zoomLevel *= 1.2;
             _zoomLevel = Math.Min(_zoomLevel, 10.0); // Max 10x zoom
             ScaleTransform.ScaleX = _zoomLevel;
@@ -185,6 +232,7 @@ namespace AstroImages.Wpf
             double ratioX = centerX / ImageScrollViewer.ExtentWidth;
             double ratioY = centerY / ImageScrollViewer.ExtentHeight;
             
+            _fitMode = false;
             _zoomLevel /= 1.2;
             _zoomLevel = Math.Max(_zoomLevel, 0.1); // Min 0.1x zoom
             ScaleTransform.ScaleX = _zoomLevel;

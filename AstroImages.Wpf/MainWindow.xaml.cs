@@ -765,6 +765,11 @@ namespace AstroImages.Wpf
                 return; // Exit early since there's nothing to display
             }
 
+            // Capture current zoom state before loading the new image so it can be restored
+            bool previousFitMode = _viewModel.FitMode;
+            double previousZoomLevel = _viewModel.ZoomLevel;
+            double previousFitScale = _viewModel.FitScale;
+
             // Get the currently selected file from the ViewModel's Files collection
             var file = _viewModel.Files[_viewModel.SelectedIndex];
             
@@ -796,9 +801,6 @@ namespace AstroImages.Wpf
                         ImageScrollViewer.Visibility = Visibility.Visible;
                         PlaceholderText.Visibility = Visibility.Collapsed;
 
-                        // Always start in Fit mode for new images
-                        _viewModel.FitMode = true;
-
                         // Force layout update to ensure ScrollViewer is properly sized
                         this.UpdateLayout();
                         
@@ -806,8 +808,29 @@ namespace AstroImages.Wpf
                         // This helps avoid timing issues where the ScrollViewer might not be sized yet
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            FitImageToScrollViewer();
-                            System.Diagnostics.Debug.WriteLine("Image loaded and fit mode applied");
+                            if (previousFitMode || DisplayImage.Source == null)
+                            {
+                                // Was in fit mode (or first image): fit the new image to the window
+                                _viewModel.FitMode = true;
+                                FitImageToScrollViewer();
+                            }
+                            else
+                            {
+                                // Was in manual zoom: restore the same zoom ratio relative to the
+                                // previous fit scale so the image appears at the same visual size.
+                                // If fit scales differ (different image dimensions) we adjust
+                                // proportionally so the zoom feels consistent.
+                                CalculateAndApplyFitScale();
+                                double newFitScale = _viewModel.FitScale;
+                                double restoredZoom = (previousFitScale > 0.0001)
+                                    ? previousZoomLevel * (newFitScale / previousFitScale)
+                                    : previousZoomLevel;
+                                restoredZoom = Math.Max(0.01, Math.Min(5.0, restoredZoom));
+                                _viewModel.FitMode = false;
+                                _viewModel.ZoomLevel = restoredZoom;
+                                CenterImageInScrollViewer();
+                            }
+                            System.Diagnostics.Debug.WriteLine($"Image loaded, fitMode={_viewModel.FitMode}, zoom={_viewModel.ZoomLevel}");
                             
                             // Generate histogram data
                             GenerateHistogramForCurrentImage();

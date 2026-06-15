@@ -420,3 +420,6 @@ TestData.zip
 .env.*.local
 
 .VSCodeCounter/
+
+*.fits
+*.xisf

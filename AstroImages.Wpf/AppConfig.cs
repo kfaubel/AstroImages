@@ -73,9 +73,9 @@ namespace AstroImages.Wpf
         
         /// <summary>
         /// Display mode for median values (Normalized or 16-bit range).
-        /// Default is Normalized (0.0-1.0).
+        /// Default is SixteenBit (0-65535).
         /// </summary>
-        public MedianDisplayMode MedianDisplayMode { get; set; } = MedianDisplayMode.Normalized;
+        public MedianDisplayMode MedianDisplayMode { get; set; } = MedianDisplayMode.SixteenBit;
         
         /// <summary>
         /// Whether to show the histogram panel.
