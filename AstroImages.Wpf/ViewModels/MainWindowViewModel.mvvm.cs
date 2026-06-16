@@ -231,6 +231,9 @@ namespace AstroImages.Wpf.ViewModels
             // Load ImageMetaData.csv from the folder (fast I/O, done synchronously)
             _csvMetadataService.Load(directoryPath);
             
+            // Load the AstroData.csv stats cache for this folder
+            _astroDataCacheService.Load(directoryPath);
+            
             // Use the file management service to get file information
             var loadDirStart = totalStopwatch.ElapsedMilliseconds;
             var fileItems = _fileManagementService.LoadFilesFromDirectory(directoryPath);
@@ -278,8 +281,26 @@ namespace AstroImages.Wpf.ViewModels
                         else
                             System.Threading.Interlocked.Increment(ref otherCount);
                         
+                        // Check AstroData.csv cache for median/mean before doing expensive full-file read
+                        bool calculateStats = _appConfig.ShowMedianColumn;
+                        if (_appConfig.ShowMedianColumn)
+                        {
+                            try
+                            {
+                                var lastWrite = System.IO.File.GetLastWriteTimeUtc(fileItem.Path);
+                                if (_astroDataCacheService.TryGetCached(fileItem.Name, lastWrite,
+                                        out var cachedMedian, out var cachedMean))
+                                {
+                                    fileItem.Median = cachedMedian;
+                                    fileItem.Mean = cachedMean;
+                                    calculateStats = false;
+                                }
+                            }
+                            catch { /* file stat failed; fall through to compute */ }
+                        }
+
                         // Extract both custom and FITS keywords for each file
-                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords, _appConfig.ShowMedianColumn);
+                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, !_appConfig.ScanXisfForFitsKeywords, calculateStats);
                         
                         // Populate CSV keywords from ImageMetaData.csv (if any columns are configured)
                         if (_appConfig.CsvKeywords.Count > 0)
@@ -360,6 +381,9 @@ namespace AstroImages.Wpf.ViewModels
                     var avgMedianTime = filesWithoutMedian.Count > 0 ? medianTime / (double)filesWithoutMedian.Count : 0;
                     _loggingService.LogInfo($"Median recalculation: {medianTime}ms total, {avgMedianTime:F1}ms avg per file");
                 }
+
+                // Persist computed stats to AstroData.csv so the next folder open can skip recomputation
+                _astroDataCacheService.Save(CurrentDirectory, fileItems);
             }
         }
         
@@ -421,6 +445,8 @@ namespace AstroImages.Wpf.ViewModels
                 CurrentDirectory = System.IO.Path.GetDirectoryName(filePaths[0]) ?? "";
                 // Load ImageMetaData.csv from the folder
                 _csvMetadataService.Load(CurrentDirectory);
+                // Load the AstroData.csv stats cache for this folder
+                _astroDataCacheService.Load(CurrentDirectory);
             }
             
             int total = filePaths.Length;
@@ -440,8 +466,26 @@ namespace AstroImages.Wpf.ViewModels
                     {
                         var fileItem = _fileManagementService.GetFileInfo(filePath);
                         
+                        // Check AstroData.csv cache for median/mean before expensive full-file read
+                        bool calculateStats = _appConfig.ShowMedianColumn;
+                        if (_appConfig.ShowMedianColumn)
+                        {
+                            try
+                            {
+                                var lastWrite = System.IO.File.GetLastWriteTimeUtc(filePath);
+                                if (_astroDataCacheService.TryGetCached(fileItem.Name, lastWrite,
+                                        out var cachedMedian, out var cachedMean))
+                                {
+                                    fileItem.Median = cachedMedian;
+                                    fileItem.Mean = cachedMean;
+                                    calculateStats = false;
+                                }
+                            }
+                            catch { /* file stat failed; fall through to compute */ }
+                        }
+
                         // Extract both custom and FITS keywords for the file
-                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, skipXisf: false, _appConfig.ShowMedianColumn);
+                        _keywordExtractionService.PopulateKeywords(fileItem, _appConfig.CustomKeywords, _appConfig.FitsKeywords, skipXisf: false, calculateStats);
                         
                         // Populate CSV keywords
                         if (_appConfig.CsvKeywords.Count > 0)
@@ -466,6 +510,11 @@ namespace AstroImages.Wpf.ViewModels
             // Return sorted list - caller will add to ObservableCollection on UI thread
             var result = processedItems.OrderBy(f => f.Name).ToList();
             System.Diagnostics.Debug.WriteLine($"LoadSpecificFiles returning {result.Count} items");
+
+            // Persist computed stats to AstroData.csv
+            if (_appConfig.ShowMedianColumn && !string.IsNullOrEmpty(CurrentDirectory))
+                _astroDataCacheService.Save(CurrentDirectory, result);
+
             return result;
         }
         
@@ -891,6 +940,7 @@ namespace AstroImages.Wpf.ViewModels
         private readonly IListViewColumnService _listViewColumnService;         // Manages ListView column visibility
         private readonly ILoggingService _loggingService;                       // Logging service for tracking actions and errors
         private readonly CsvMetadataService _csvMetadataService;               // Loads ImageMetaData.csv from the current folder
+        private readonly AstroDataCacheService _astroDataCacheService;          // Caches median/mean values in AstroData.csv
         #endregion
         #region Main Application Commands
         // These commands handle the primary application functionality
@@ -945,6 +995,7 @@ namespace AstroImages.Wpf.ViewModels
             _folderDialogService = folderDialogService;
             _loggingService = loggingService;
             _csvMetadataService = new CsvMetadataService();
+            _astroDataCacheService = new AstroDataCacheService();
             
             // Initialize AutoStretch from configuration
             _autoStretch = _appConfig.AutoStretch;
@@ -1409,6 +1460,10 @@ namespace AstroImages.Wpf.ViewModels
                 });
 
             _loggingService.LogInfo($"Median calculation complete");
+
+            // Persist updated stats to AstroData.csv
+            if (!string.IsNullOrEmpty(CurrentDirectory))
+                _astroDataCacheService.Save(CurrentDirectory, Files);
         }
 
         private void EnterFullScreen()

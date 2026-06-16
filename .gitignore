@@ -424,3 +424,4 @@ TestData.zip
 *.fits
 *.xisf
 ImageMetaData.csv
+AstroData.csv
