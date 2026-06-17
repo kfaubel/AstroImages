@@ -2,6 +2,8 @@
 
 A modern WPF application for browsing and reviewing astronomical images and FITS files. Designed specifically for astrophotographers who need to quickly review image quality and manage their subexposures.
 
+<img width="3701" height="2007" alt="AstroImages" src="https://github.com/user-attachments/assets/fceba398-5514-4f59-a656-16fe1f0d632f" />
+
 ## Key Features
 
 - **View FITS and XISF astronomical images** - Includes display of metadata for these file formats
@@ -13,6 +15,8 @@ A modern WPF application for browsing and reviewing astronomical images and FITS
 - **Histogram display** - Optional histogram panel with linear and logarithmic scales
 - **Floating windows** - Detach image and histogram viewers to separate windows for multi-monitor setups
 - **Dark mode** - Switch between light and dark themes for comfortable viewing
+- **Median & Mean** - Calculates these values and displays then as 0.0-1.0 or 0-65535
+- **Session Metadata NINA plugin values** - Reads the AquisitionDetails.csv and ImageMetaData.csv if present
 
 ## Support for NINA Users
 
