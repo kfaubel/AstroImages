@@ -1,20 +1,36 @@
-AstroImages v1.5.0 - What's New
+AstroImages Release Notes
 
-NEW FEATURES:
-* Added median display format options (normalized 0.0-1.0 or 16-bit 0-65535)
-* Added optional histogram panel (can be shown/hidden via Options)
-* Added floating window support for multi-monitor setups
-* Added column color coding (green=custom keywords, blue=FITS keywords, purple=median)
+v1.6.0 (from v1.5.0)
 
-IMPROVEMENTS:
-* Improved dark mode text visibility throughout the application
-* Enhanced column sizing for better data display
-* Fixed layout issues when floating/docking windows
-* Improved NINA filename pattern support (added FWHM, RMSARCSEC)
+New Features:
+* Added an applicaiton installer 
+    - Previously you had to download a zip file and place it someplace.
+* Added display of metadata from a file in the directory called AquisitionDetails.csv and ImageMetaData.csv
+    - These files are written by Tom Palmer's Session Metadata plugin for NINA
+    - The csv files have the full pathname but only the filename part is used to match files in the current folder.
+* Added median display format options: normalized range (0.0-1.0) or 16-bit range (0-65535).
+* Added an optional histogram panel that can be shown or hidden from Options.
+* Added floating image and histogram windows for multi-monitor workflows.
+* Added file-list column color coding:
+	- Green: custom filename keywords
+	- Blue: FITS keywords
+	- Purple: median/mean columns
+    - Orange: Session Metadata values
 
-BUG FIXES:
-* Fixed grey areas appearing when histogram is disabled
-* Fixed window resize behavior with floating windows
-* Fixed column width when image viewer is re-docked
 
-For full details, visit: https://github.com/kfaubel/AstroImages/releases
+Improvements:
+* Improved dark mode text visibility across the application.
+* Improved column sizing behavior for mixed metadata sets.
+* Expanded NINA filename parsing support (including FWHM and RMSARCSEC patterns).
+* Added compact astronomical coordinate display formatting coordinates from the fits header
+	- RA shown as HH:MM:SS
+	- Dec shown as +DD:MM:SS or -DD:MM:SS
+
+Fixes:
+* Fixed grey/unused areas when histogram is disabled.
+* Fixed floating/docking layout issues and window resize behavior.
+* Fixed file-list width behavior when adding/updating Session Metadata columns.
+* Fixed metadata-column width calculation in floating mode so the file list can properly use available width.
+
+Notes:
+* This release consolidates usability and layout improvements introduced after v1.5.x, with emphasis on metadata readability and multi-window workflows.

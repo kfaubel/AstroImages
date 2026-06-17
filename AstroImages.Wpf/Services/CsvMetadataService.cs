@@ -6,19 +6,23 @@ using System.Linq;
 namespace AstroImages.Wpf.Services
 {
     /// <summary>
-    /// Loads and caches the ImageMetaData.csv file found in the current image folder.
-    /// Provides per-file lookup of CSV column values, matching on filename only
-    /// (stripping the directory portion of the FilePath column).
+    /// Loads and caches session metadata CSV files found in the current image folder.
+    /// Supports both ImageMetaData.csv (per-file values) and AcquisitionDetails.csv
+    /// (session-level values, optionally per-file if FilePath is present).
     /// </summary>
     public class CsvMetadataService
     {
-        private const string CsvFileName = "ImageMetaData.csv";
+        private const string ImageMetadataFileName = "ImageMetaData.csv";
+        private const string AcquisitionDetailsFileName = "AcquisitionDetails.csv";
 
         // Column name used as the match key (the FilePath column, stripped to filename)
         private const string FilePathColumn = "FilePath";
 
-        // Cache: filename (lowercase) → row values
+        // Cache: filename (lowercase) -> row values from per-file metadata.
         private Dictionary<string, Dictionary<string, string>> _rowsByFilename = new();
+
+        // Cache: session-level values from AcquisitionDetails.csv.
+        private Dictionary<string, string> _sessionValues = new(StringComparer.OrdinalIgnoreCase);
 
         // Column names in order, excluding FilePath
         private List<string> _availableColumns = new();
@@ -63,19 +67,40 @@ namespace AstroImages.Wpf.Services
             ("MountRA",             "Mount right ascension in degrees"),
             ("MountDec",            "Mount declination in degrees"),
             ("ImageType",           "Image type (LIGHT, DARK, FLAT, BIAS)"),
+
+            // AcquisitionDetails.csv session-level columns
+            ("TargetName",          "Target object name"),
+            ("RACoordinates",       "Target right ascension"),
+            ("DECCoordinates",      "Target declination"),
+            ("TelescopeName",       "Telescope name"),
+            ("FocalLength",         "Telescope focal length"),
+            ("FocalRatio",          "Telescope focal ratio"),
+            ("CameraName",          "Camera model name"),
+            ("PixelSize",           "Camera pixel size"),
+            ("BitDepth",            "Camera bit depth"),
+            ("ObserverLatitude",    "Observer latitude"),
+            ("ObserverLongitude",   "Observer longitude"),
+            ("ObserverElevation",   "Observer elevation"),
         };
 
         /// <summary>
-        /// Loads ImageMetaData.csv from the specified folder.
+        /// Loads session metadata CSV files from the specified folder.
         /// Clears any previously loaded data first.
-        /// Does nothing if the file does not exist.
+        /// Each file is optional.
         /// </summary>
         public void Load(string folderPath)
         {
             _rowsByFilename = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            _sessionValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _availableColumns = new List<string>();
 
-            var csvPath = Path.Combine(folderPath, CsvFileName);
+            LoadImageMetadata(folderPath);
+            LoadAcquisitionDetails(folderPath);
+        }
+
+        private void LoadImageMetadata(string folderPath)
+        {
+            var csvPath = Path.Combine(folderPath, ImageMetadataFileName);
             if (!File.Exists(csvPath))
                 return;
 
@@ -113,6 +138,74 @@ namespace AstroImages.Wpf.Services
                     // Last row wins if duplicate filenames exist
                     _rowsByFilename[filename] = row;
                 }
+
+            }
+            catch (Exception ex)
+            {
+                App.LoggingService?.LogError("CsvMetadataService", $"Failed to load {csvPath}", ex);
+            }
+        }
+
+        private void LoadAcquisitionDetails(string folderPath)
+        {
+            var csvPath = Path.Combine(folderPath, AcquisitionDetailsFileName);
+            if (!File.Exists(csvPath))
+                return;
+
+            try
+            {
+                using var reader = new StreamReader(csvPath);
+                var headerLine = reader.ReadLine();
+                if (headerLine == null) return;
+
+                var headers = ParseCsvLine(headerLine);
+                var filePathIndex = headers.IndexOf(FilePathColumn);
+
+                string? line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var fields = ParseCsvLine(line);
+
+                    // If this file includes FilePath, merge values per filename.
+                    if (filePathIndex >= 0 && fields.Count > filePathIndex)
+                    {
+                        var filePath = fields[filePathIndex];
+                        var filename = Path.GetFileName(filePath);
+                        if (!string.IsNullOrEmpty(filename))
+                        {
+                            if (!_rowsByFilename.TryGetValue(filename, out var row))
+                            {
+                                row = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                                _rowsByFilename[filename] = row;
+                            }
+
+                            for (int i = 0; i < headers.Count && i < fields.Count; i++)
+                            {
+                                if (!string.Equals(headers[i], FilePathColumn, StringComparison.OrdinalIgnoreCase))
+                                    row[headers[i]] = fields[i];
+                            }
+                        }
+                    }
+
+                    // Also keep session-level fallback values (last non-empty wins).
+                    for (int i = 0; i < headers.Count && i < fields.Count; i++)
+                    {
+                        if (string.Equals(headers[i], FilePathColumn, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        if (!string.IsNullOrWhiteSpace(fields[i]))
+                            _sessionValues[headers[i]] = fields[i];
+                    }
+                }
+
+                // Merge discovered columns into available column list.
+                var available = new HashSet<string>(_availableColumns, StringComparer.OrdinalIgnoreCase);
+                foreach (var header in headers)
+                {
+                    if (!string.Equals(header, FilePathColumn, StringComparison.OrdinalIgnoreCase) && available.Add(header))
+                        _availableColumns.Add(header);
+                }
             }
             catch (Exception ex)
             {
@@ -128,12 +221,15 @@ namespace AstroImages.Wpf.Services
         public Dictionary<string, string> GetValues(string filename, IEnumerable<string> columns)
         {
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (!_rowsByFilename.TryGetValue(filename, out var row))
-                return result;
+            _rowsByFilename.TryGetValue(filename, out var row);
 
             foreach (var col in columns)
             {
-                if (row.TryGetValue(col, out var val))
+                if (row != null && row.TryGetValue(col, out var rowVal) && !string.IsNullOrWhiteSpace(rowVal))
+                    result[col] = FormatValue(rowVal);
+                else if (_sessionValues.TryGetValue(col, out var sessionVal) && !string.IsNullOrWhiteSpace(sessionVal))
+                    result[col] = FormatValue(sessionVal);
+                else if (row != null && row.TryGetValue(col, out var val))
                     result[col] = FormatValue(val);
             }
             return result;
@@ -164,8 +260,8 @@ namespace AstroImages.Wpf.Services
             return raw;
         }
 
-        /// <summary>True if a CSV was successfully loaded for the current folder.</summary>
-        public bool IsLoaded => _rowsByFilename.Count > 0;
+        /// <summary>True if any supported session metadata CSV was successfully loaded for the current folder.</summary>
+        public bool IsLoaded => _rowsByFilename.Count > 0 || _sessionValues.Count > 0;
 
         /// <summary>
         /// Minimal CSV line parser that handles quoted fields containing commas.

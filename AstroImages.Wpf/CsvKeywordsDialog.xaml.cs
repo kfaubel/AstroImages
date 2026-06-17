@@ -8,7 +8,8 @@ using AstroImages.Wpf.Services;
 namespace AstroImages.Wpf
 {
     /// <summary>
-    /// Dialog for selecting which ImageMetaData.csv columns to display as columns in the file list.
+    /// Dialog for selecting which session metadata columns to display as columns in the file list.
+    /// Session metadata comes from ImageMetaData.csv and AcquisitionDetails.csv.
     /// </summary>
     public partial class CsvKeywordsDialog : Window
     {

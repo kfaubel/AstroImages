@@ -1,7 +1,7 @@
 <Window x:Class="AstroImages.Wpf.CsvKeywordsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="CSV Metadata Keywords Configuration"
+    Title="Session Metadata Configuration"
         Height="500"
         Width="420"
         WindowStartupLocation="CenterOwner"
@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0"
-                   Text="Select ImageMetaData.csv columns to display as columns:"
+                   Text="Select session metadata columns to display (ImageMetaData.csv + AcquisitionDetails.csv):"
                    Margin="0,0,0,10"
                    FontWeight="Bold"
                    TextWrapping="Wrap"/>
