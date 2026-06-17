@@ -1488,6 +1488,7 @@ namespace AstroImages.Wpf
                 // Hide docked image and histogram in main window
                 // Collapse the entire right column to give full space to file list
                 // Use Pixel-based sizing (not Star) so columns don't participate in resize
+                FileListColumn.Width = new GridLength(1, GridUnitType.Star);
                 ImageColumn.Width = new GridLength(0, GridUnitType.Pixel);
                 ImageColumn.MinWidth = 0;
                 ImageColumn.MaxWidth = 0; // Prevent column from expanding during layout/resize
@@ -1551,6 +1552,7 @@ namespace AstroImages.Wpf
 
             // Show docked image and histogram in main window
             // Restore the right column to 25% width (1* vs 3* for file list)
+            FileListColumn.Width = new GridLength(3, GridUnitType.Star);
             ImageColumn.Width = new GridLength(1, GridUnitType.Star);
             ImageColumn.MinWidth = 200;
             ImageColumn.MaxWidth = double.PositiveInfinity; // Remove max width constraint
@@ -1880,6 +1882,15 @@ namespace AstroImages.Wpf
             
             // Update the File column width to be responsive to window width
             _listViewColumnService?.UpdateFileColumnWidth();
+
+            // While floating, keep the file list as a single full-width pane.
+            if (_isFloating)
+            {
+                FileListColumn.Width = new GridLength(1, GridUnitType.Star);
+                SplitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
+                ImageColumn.Width = new GridLength(0, GridUnitType.Pixel);
+                return;
+            }
             
             // Adjust splitter position when window resizes (with small delay for layout)
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() =>

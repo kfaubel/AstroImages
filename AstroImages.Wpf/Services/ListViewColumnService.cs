@@ -298,6 +298,13 @@ namespace AstroImages.Wpf.Services
             
             // Force all columns to use their calculated optimal widths (ignore any cached widths)
             ResetAllColumnWidths();
+
+            // Recalculate splitter and fill columns after layout settles.
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() =>
+            {
+                AdjustSplitterPosition();
+                ExpandFileColumnToFillAvailableWidth();
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         /// <summary>
@@ -314,6 +321,7 @@ namespace AstroImages.Wpf.Services
                 if (fileColumn != null)
                 {
                     fileColumn.Width = GetFileColumnWidth();
+                    ExpandFileColumnToFillAvailableWidth();
                 }
             }
         }
@@ -400,7 +408,7 @@ namespace AstroImages.Wpf.Services
                         content = FormatFileSize(item.Size);
                         break;
                     default:
-                        // Keyword column - check both custom and FITS keywords
+                        // Keyword column - check custom, FITS, and CSV/session metadata values.
                         if (isCustomKeyword && item.CustomKeywords.ContainsKey(columnName))
                         {
                             content = item.CustomKeywords[columnName];
@@ -408,6 +416,10 @@ namespace AstroImages.Wpf.Services
                         else if (!isCustomKeyword && item.FitsKeywords.ContainsKey(columnName))
                         {
                             content = item.FitsKeywords[columnName];
+                        }
+                        else if (!isCustomKeyword && item.CsvKeywords.ContainsKey(columnName))
+                        {
+                            content = item.CsvKeywords[columnName];
                         }
                         break;
                 }
@@ -626,19 +638,43 @@ namespace AstroImages.Wpf.Services
                 var mainGrid = FindMainContentGrid(mainWindow);
                 if (mainGrid != null && mainGrid.ColumnDefinitions.Count >= 3)
                 {
+                    // If the image column is collapsed (floating mode), keep a single-pane layout.
+                    // This prevents metadata/dialog actions from restoring split ratios.
+                    var imageColumn = mainGrid.ColumnDefinitions[2];
+                    var splitterColumn = mainGrid.ColumnDefinitions[1];
+                    bool imageCollapsed = imageColumn.MaxWidth == 0 ||
+                        (imageColumn.Width.GridUnitType == GridUnitType.Pixel && imageColumn.Width.Value <= 0.0);
+
+                    if (imageCollapsed)
+                    {
+                        mainGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                        splitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
+                        imageColumn.Width = new GridLength(0, GridUnitType.Pixel);
+                        ExpandFileColumnToFillAvailableWidth();
+                        return;
+                    }
 
 
                     double totalColumnsWidth = CalculateTotalColumnsWidth();
 
                     double windowWidth = mainWindow.ActualWidth;
+                    if (windowWidth <= 0)
+                        return;
                     
                     // Calculate what proportion of the window the file list should take
                     // Small buffer for rounding/layout issues (reduced since padding is now more accurate)
                     double bufferedColumnsWidth = totalColumnsWidth + 3;
                     double idealRatio = bufferedColumnsWidth / windowWidth;
                     
-                    // Apply constraints: minimum 30%, maximum 70%
-                    double fileListRatio = Math.Max(0.3, Math.Min(0.7, idealRatio));
+                    // Apply constraints: minimum 30%, maximum based on image column minimum width.
+                    // This allows wider file-list panes when many columns are shown, while preserving
+                    // at least the image pane's minimum width.
+                    double imageMinWidth = mainGrid.ColumnDefinitions[2].MinWidth;
+                    double splitterWidth = mainGrid.ColumnDefinitions[1].ActualWidth > 0
+                        ? mainGrid.ColumnDefinitions[1].ActualWidth
+                        : 5;
+                    double maxFileListRatio = Math.Max(0.3, (windowWidth - imageMinWidth - splitterWidth) / windowWidth);
+                    double fileListRatio = Math.Max(0.3, Math.Min(maxFileListRatio, idealRatio));
                     double imageViewerRatio = 1.0 - fileListRatio;
                     
                     // Set the column definitions
@@ -660,6 +696,10 @@ namespace AstroImages.Wpf.Services
                     
                     // Log detailed debugging information
                     bool willHaveScrollbar = idealRatio > 0.7;
+
+                    // If there is spare width in the file pane (for example after adding metadata columns),
+                    // grow the File column so the visible columns fill the pane.
+                    ExpandFileColumnToFillAvailableWidth();
 
                 }
                 else
@@ -774,13 +814,45 @@ namespace AstroImages.Wpf.Services
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() =>
             {
                 AdjustSplitterPosition();
+                ExpandFileColumnToFillAvailableWidth();
             }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             
             // Also try with lower priority as backup
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() =>
             {
                 AdjustSplitterPosition();
+                ExpandFileColumnToFillAvailableWidth();
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// Expands the File column to consume any spare width in the visible ListView pane.
+        /// This keeps the list visually full-width when additional metadata columns are added.
+        /// </summary>
+        private void ExpandFileColumnToFillAvailableWidth()
+        {
+            if (!(_fileListView?.View is GridView gridView))
+                return;
+
+            if (_fileListView.ActualWidth <= 0)
+                return;
+
+            var fileColumn = gridView.Columns.FirstOrDefault(c =>
+                c.Header is GridViewColumnHeader header &&
+                header.Content?.ToString() == "File");
+
+            if (fileColumn == null)
+                return;
+
+            var currentTotalWidth = CalculateTotalColumnsWidth();
+            var availableWidth = _fileListView.ActualWidth;
+            var extraWidth = availableWidth - currentTotalWidth;
+
+            // Only grow columns; do not shrink here so content widths remain stable.
+            if (extraWidth > 1)
+            {
+                fileColumn.Width += extraWidth;
+            }
         }
 
         /// <summary>

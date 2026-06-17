@@ -306,6 +306,58 @@ namespace AstroImages.Tests
             // Assert
             Assert.Equal("", result);
         }
+
+        [Fact]
+        public void FormatHeaderValue_WithRaKeyword_ConvertsDegreesToCompactHms()
+        {
+            // Arrange
+            var degrees = 180.0;
+
+            // Act
+            var result = FitsUtilities.FormatHeaderValue("RA", degrees);
+
+            // Assert
+            Assert.Equal("12:00:00", result);
+        }
+
+        [Fact]
+        public void FormatHeaderValue_WithDecKeyword_ConvertsDegreesToCompactDms()
+        {
+            // Arrange
+            var degrees = -45.5;
+
+            // Act
+            var result = FitsUtilities.FormatHeaderValue("DEC", degrees);
+
+            // Assert
+            Assert.Equal("-45:30:00", result);
+        }
+
+        [Fact]
+        public void FormatCoordinateKeywordValue_NonCoordinateKeyword_UsesFallback()
+        {
+            // Arrange
+            var fallback = "123.456";
+
+            // Act
+            var result = FitsUtilities.FormatCoordinateKeywordValue("EXPTIME", 123.456, fallback);
+
+            // Assert
+            Assert.Equal(fallback, result);
+        }
+
+        [Fact]
+        public void FormatCoordinateKeywordValue_UnparseableValue_UsesFallback()
+        {
+            // Arrange
+            var fallback = "not-a-number";
+
+            // Act
+            var result = FitsUtilities.FormatCoordinateKeywordValue("RA", "not-a-number", fallback);
+
+            // Assert
+            Assert.Equal(fallback, result);
+        }
         
         [Fact]
         public void ExtractWcsInfo_ValidHeaders_ExtractsWcsKeywords()

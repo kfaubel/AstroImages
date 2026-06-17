@@ -34,8 +34,8 @@ namespace AstroImages.Wpf.Services
                     {
                         if (fitsHeaders.TryGetValue(keyword, out var value))
                         {
-                            // Use the utility method for consistent formatting
-                            result[keyword] = FitsUtilities.FormatHeaderValue(value);
+                            // Apply keyword-aware formatting (including compact RA/Dec conversion).
+                            result[keyword] = FitsUtilities.FormatHeaderValue(keyword, value);
                         }
                     }
                 }
@@ -57,7 +57,8 @@ namespace AstroImages.Wpf.Services
                         foreach (var kvp in xisfKeywords)
                         {
                             System.Diagnostics.Debug.WriteLine($"  {kvp.Key} = {kvp.Value}");
-                            result[kvp.Key] = XisfUtilities.FormatPropertyValue(kvp.Value);
+                            var formatted = XisfUtilities.FormatPropertyValue(kvp.Value);
+                            result[kvp.Key] = FitsUtilities.FormatCoordinateKeywordValue(kvp.Key, kvp.Value, formatted);
                         }
                     }
                     catch (Exception xisfEx)

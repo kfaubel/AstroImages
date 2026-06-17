@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -11,6 +12,16 @@ namespace AstroImages.Core
     /// </summary>
     public static class FitsUtilities
     {
+        private static readonly HashSet<string> RightAscensionKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "RA", "OBJCTRA", "TELRA", "CRVAL1"
+        };
+
+        private static readonly HashSet<string> DeclinationKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "DEC", "OBJCTDEC", "TELDEC", "CRVAL2"
+        };
+
         /// <summary>
         /// Check if a file is a FITS file by examining the header
         /// </summary>
@@ -214,6 +225,38 @@ namespace AstroImages.Core
         }
 
         /// <summary>
+        /// Format a FITS header value for display with keyword-specific formatting rules.
+        /// Applies RA/Dec degree-to-sexagesimal conversion for known coordinate keywords.
+        /// </summary>
+        public static string FormatHeaderValue(string keyword, object value)
+        {
+            var fallback = FormatHeaderValue(value);
+            return FormatCoordinateKeywordValue(keyword, value, fallback);
+        }
+
+        /// <summary>
+        /// Applies RA/Dec degree-to-sexagesimal conversion for known coordinate keywords.
+        /// Returns <paramref name="fallbackFormattedValue"/> when keyword is not a coordinate
+        /// keyword or when the value cannot be parsed as degrees.
+        /// </summary>
+        public static string FormatCoordinateKeywordValue(string keyword, object value, string fallbackFormattedValue)
+        {
+            if (string.IsNullOrWhiteSpace(keyword) || value == null)
+                return fallbackFormattedValue;
+
+            if (!TryParseDegrees(value, out var degrees))
+                return fallbackFormattedValue;
+
+            if (RightAscensionKeywords.Contains(keyword))
+                return FormatRightAscensionFromDegrees(degrees);
+
+            if (DeclinationKeywords.Contains(keyword))
+                return FormatDeclinationFromDegrees(degrees);
+
+            return fallbackFormattedValue;
+        }
+
+        /// <summary>
         /// Format a numeric value, showing integers without decimal point and 
         /// floating point values rounded to 5 decimal places
         /// </summary>
@@ -228,6 +271,85 @@ namespace AstroImages.Core
             }
             
             return rounded.ToString("G");
+        }
+
+        private static bool TryParseDegrees(object value, out double degrees)
+        {
+            switch (value)
+            {
+                case double d when double.IsFinite(d):
+                    degrees = d;
+                    return true;
+                case float f when float.IsFinite(f):
+                    degrees = f;
+                    return true;
+                case int i:
+                    degrees = i;
+                    return true;
+                case long l:
+                    degrees = l;
+                    return true;
+                case string s:
+                    return double.TryParse(s.Trim(), NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out degrees);
+                default:
+                    degrees = 0;
+                    return false;
+            }
+        }
+
+        private static string FormatRightAscensionFromDegrees(double degrees)
+        {
+            var normalizedDegrees = ((degrees % 360.0) + 360.0) % 360.0;
+            var totalSeconds = normalizedDegrees * 240.0; // 360deg == 24h == 86400s
+
+            var hours = (int)(totalSeconds / 3600.0);
+            totalSeconds -= hours * 3600.0;
+
+            var minutes = (int)(totalSeconds / 60.0);
+            var seconds = totalSeconds - (minutes * 60.0);
+
+            seconds = Math.Round(seconds, 0, MidpointRounding.AwayFromZero);
+            if (seconds >= 60.0)
+            {
+                seconds = 0.0;
+                minutes++;
+            }
+
+            if (minutes >= 60)
+            {
+                minutes = 0;
+                hours = (hours + 1) % 24;
+            }
+
+            return $"{hours:00}:{minutes:00}:{(int)seconds:00}";
+        }
+
+        private static string FormatDeclinationFromDegrees(double degrees)
+        {
+            var sign = degrees < 0 ? "-" : "+";
+            var absoluteDegrees = Math.Abs(degrees);
+            var totalArcSeconds = absoluteDegrees * 3600.0;
+
+            var deg = (int)(totalArcSeconds / 3600.0);
+            totalArcSeconds -= deg * 3600.0;
+
+            var arcMinutes = (int)(totalArcSeconds / 60.0);
+            var arcSeconds = totalArcSeconds - (arcMinutes * 60.0);
+
+            arcSeconds = Math.Round(arcSeconds, 0, MidpointRounding.AwayFromZero);
+            if (arcSeconds >= 60.0)
+            {
+                arcSeconds = 0.0;
+                arcMinutes++;
+            }
+
+            if (arcMinutes >= 60)
+            {
+                arcMinutes = 0;
+                deg++;
+            }
+
+            return $"{sign}{deg:00}:{arcMinutes:00}:{(int)arcSeconds:00}";
         }
 
         /// <summary>
