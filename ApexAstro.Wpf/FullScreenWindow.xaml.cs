@@ -1,0 +1,384 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
+using ApexAstro.Wpf.Models;
+
+namespace ApexAstro.Wpf
+{
+    /// <summary>
+    /// Full-screen image viewer window
+    /// </summary>
+    public partial class FullScreenWindow : Window
+    {
+        private readonly ObservableCollection<FileItem> _files;
+        private readonly AppConfig _appConfig;
+        private int _currentIndex;
+        private double _zoomLevel = 1.0;
+        private double _fitScale = 1.0;        // Fit-to-window scale for the current image
+        private bool _fitMode = true;          // True = fit to window; false = manual zoom
+        private System.Windows.Point? _lastMousePos;
+        private bool _isPanning = false;
+
+        public int CurrentIndex => _currentIndex;
+
+        public FullScreenWindow(ObservableCollection<FileItem> files, int startIndex, AppConfig appConfig)
+        {
+            InitializeComponent();
+            
+            _files = files;
+            _currentIndex = startIndex;
+            _appConfig = appConfig;
+
+            // Set cursor to hand
+            Cursor = System.Windows.Input.Cursors.Hand;
+
+            // Position window on the same monitor as the owner before maximizing
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Loaded += PositionOnOwnerMonitor;
+        }
+
+        /// <summary>
+        /// Positions the window on the same monitor as the owner window
+        /// </summary>
+        private void PositionOnOwnerMonitor(object sender, RoutedEventArgs e)
+        {
+            if (Owner != null)
+            {
+                // Get the screen where the owner window is located
+                var ownerHandle = new System.Windows.Interop.WindowInteropHelper(Owner).Handle;
+                var screen = System.Windows.Forms.Screen.FromHandle(ownerHandle);
+                
+                // Position this window to fill that screen
+                Left = screen.Bounds.Left;
+                Top = screen.Bounds.Top;
+                Width = screen.Bounds.Width;
+                Height = screen.Bounds.Height;
+                
+                // Now maximize to that screen
+                WindowState = WindowState.Maximized;
+            }
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Show help dialog if enabled
+            if (_appConfig.ShowFullScreenHelp)
+            {
+                var helpDialog = new FullScreenHelpDialog(_appConfig);
+                helpDialog.Owner = this;
+                helpDialog.ShowDialog();
+            }
+
+            // Load the initial image
+            LoadCurrentImage();
+        }
+
+        private void LoadCurrentImage()
+        {
+            if (_currentIndex < 0 || _currentIndex >= _files.Count)
+                return;
+
+            // Capture zoom state before loading so it can be restored
+            bool previousFitMode = _fitMode;
+            double previousZoomLevel = _zoomLevel;
+            double previousFitScale = _fitScale;
+
+            var fileItem = _files[_currentIndex];
+            
+            try
+            {
+                var image = FitsImageRenderer.RenderFitsFile(fileItem.Path, autoStretch: true, stretchAggressiveness: _appConfig.StretchAggressiveness);
+                DisplayImage.Source = image;
+                
+                // Update info text with selection status
+                UpdateInfoText();
+
+                if (previousFitMode)
+                {
+                    // Was fitting to window — keep doing that for the new image
+                    FitImageToWindow();
+                }
+                else
+                {
+                    // Was in manual zoom — recalculate the new image's fit scale,
+                    // then restore the zoom proportionally
+                    CalculateFitScale();
+                    double restoredZoom = (previousFitScale > 0.0001)
+                        ? previousZoomLevel * (_fitScale / previousFitScale)
+                        : previousZoomLevel;
+                    restoredZoom = Math.Max(0.1, Math.Min(10.0, restoredZoom));
+                    _zoomLevel = restoredZoom;
+                    ScaleTransform.ScaleX = _zoomLevel;
+                    ScaleTransform.ScaleY = _zoomLevel;
+                    // Center the image
+                    ImageScrollViewer.UpdateLayout();
+                    CenterImage();
+                    UpdateInfoText();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error loading image: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Calculates and stores the fit-to-window scale for the current image without changing _zoomLevel.
+        /// </summary>
+        private void CalculateFitScale()
+        {
+            if (DisplayImage.Source == null) return;
+            var bmp = DisplayImage.Source as BitmapSource;
+            if (bmp == null) return;
+
+            double viewportWidth = ImageScrollViewer.ActualWidth > 0 ? ImageScrollViewer.ActualWidth : ActualWidth;
+            double viewportHeight = ImageScrollViewer.ActualHeight > 0 ? ImageScrollViewer.ActualHeight : ActualHeight;
+            if (viewportWidth <= 0 || viewportHeight <= 0) return;
+
+            double scaleX = viewportWidth / bmp.PixelWidth;
+            double scaleY = viewportHeight / bmp.PixelHeight;
+            _fitScale = Math.Min(Math.Min(scaleX, scaleY), 1.0);
+        }
+
+        private void CenterImage()
+        {
+            ImageScrollViewer.ScrollToHorizontalOffset(
+                Math.Max(0, (ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth) / 2));
+            ImageScrollViewer.ScrollToVerticalOffset(
+                Math.Max(0, (ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight) / 2));
+        }
+
+        private void UpdateInfoText()
+        {
+            if (_currentIndex >= 0 && _currentIndex < _files.Count)
+            {
+                var fileItem = _files[_currentIndex];
+                int zoomPercentage = (int)(_zoomLevel * 100);
+                InfoTextBlock.Text = $"{fileItem.Name} ({_currentIndex + 1}/{_files.Count}) {zoomPercentage}%";
+                
+                // Set color based on selection status
+                InfoTextBlock.Foreground = fileItem.IsSelected 
+                    ? System.Windows.Media.Brushes.Red 
+                    : System.Windows.Media.Brushes.White;
+            }
+        }
+
+        private void FitImageToWindow()
+        {
+            if (DisplayImage.Source == null)
+                return;
+
+            var bmp = DisplayImage.Source as BitmapSource;
+            if (bmp == null)
+                return;
+
+            double viewportWidth = ImageScrollViewer.ActualWidth > 0 ? ImageScrollViewer.ActualWidth : ActualWidth;
+            double viewportHeight = ImageScrollViewer.ActualHeight > 0 ? ImageScrollViewer.ActualHeight : ActualHeight;
+
+            double scaleX = viewportWidth / bmp.PixelWidth;
+            double scaleY = viewportHeight / bmp.PixelHeight;
+            
+            _fitScale = Math.Min(scaleX, scaleY);
+            _fitScale = Math.Min(_fitScale, 1.0); // Don't zoom in beyond 100%
+            _zoomLevel = _fitScale;
+            _fitMode = true;
+            
+            ScaleTransform.ScaleX = _zoomLevel;
+            ScaleTransform.ScaleY = _zoomLevel;
+            
+            // Center the image
+            ImageScrollViewer.ScrollToHorizontalOffset(0);
+            ImageScrollViewer.ScrollToVerticalOffset(0);
+            
+            // Update info text to show new zoom level
+            UpdateInfoText();
+        }
+
+        private void ZoomIn()
+        {
+            // Get current center position before zoom
+            double centerX = ImageScrollViewer.HorizontalOffset + ImageScrollViewer.ViewportWidth / 2;
+            double centerY = ImageScrollViewer.VerticalOffset + ImageScrollViewer.ViewportHeight / 2;
+            
+            // Calculate position as ratio of current content size
+            double ratioX = centerX / ImageScrollViewer.ExtentWidth;
+            double ratioY = centerY / ImageScrollViewer.ExtentHeight;
+            
+            _fitMode = false;
+            _zoomLevel *= 1.2;
+            _zoomLevel = Math.Min(_zoomLevel, 10.0); // Max 10x zoom
+            ScaleTransform.ScaleX = _zoomLevel;
+            ScaleTransform.ScaleY = _zoomLevel;
+            
+            // Update scroll position to maintain center point
+            ImageScrollViewer.UpdateLayout();
+            ImageScrollViewer.ScrollToHorizontalOffset(ratioX * ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth / 2);
+            ImageScrollViewer.ScrollToVerticalOffset(ratioY * ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight / 2);
+            
+            // Update info text to show new zoom level
+            UpdateInfoText();
+        }
+
+        private void ZoomOut()
+        {
+            // Get current center position before zoom
+            double centerX = ImageScrollViewer.HorizontalOffset + ImageScrollViewer.ViewportWidth / 2;
+            double centerY = ImageScrollViewer.VerticalOffset + ImageScrollViewer.ViewportHeight / 2;
+            
+            // Calculate position as ratio of current content size
+            double ratioX = centerX / ImageScrollViewer.ExtentWidth;
+            double ratioY = centerY / ImageScrollViewer.ExtentHeight;
+            
+            _fitMode = false;
+            _zoomLevel /= 1.2;
+            _zoomLevel = Math.Max(_zoomLevel, 0.1); // Min 0.1x zoom
+            ScaleTransform.ScaleX = _zoomLevel;
+            ScaleTransform.ScaleY = _zoomLevel;
+            
+            // Update scroll position to maintain center point
+            ImageScrollViewer.UpdateLayout();
+            ImageScrollViewer.ScrollToHorizontalOffset(ratioX * ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth / 2);
+            ImageScrollViewer.ScrollToVerticalOffset(ratioY * ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight / 2);
+            
+            // Update info text to show new zoom level
+            UpdateInfoText();
+        }
+
+        private void GoToNext()
+        {
+            if (_files.Count == 0)
+                return;
+                
+            _currentIndex++;
+            if (_currentIndex >= _files.Count)
+            {
+                _currentIndex = 0; // Loop back to start
+            }
+            LoadCurrentImage();
+        }
+
+        private void GoToPrevious()
+        {
+            if (_files.Count == 0)
+                return;
+                
+            _currentIndex--;
+            if (_currentIndex < 0)
+            {
+                _currentIndex = _files.Count - 1; // Loop to end
+            }
+            LoadCurrentImage();
+        }
+
+        private void ToggleSelection()
+        {
+            if (_currentIndex >= 0 && _currentIndex < _files.Count)
+            {
+                _files[_currentIndex].IsSelected = !_files[_currentIndex].IsSelected;
+                // Update info text to show selection status
+                UpdateInfoText();
+            }
+        }
+
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    Close();
+                    break;
+                case Key.Right:
+                    GoToNext();
+                    break;
+                case Key.Left:
+                    GoToPrevious();
+                    break;
+                case Key.Space:
+                    ToggleSelection();
+                    break;
+                case Key.Up:
+                    ZoomIn();
+                    break;
+                case Key.Down:
+                    ZoomOut();
+                    break;
+                case Key.F:
+                    FitImageToWindow();
+                    break;
+            }
+        }
+
+        private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Delta > 0)
+            {
+                ZoomIn();
+            }
+            else
+            {
+                ZoomOut();
+            }
+            
+            // Prevent the ScrollViewer from handling the mouse wheel
+            e.Handled = true;
+        }
+
+        private void ImageScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            // Handle zoom
+            if (e.Delta > 0)
+            {
+                ZoomIn();
+            }
+            else
+            {
+                ZoomOut();
+            }
+            
+            // Prevent the ScrollViewer from scrolling
+            e.Handled = true;
+        }
+
+        private void ImageScrollViewer_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            // Prevent ScrollViewer from handling arrow keys
+            if (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down)
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void DisplayImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _lastMousePos = e.GetPosition(ImageScrollViewer);
+            _isPanning = true;
+            DisplayImage.CaptureMouse();
+            Cursor = System.Windows.Input.Cursors.Hand;
+        }
+
+        private void DisplayImage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _isPanning = false;
+            DisplayImage.ReleaseMouseCapture();
+            Cursor = System.Windows.Input.Cursors.Hand;
+        }
+
+        private void DisplayImage_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (!_isPanning || !_lastMousePos.HasValue)
+                return;
+
+            var pos = e.GetPosition(ImageScrollViewer);
+            var dx = pos.X - _lastMousePos.Value.X;
+            var dy = pos.Y - _lastMousePos.Value.Y;
+
+            ImageScrollViewer.ScrollToHorizontalOffset(ImageScrollViewer.HorizontalOffset - dx);
+            ImageScrollViewer.ScrollToVerticalOffset(ImageScrollViewer.VerticalOffset - dy);
+
+            _lastMousePos = pos;
+        }
+    }
+}

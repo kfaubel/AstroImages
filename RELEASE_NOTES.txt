@@ -1,4 +1,4 @@
-AstroImages Release Notes
+ApexAstro Release Notes
 
 v1.6.0 (from v1.5.0)
 

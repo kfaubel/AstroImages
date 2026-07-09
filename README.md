@@ -1,4 +1,4 @@
-# AstroImages
+# ApexAstro
 
 A modern WPF application for browsing and reviewing astronomical images and FITS files. Designed specifically for astrophotographers who need to quickly review image quality and manage their subexposures.
 
@@ -42,18 +42,18 @@ This app can parse RMS, HFR, ECCENTRICITY, FWHM, Stars, and other quality metric
 +### Installation
 
 #### Option 1: Installer (Recommended)
-1. **Download** `AstroImages-Setup-x.x.x.exe` from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
+1. **Download** `ApexAstro-Setup-x.x.x.exe` from [GitHub Releases](https://github.com/kfaubel/ApexAstro/releases)
 2. **Run** the installer
 3. The installer will:
    - Check for .NET 8 Desktop Runtime (offers to download if missing)
-   - Install to `%LOCALAPPDATA%\AstroImages`
+   - Install to `%LOCALAPPDATA%\ApexAstro`
    - Create Start Menu shortcuts
    - Use streamlined installation (only 2-3 clicks required)
 
 #### Option 2: Portable ZIP
-1. **Download** `AstroImages-win-x64.zip` from [GitHub Releases](https://github.com/kfaubel/AstroImages/releases)
+1. **Download** `ApexAstro-win-x64.zip` from [GitHub Releases](https://github.com/kfaubel/ApexAstro/releases)
 2. **Extract** all files to a folder of your choice
-3. **Run** `AstroImages.exe`
+3. **Run** `ApexAstro.exe`
 
 #### Advanced: Silent/Automated Installation
 
@@ -61,16 +61,16 @@ The installer supports command-line flags for automated deployment:
 
 ```powershell
 # Silent installation (shows progress bar)
-AstroImages-Setup-v1.5.0.exe /SILENT
+ApexAstro-Setup-v1.5.0.exe /SILENT
 
 # Very silent installation (no UI at all)
-AstroImages-Setup-v1.5.0.exe /VERYSILENT
+ApexAstro-Setup-v1.5.0.exe /VERYSILENT
 
 # Silent with custom directory
-AstroImages-Setup-v1.5.0.exe /VERYSILENT /DIR="C:\MyApps\AstroImages"
+ApexAstro-Setup-v1.5.0.exe /VERYSILENT /DIR="C:\MyApps\ApexAstro"
 
 # Complete silent installation with logging
-AstroImages-Setup-v1.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="install.log"
+ApexAstro-Setup-v1.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="install.log"
 ```
 
 **Common flags:**
@@ -99,8 +99,8 @@ AstroImages-Setup-v1.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="inst
 
 1. **Clone the repository**
    ```powershell
-   git clone https://github.com/kfaubel/AstroImages.git
-   cd AstroImages
+   git clone https://github.com/kfaubel/ApexAstro.git
+   cd ApexAstro
    ```
 
 2. **Open in VS Code**
@@ -114,7 +114,7 @@ AstroImages-Setup-v1.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="inst
 3. **Build and run**
    - Press `F5` to build and run with debugger (or use Command Palette: "Debug: Start Debugging")
    - Or press `Ctrl+F5` to run without debugger
-   - Alternatively, use the terminal: `dotnet run --project AstroImages.Wpf`
+   - Alternatively, use the terminal: `dotnet run --project ApexAstro.Wpf`
 
 ### Command Line Development
 
@@ -129,13 +129,13 @@ dotnet clean
 dotnet build
 
 # Run the application
-dotnet run --project AstroImages.Wpf
+dotnet run --project ApexAstro.Wpf
 
 # Build specific configuration
 dotnet build --configuration Release
 
 # Watch for changes and auto-rebuild
-dotnet watch --project AstroImages.Wpf
+dotnet watch --project ApexAstro.Wpf
 ```
 ---
 
@@ -144,15 +144,15 @@ dotnet watch --project AstroImages.Wpf
 ### Project Structure
 
 ```
-AstroImages2/
-├── AstroImages.Wpf/          # Main WPF application
+ApexAstro2/
+├── ApexAstro.Wpf/          # Main WPF application
 │   ├── Views/                # XAML windows and user controls
 │   ├── ViewModels/           # MVVM view models
 │   ├── Services/             # Business logic services
 │   ├── Models/               # Data models
 │   └── App.xaml              # Application entry point
-├── AstroImages.Core/         # Core library (FITS parsing, etc.)
-├── AstroImages.Utils/        # Utility classes
+├── ApexAstro.Core/         # Core library (FITS parsing, etc.)
+├── ApexAstro.Utils/        # Utility classes
 └── TestData/                 # Sample FITS files for testing
 ```
 
@@ -164,7 +164,7 @@ AstroImages2/
 
 ```powershell
 # Small, fast download - requires .NET 8 Desktop Runtime
-dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained
+dotnet publish ApexAstro.Wpf -c Release -r win-x64 --no-self-contained
 ```
 
 ### Publishing to GitHub Releases
@@ -178,7 +178,7 @@ The workflow automatically creates both a ZIP file and an installer when you pus
 Follow these steps to publish a new version:
 
 1. **Update Version Numbers** (use the same version in all locations):
-   - [ ] `AstroImages.Wpf/AstroImages.Wpf.csproj` - Update `<Version>` property (e.g., `1.5.0`)
+   - [ ] `ApexAstro.Wpf/ApexAstro.Wpf.csproj` - Update `<Version>` property (e.g., `1.5.0`)
    - [ ] `installer.iss` - Update `#define MyAppVersion` (e.g., `"1.5.0"`)
 
 2. **Update Release Notes**:
@@ -190,10 +190,10 @@ Follow these steps to publish a new version:
    ```powershell
    # Build and test the application
    dotnet build -c Release
-   dotnet run --project AstroImages.Wpf -c Release
+   dotnet run --project ApexAstro.Wpf -c Release
    
    # Test the installer build (requires Inno Setup installed)
-   dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
+   dotnet publish ApexAstro.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
    ```
 
@@ -217,13 +217,13 @@ Follow these steps to publish a new version:
    ```
 
 6. **Monitor GitHub Actions**:
-   - [ ] Go to https://github.com/kfaubel/AstroImages/actions
+   - [ ] Go to https://github.com/kfaubel/ApexAstro/actions
    - [ ] Wait for the build to complete (~5-10 minutes)
    - [ ] Check for any errors in the workflow
 
 7. **Verify Release**:
-   - [ ] Go to https://github.com/kfaubel/AstroImages/releases
-   - [ ] Verify both `AstroImages-win-x64.zip` and `AstroImages-Setup-x.x.x.exe` are present
+   - [ ] Go to https://github.com/kfaubel/ApexAstro/releases
+   - [ ] Verify both `ApexAstro-win-x64.zip` and `ApexAstro-Setup-x.x.x.exe` are present
    - [ ] Download and test the installer
    - [ ] Check that release notes are displayed correctly
 
@@ -264,7 +264,7 @@ It bumps the **patch** component (e.g. `1.5.2` → `1.5.3`), commits, tags, and 
 
 **What the script does, step by step:**
 
-1. Reads the current `<Version>` from `AstroImages.Wpf/AstroImages.Wpf.csproj`.
+1. Reads the current `<Version>` from `ApexAstro.Wpf/ApexAstro.Wpf.csproj`.
 2. Calculates the new version according to the chosen bump type.
 3. Asks for confirmation before making any changes.
 4. Updates `<Version>`, `<AssemblyVersion>`, and `<FileVersion>` in the `.csproj`.
@@ -279,8 +279,8 @@ It bumps the **patch** component (e.g. `1.5.2` → `1.5.3`), commits, tags, and 
 **After the script completes:**
 
 - GitHub Actions picks up the new `vX.Y.Z` tag and builds the installer and ZIP automatically (~5–10 minutes).
-- Check progress at <https://github.com/kfaubel/AstroImages/actions>.
-- The finished assets appear at <https://github.com/kfaubel/AstroImages/releases>.
+- Check progress at <https://github.com/kfaubel/ApexAstro/actions>.
+- The finished assets appear at <https://github.com/kfaubel/ApexAstro/releases>.
 
 ### Building the Installer Locally (Testing)
 
@@ -313,7 +313,7 @@ To test the installer before pushing a release:
 2. **Build and create installer**:
    ```powershell
    # Build the application
-   dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
+   dotnet publish ApexAstro.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
    
    # Compile the installer (command line)
    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
@@ -321,7 +321,7 @@ To test the installer before pushing a release:
    # Or open installer.iss in Inno Setup GUI and click Build -> Compile
    ```
 
-3. **Test the installer**: Find it at `installer-output/AstroImages-Setup-x.x.x.exe`
+3. **Test the installer**: Find it at `installer-output/ApexAstro-Setup-x.x.x.exe`
 
 ---
 
@@ -356,10 +356,10 @@ Maybe: https://learn.microsoft.com/en-gb/windows/msix/
 # Install Windows SDK or Visual Studio (includes SignTool)
 
 # Sign the executable
-signtool sign /f "certificate.pfx" /p "password" /fd SHA256 /tr http://timestamp.sectigo.com /td SHA256 "AstroImages.Wpf.exe"
+signtool sign /f "certificate.pfx" /p "password" /fd SHA256 /tr http://timestamp.sectigo.com /td SHA256 "ApexAstro.Wpf.exe"
 
 # Verify signature
-signtool verify /pa "AstroImages.Wpf.exe"
+signtool verify /pa "ApexAstro.Wpf.exe"
 ```
 
 #### Using MSBuild (Automated)
@@ -374,7 +374,7 @@ Add to your `.csproj` file:
 </PropertyGroup>
 
 <Target Name="SignOutput" AfterTargets="Publish">
-  <Exec Command="&quot;$(SignToolPath)&quot; sign /f certificate.pfx /p $(CertPassword) /fd SHA256 &quot;$(PublishDir)AstroImages.Wpf.exe&quot;" />
+  <Exec Command="&quot;$(SignToolPath)&quot; sign /f certificate.pfx /p $(CertPassword) /fd SHA256 &quot;$(PublishDir)ApexAstro.Wpf.exe&quot;" />
 </Target>
 ```
 
@@ -391,7 +391,7 @@ Always include timestamping when signing:
 
 ## User Guide
 
-See the AstroImages.Wpf/Documentation/Help.md file or run the app and go to Help -> Documentation
+See the ApexAstro.Wpf/Documentation/Help.md file or run the app and go to Help -> Documentation
 
 ### Keyboard Shortcuts
 

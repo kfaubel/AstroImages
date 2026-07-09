@@ -1,0 +1,22 @@
+<Window x:Class="ApexAstro.Wpf.FloatingHistogramWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ApexAstro.Wpf"
+        Title="Histogram" 
+        Height="300" 
+        Width="600"
+        MinWidth="300" 
+        MinHeight="150"
+        Icon="icon.ico"
+        Background="{DynamicResource ThemeWindowBackground}"
+        BorderBrush="{DynamicResource ThemeBorderBrush}"
+        BorderThickness="1">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Histogram Control -->
+        <local:HistogramControl Grid.Row="0" x:Name="HistogramControl" Margin="4"/>
+    </Grid>
+</Window>

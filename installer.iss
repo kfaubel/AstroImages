@@ -1,11 +1,11 @@
-; Inno Setup Script for AstroImages
+; Inno Setup Script for ApexAstro
 ; https://jrsoftware.org/isinfo.php
 
-#define MyAppName "AstroImages"
+#define MyAppName "ApexAstro"
 #define MyAppVersion "1.5.0"
 #define MyAppPublisher "Ken Faubel"
-#define MyAppURL "https://github.com/kfaubel/AstroImages"
-#define MyAppExeName "AstroImages.exe"
+#define MyAppURL "https://github.com/kfaubel/ApexAstro"
+#define MyAppExeName "ApexAstro.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -23,10 +23,10 @@ DisableProgramGroupPage=yes
 InfoBeforeFile=RELEASE_NOTES.txt
 ; Output directory for the installer
 OutputDir=installer-output
-OutputBaseFilename=AstroImages-Setup-{#MyAppVersion}
+OutputBaseFilename=ApexAstro-Setup-{#MyAppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
-SetupIconFile=AstroImages.Wpf\icon.ico
+SetupIconFile=ApexAstro.Wpf\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 ; Privileges

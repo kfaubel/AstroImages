@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>ApexAstro</AssemblyName>
+    <!-- Version Information -->
+    <Version>1.6.0</Version>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
+    <AssemblyTitle>ApexAstro</AssemblyTitle>
+    <AssemblyDescription>Astronomical Image Viewer for FITS and standard image formats</AssemblyDescription>
+    <AssemblyCompany>Ken Faubel</AssemblyCompany>
+    <AssemblyProduct>ApexAstro</AssemblyProduct>
+    <AssemblyCopyright>Copyright ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© 2025 Ken Faubel. All rights reserved.</AssemblyCopyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ApexAstro.Core\ApexAstro.Core.csproj" />
+    <ProjectReference Include="..\ApexAstro.Utils\ApexAstro.Utils.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
+    <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="icon.ico" />
+    <Resource Include="splash.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Documentation\Help.md" />
+  </ItemGroup>
+</Project>

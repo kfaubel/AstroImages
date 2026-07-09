@@ -2,13 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "AstroImages: Run Release",
+      "name": "ApexAstro: Run Release",
       "type": "coreclr",
       "request": "launch",
       "noDebug": true,
-      "preLaunchTask": "build AstroImages Release",
-      "program": "${workspaceFolder}/AstroImages.Wpf/bin/Release/net8.0-windows/AstroImages.exe",
-      "cwd": "${workspaceFolder}/AstroImages.Wpf",
+      "preLaunchTask": "build ApexAstro Release",
+      "program": "${workspaceFolder}/ApexAstro.Wpf/bin/Release/net8.0-windows/ApexAstro.exe",
+      "cwd": "${workspaceFolder}/ApexAstro.Wpf",
       "console": "internalConsole",
       "stopAtEntry": false
     }

@@ -1,4 +1,4 @@
-# AstroImages - Application Architecture
+# ApexAstro - Application Architecture
 
 ## Table of Contents
 - [Overview](#overview)
@@ -13,7 +13,7 @@
 
 ## Overview
 
-AstroImages is a WPF desktop application built with .NET 8.0 following the **Model-View-ViewModel (MVVM)** architectural pattern. The application uses **Dependency Injection** for loose coupling and testability, and implements parallel processing for optimal performance.
+ApexAstro is a WPF desktop application built with .NET 8.0 following the **Model-View-ViewModel (MVVM)** architectural pattern. The application uses **Dependency Injection** for loose coupling and testability, and implements parallel processing for optimal performance.
 
 ### Technology Stack
 - **.NET 8.0** - Latest LTS framework
@@ -51,7 +51,7 @@ MVVM (Model-View-ViewModel) is an architectural pattern that separates the appli
 └────────────────────────────────────────────────────────────┘
 ```
 
-### MVVM Components in AstroImages
+### MVVM Components in ApexAstro
 
 #### 1. **Model Layer**
 Represents data and business logic. Models are simple data containers that implement `INotifyPropertyChanged` when UI binding is needed.
@@ -129,7 +129,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
 }
 ```
 
-### MVVM Benefits in AstroImages
+### MVVM Benefits in ApexAstro
 
 1. **Separation of Concerns**
    - UI logic is separate from business logic
@@ -155,9 +155,9 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
 Dependency Injection (DI) is a design pattern where an object receives its dependencies from external sources rather than creating them itself. This promotes loose coupling and makes testing easier.
 
-### DI Implementation in AstroImages
+### DI Implementation in ApexAstro
 
-AstroImages uses **Constructor Injection** - dependencies are provided through the constructor.
+ApexAstro uses **Constructor Injection** - dependencies are provided through the constructor.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -257,7 +257,7 @@ public class MainWindowViewModel
 }
 ```
 
-### Benefits of DI in AstroImages
+### Benefits of DI in ApexAstro
 
 1. **Loose Coupling**
    - ViewModel doesn't create services directly
@@ -611,7 +611,7 @@ public class MainWindowViewModel
 
 ## Threading Model
 
-AstroImages uses a **hybrid threading model** to balance performance with UI responsiveness:
+ApexAstro uses a **hybrid threading model** to balance performance with UI responsiveness:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -885,7 +885,7 @@ public static class ThemeService
 private static Mutex? _mutex;
 protected override void OnStartup(StartupEventArgs e)
 {
-    _mutex = new Mutex(true, "AstroImages_SingleInstance", out bool createdNew);
+    _mutex = new Mutex(true, "ApexAstro_SingleInstance", out bool createdNew);
     if (!createdNew)
     {
         // Already running
@@ -1003,7 +1003,7 @@ public class MockFileManagementService : IFileManagementService
 
 ## Conclusion
 
-AstroImages demonstrates a well-structured WPF application following industry-standard patterns:
+ApexAstro demonstrates a well-structured WPF application following industry-standard patterns:
 
 - **MVVM** for separation of concerns and testability
 - **Dependency Injection** for loose coupling

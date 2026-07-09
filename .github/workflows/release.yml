@@ -25,7 +25,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
       
     - name: Publish
-      run: dotnet publish AstroImages.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
+      run: dotnet publish ApexAstro.Wpf -c Release -r win-x64 --no-self-contained --output ./publish
       
     - name: Create ZIP package
       run: |
@@ -33,7 +33,7 @@ jobs:
         # Remove debug files
         Remove-Item *.pdb
         # Create release package
-        Compress-Archive -Path * -DestinationPath ../AstroImages-win-x64.zip
+        Compress-Archive -Path * -DestinationPath ../ApexAstro-win-x64.zip
         cd ..
     
     - name: Install Inno Setup
@@ -48,14 +48,14 @@ jobs:
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
         # Copy installer with version in filename (includes 'v' prefix)
         $VERSION = "${{ github.ref_name }}"
-        Copy-Item installer-output\AstroImages-Setup-*.exe .\AstroImages-Setup-$VERSION.exe
+        Copy-Item installer-output\ApexAstro-Setup-*.exe .\ApexAstro-Setup-$VERSION.exe
     
     - name: Verify files
       run: |
         $VERSION = "${{ github.ref_name }}"
         Write-Host "Files to upload:"
-        Get-Item AstroImages-win-x64.zip | Format-List Name, Length
-        Get-Item AstroImages-Setup-$VERSION.exe | Format-List Name, Length
+        Get-Item ApexAstro-win-x64.zip | Format-List Name, Length
+        Get-Item ApexAstro-Setup-$VERSION.exe | Format-List Name, Length
         
     - name: Create Release
       env:
@@ -68,7 +68,7 @@ jobs:
         $CUSTOM_NOTES = Get-Content -Path "RELEASE_NOTES.txt" -Raw
         
         $RELEASE_NOTES = @"
-        ## AstroImages $TAG
+        ## ApexAstro $TAG
         
         ### System Requirements
         - Windows 10/11 (64-bit)
@@ -77,18 +77,18 @@ jobs:
         ### Installation Options
         
         #### Option 1: Installer (Recommended)
-        1. Download ``AstroImages-Setup-$VERSION.exe``
+        1. Download ``ApexAstro-Setup-$VERSION.exe``
         2. Run the installer
         3. The installer will:
            - Check for .NET 8 Desktop Runtime (prompts to download if missing)
-           - Install to ``%LOCALAPPDATA%\AstroImages``
+           - Install to ``%LOCALAPPDATA%\ApexAstro``
            - Create Start Menu shortcuts
            - Use streamlined setup (only 2-3 clicks required)
         
         #### Option 2: Portable ZIP
-        1. Download ``AstroImages-win-x64.zip``
+        1. Download ``ApexAstro-win-x64.zip``
         2. Extract all files to a folder of your choice
-        3. Run ``AstroImages.exe``
+        3. Run ``ApexAstro.exe``
         4. Ensure .NET 8 Desktop Runtime is installed
         
         ### What's New
@@ -98,7 +98,7 @@ jobs:
         
         # Create release with gh CLI
         gh release create $TAG `
-          AstroImages-win-x64.zip `
-          AstroImages-Setup-$VERSION.exe `
-          --title "AstroImages $TAG" `
+          ApexAstro-win-x64.zip `
+          ApexAstro-Setup-$VERSION.exe `
+          --title "ApexAstro $TAG" `
           --notes "$RELEASE_NOTES"

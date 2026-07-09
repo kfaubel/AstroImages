@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$csprojPath = "AstroImages.Wpf\AstroImages.Wpf.csproj"
+$csprojPath = "ApexAstro.Wpf\ApexAstro.Wpf.csproj"
 $csprojContent = Get-Content $csprojPath -Raw
 
 if ($csprojContent -match '<Version>(\d+\.\d+\.\d+)</Version>') {
@@ -58,4 +58,4 @@ git push origin main
 git push origin $tagName
 
 Write-Host "`nRelease $newVersion complete!" -ForegroundColor Green
-Write-Host "https://github.com/kfaubel/AstroImages/actions" -ForegroundColor Cyan
+Write-Host "https://github.com/kfaubel/ApexAstro/actions" -ForegroundColor Cyan

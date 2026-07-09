@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive unit test suite has been created for the AstroImages application with **83 tests covering all key functionality**. All tests are passing successfully.
+A comprehensive unit test suite has been created for the ApexAstro application with **83 tests covering all key functionality**. All tests are passing successfully.
 
 ## Test Results
 
@@ -295,8 +295,8 @@ While the current 83 tests cover core functionality, these areas could be expand
 ## Files Created
 
 ```
-AstroImages.Tests/
-├── AstroImages.Tests.csproj        # Test project file
+ApexAstro.Tests/
+├── ApexAstro.Tests.csproj        # Test project file
 ├── README.md                        # Test documentation
 ├── FitsParserTests.cs              # FITS parser tests
 ├── XisfParserTests.cs              # XISF parser tests
