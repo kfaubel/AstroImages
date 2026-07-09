@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "AstroImages: Run Release",
+      "type": "coreclr",
+      "request": "launch",
+      "noDebug": true,
+      "preLaunchTask": "build AstroImages Release",
+      "program": "${workspaceFolder}/AstroImages.Wpf/bin/Release/net8.0-windows/AstroImages.exe",
+      "cwd": "${workspaceFolder}/AstroImages.Wpf",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    }
+  ]
+}
