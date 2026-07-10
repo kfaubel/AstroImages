@@ -49,7 +49,7 @@
                          Content="Show size in the file list" 
                          Margin="0,5"/>
                 <CheckBox Name="ShowMedianColumnCheckBox" 
-                         Content="Show median and mean in the file list" 
+                         Content="Show median and mean in the file list (slower)" 
                          Margin="0,5"
                          Checked="ShowMedianColumnCheckBox_CheckedChanged"
                          Unchecked="ShowMedianColumnCheckBox_CheckedChanged"/>
