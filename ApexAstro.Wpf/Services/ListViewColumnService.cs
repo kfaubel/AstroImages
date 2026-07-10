@@ -122,15 +122,18 @@ namespace ApexAstro.Wpf.Services
                 gridView.Columns.Add(timeColumn);
             }
 
-            if (_appConfig.ShowFilenameSequenceColumn)
+            if (_appConfig.ShowFilenameFrameColumn)
             {
-                var sequenceColumn = new GridViewColumn
+                var frameHeader = CreateSortableHeader("Frame");
+                frameHeader.Content = "Seq";
+
+                var frameColumn = new GridViewColumn
                 {
-                    Header = CreateSortableHeader("Sequence"),
-                    Width = CalculateDataDrivenColumnWidth("Sequence"),
-                    DisplayMemberBinding = new System.Windows.Data.Binding("FilenameSequence")
+                    Header = frameHeader,
+                    Width = CalculateDataDrivenColumnWidth("Frame"),
+                    DisplayMemberBinding = new System.Windows.Data.Binding("FilenameFrame")
                 };
-                gridView.Columns.Add(sequenceColumn);
+                gridView.Columns.Add(frameColumn);
             }
 
             // Metadata button column with info icon (no gray box)
@@ -395,8 +398,8 @@ namespace ApexAstro.Wpf.Services
                             case "time":
                                 newWidth = CalculateDataDrivenColumnWidth("Time");
                                 break;
-                            case "sequence":
-                                newWidth = CalculateDataDrivenColumnWidth("Sequence");
+                            case "Frame":
+                                newWidth = CalculateDataDrivenColumnWidth("Frame");
                                 break;
                             case "size":
                                 newWidth = 85; // Fixed width for size column
@@ -461,8 +464,8 @@ namespace ApexAstro.Wpf.Services
                     case "time":
                         content = item.FilenameTime;
                         break;
-                    case "sequence":
-                        content = item.FilenameSequence;
+                    case "Frame":
+                        content = item.FilenameFrame;
                         break;
                     case "size":
                         content = FormatFileSize(item.Size);
@@ -512,7 +515,7 @@ namespace ApexAstro.Wpf.Services
                 return 85;
             }
 
-            if (columnName.Equals("Sequence", StringComparison.OrdinalIgnoreCase))
+            if (columnName.Equals("Frame", StringComparison.OrdinalIgnoreCase))
             {
                 return 80;
             }
@@ -600,7 +603,7 @@ namespace ApexAstro.Wpf.Services
             }
             widths["Date"] = 95;
             widths["Time"] = 85;
-            widths["Sequence"] = 80;
+            widths["Frame"] = 60;
             widths["Size"] = 85;       // Fixed width for size column
             
             // Custom and FITS keyword columns - data-driven widths based on actual content

@@ -40,7 +40,7 @@ namespace ApexAstro.Wpf
         /// <summary>
         /// Property to track whether the filename sequence column should be shown.
         /// </summary>
-        public bool ShowFilenameSequenceColumn { get; set; }
+        public bool ShowFilenameFrameColumn { get; set; }
         
         /// <summary>
         /// Property to track whether the median column should be shown in the main ListView.
@@ -124,14 +124,14 @@ namespace ApexAstro.Wpf
         /// <param name="scanXisfForFitsKeywords">Current value of the ScanXisfForFitsKeywords setting</param>
         /// <param name="medianDisplayMode">Current median display mode setting</param>
         /// <param name="showHistogram">Current value of the ShowHistogram setting</param>
-        public GeneralOptionsDialog(bool showSizeColumn, bool showFullFilename, bool showFilenameDateColumn, bool showFilenameTimeColumn, bool showFilenameSequenceColumn, bool showMedianColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords, MedianDisplayMode medianDisplayMode, bool showHistogram) : this()
+        public GeneralOptionsDialog(bool showSizeColumn, bool showFullFilename, bool showFilenameDateColumn, bool showFilenameTimeColumn, bool showFilenameFrameColumn, bool showMedianColumn, ThemeMode theme, bool showFullScreenHelp, double playPauseInterval, bool scanXisfForFitsKeywords, MedianDisplayMode medianDisplayMode, bool showHistogram) : this()
         {
             // Store the initial values in our properties
             ShowSizeColumn = showSizeColumn;
             ShowFullFilename = showFullFilename;
             ShowFilenameDateColumn = showFilenameDateColumn;
             ShowFilenameTimeColumn = showFilenameTimeColumn;
-            ShowFilenameSequenceColumn = showFilenameSequenceColumn;
+            ShowFilenameFrameColumn = showFilenameFrameColumn;
             ShowMedianColumn = showMedianColumn;
             SelectedTheme = theme;
             ShowFullScreenHelp = showFullScreenHelp;
@@ -145,7 +145,7 @@ namespace ApexAstro.Wpf
             ShowFullFilenameCheckBox.IsChecked = showFullFilename;
             ShowFilenameDateColumnCheckBox.IsChecked = showFilenameDateColumn;
             ShowFilenameTimeColumnCheckBox.IsChecked = showFilenameTimeColumn;
-            ShowFilenameSequenceColumnCheckBox.IsChecked = showFilenameSequenceColumn;
+            ShowFilenameFrameColumnCheckBox.IsChecked = ShowFilenameFrameColumn;
             ShowSizeColumnCheckBox.IsChecked = showSizeColumn;
             ShowMedianColumnCheckBox.IsChecked = showMedianColumn;
             ScanXisfForFitsKeywordsCheckBox.IsChecked = scanXisfForFitsKeywords;
@@ -196,8 +196,8 @@ namespace ApexAstro.Wpf
                 }
             }
             
-            // Default to 1.0 second if no match found
-            PlayPauseIntervalComboBox.SelectedIndex = 2; // 1.0 second is at index 2
+            // Default to 0.5 second if no match found
+            PlayPauseIntervalComboBox.SelectedIndex = 1; // 0.5 second is at index 1
         }
 
         /// <summary>
@@ -244,7 +244,7 @@ namespace ApexAstro.Wpf
             ShowFullFilename = ShowFullFilenameCheckBox.IsChecked ?? true;
             ShowFilenameDateColumn = ShowFilenameDateColumnCheckBox.IsChecked ?? false;
             ShowFilenameTimeColumn = ShowFilenameTimeColumnCheckBox.IsChecked ?? false;
-            ShowFilenameSequenceColumn = ShowFilenameSequenceColumnCheckBox.IsChecked ?? false;
+            ShowFilenameFrameColumn = ShowFilenameFrameColumnCheckBox.IsChecked ?? false;
             ShowMedianColumn = ShowMedianColumnCheckBox.IsChecked ?? false;
             ScanXisfForFitsKeywords = ScanXisfForFitsKeywordsCheckBox.IsChecked ?? false;
             ShowHistogram = ShowHistogramCheckBox.IsChecked ?? false;
@@ -269,7 +269,7 @@ namespace ApexAstro.Wpf
             }
             else
             {
-                PlayPauseInterval = 1.0; // Default to 1 second if parsing fails
+                PlayPauseInterval = 0.5; // Default to 0.5 second if parsing fails
             }
             
             // Set DialogResult to true to indicate user clicked OK

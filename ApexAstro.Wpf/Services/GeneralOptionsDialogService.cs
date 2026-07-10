@@ -6,12 +6,12 @@ namespace ApexAstro.Wpf.Services
 {
     public class GeneralOptionsDialogService : IGeneralOptionsDialogService
     {
-        public (bool? showSizeColumn, bool? showFullFilename, bool? showFilenameDateColumn, bool? showFilenameTimeColumn, bool? showFilenameSequenceColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords, List<string>? csvKeywords) ShowGeneralOptionsDialog(
+        public (bool? showSizeColumn, bool? showFullFilename, bool? showFilenameDateColumn, bool? showFilenameTimeColumn, bool? ShowFilenameFrameColumn, bool? showMedianColumn, ThemeMode? theme, bool? showFullScreenHelp, double? playPauseInterval, bool? scanXisfForFitsKeywords, MedianDisplayMode? medianDisplayMode, bool? showHistogram, List<string>? fitsKeywords, List<string>? customKeywords, List<string>? csvKeywords) ShowGeneralOptionsDialog(
             bool currentShowSizeColumn,
             bool currentShowFullFilename,
             bool currentShowFilenameDateColumn,
             bool currentShowFilenameTimeColumn,
-            bool currentShowFilenameSequenceColumn,
+            bool currentShowFilenameFrameColumn,
             bool currentShowMedianColumn,
             ThemeMode currentTheme, 
             bool currentShowFullScreenHelp,
@@ -28,7 +28,7 @@ namespace ApexAstro.Wpf.Services
             List<string>? newCustomKeywords = null;
             List<string>? newCsvKeywords = null;
 
-            var dialog = new GeneralOptionsDialog(currentShowSizeColumn, currentShowFullFilename, currentShowFilenameDateColumn, currentShowFilenameTimeColumn, currentShowFilenameSequenceColumn, currentShowMedianColumn, currentTheme, currentShowFullScreenHelp, currentPlayPauseInterval, currentScanXisfForFitsKeywords, currentMedianDisplayMode, currentShowHistogram);
+            var dialog = new GeneralOptionsDialog(currentShowSizeColumn, currentShowFullFilename, currentShowFilenameDateColumn, currentShowFilenameTimeColumn, currentShowFilenameFrameColumn, currentShowMedianColumn, currentTheme, currentShowFullScreenHelp, currentPlayPauseInterval, currentScanXisfForFitsKeywords, currentMedianDisplayMode, currentShowHistogram);
             
             // Wire up the FITS Keywords button
             dialog.FitsKeywordsRequested += () =>
@@ -70,7 +70,7 @@ namespace ApexAstro.Wpf.Services
             
             if (dialog.ShowDialog() == true)
             {
-                return (dialog.ShowSizeColumn, dialog.ShowFullFilename, dialog.ShowFilenameDateColumn, dialog.ShowFilenameTimeColumn, dialog.ShowFilenameSequenceColumn, dialog.ShowMedianColumn, dialog.SelectedTheme, dialog.ShowFullScreenHelp, dialog.PlayPauseInterval, dialog.ScanXisfForFitsKeywords, dialog.MedianDisplayMode, dialog.ShowHistogram, newFitsKeywords, newCustomKeywords, newCsvKeywords);
+                return (dialog.ShowSizeColumn, dialog.ShowFullFilename, dialog.ShowFilenameDateColumn, dialog.ShowFilenameTimeColumn, dialog.ShowFilenameFrameColumn, dialog.ShowMedianColumn, dialog.SelectedTheme, dialog.ShowFullScreenHelp, dialog.PlayPauseInterval, dialog.ScanXisfForFitsKeywords, dialog.MedianDisplayMode, dialog.ShowHistogram, newFitsKeywords, newCustomKeywords, newCsvKeywords);
             }
             return (null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         }

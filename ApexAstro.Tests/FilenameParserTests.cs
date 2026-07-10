@@ -269,11 +269,11 @@ namespace ApexAstro.Tests
         }
 
         [Fact]
-        public void ExtractSequenceToken_NinaFormattedFilename_ExtractsTrailingSequence()
+        public void ExtractFrameToken_NinaFormattedFilename_ExtractsTrailingSequence()
         {
             var filename = "2026-07-08_22-24-17_O_RMS_0.58_HFR_1.95_ECC_0.57_0306.fits";
 
-            var sequence = FilenameParser.ExtractSequenceToken(filename);
+            var sequence = FilenameParser.ExtractFrameToken(filename);
 
             Assert.Equal("0306", sequence);
         }

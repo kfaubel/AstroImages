@@ -42,8 +42,8 @@
                 <CheckBox Name="ShowFilenameTimeColumnCheckBox"
                          Content="Show the time from filename"
                          Margin="0,5"/>
-                <CheckBox Name="ShowFilenameSequenceColumnCheckBox"
-                         Content="Show the sequence number from filename"
+                <CheckBox Name="ShowFilenameFrameColumnCheckBox"
+                         Content="Show the frame number from filename"
                          Margin="0,5"/>
                 <CheckBox Name="ShowSizeColumnCheckBox" 
                          Content="Show size in the file list" 

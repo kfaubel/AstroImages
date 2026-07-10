@@ -16,7 +16,7 @@ namespace ApexAstro.Wpf.Models
         private string _nameWithoutExtension = string.Empty;
         private string _filenameDate = string.Empty;
         private string _filenameTime = string.Empty;
-        private string _filenameSequence = string.Empty;
+        private string _FilenameFrame = string.Empty;
 
         public string Name
         {
@@ -71,15 +71,15 @@ namespace ApexAstro.Wpf.Models
             }
         }
 
-        public string FilenameSequence
+        public string FilenameFrame
         {
-            get => _filenameSequence;
+            get => _FilenameFrame;
             private set
             {
-                if (_filenameSequence != value)
+                if (_FilenameFrame != value)
                 {
-                    _filenameSequence = value;
-                    OnPropertyChanged(nameof(FilenameSequence));
+                    _FilenameFrame = value;
+                    OnPropertyChanged(nameof(FilenameFrame));
                 }
             }
         }
@@ -192,7 +192,7 @@ namespace ApexAstro.Wpf.Models
             NameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(_name) ?? string.Empty;
             FilenameDate = ApexAstro.Wpf.FilenameParser.ExtractDateToken(_name);
             FilenameTime = ApexAstro.Wpf.FilenameParser.ExtractTimeToken(_name);
-            FilenameSequence = ApexAstro.Wpf.FilenameParser.ExtractSequenceToken(_name);
+            FilenameFrame = ApexAstro.Wpf.FilenameParser.ExtractFrameToken(_name);
         }
     }
 }

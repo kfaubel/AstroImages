@@ -34,6 +34,7 @@
     <Resource Include="splash.png" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Documentation\GettingStarted.md" />
     <EmbeddedResource Include="Documentation\Help.md" />
   </ItemGroup>
 </Project>

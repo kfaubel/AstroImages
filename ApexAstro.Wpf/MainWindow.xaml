@@ -208,6 +208,11 @@
                           Background="{DynamicResource ThemeListViewBackground}"
                           Foreground="{DynamicResource ThemeForeground}"
                           BorderBrush="{DynamicResource ThemeBorderBrush}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                            <Setter Property="ToolTip" Value="{Binding Name}"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
                     <ListView.SelectedIndex>
                         <Binding Path="SelectedIndex" Mode="TwoWay"/>
                     </ListView.SelectedIndex>

@@ -844,9 +844,9 @@ namespace ApexAstro.Wpf.ViewModels
                     ? files.OrderBy(f => f.FilenameTime, StringComparer.OrdinalIgnoreCase).ToList()
                     : files.OrderByDescending(f => f.FilenameTime, StringComparer.OrdinalIgnoreCase).ToList(),
 
-                "Sequence" => direction == ListSortDirection.Ascending
-                    ? files.OrderBy(f => int.TryParse(f.FilenameSequence, out int sequence) ? sequence : int.MaxValue).ToList()
-                    : files.OrderByDescending(f => int.TryParse(f.FilenameSequence, out int sequence) ? sequence : int.MinValue).ToList(),
+                "Frame" => direction == ListSortDirection.Ascending
+                    ? files.OrderBy(f => int.TryParse(f.FilenameFrame, out int frame) ? frame : int.MaxValue).ToList()
+                    : files.OrderByDescending(f => int.TryParse(f.FilenameFrame, out int frame) ? frame : int.MinValue).ToList(),
                     
                 "Size" => direction == ListSortDirection.Ascending 
                     ? files.OrderBy(f => f.Size).ToList()
@@ -1347,7 +1347,7 @@ namespace ApexAstro.Wpf.ViewModels
                 _appConfig.ShowFullFilename,
                 _appConfig.ShowFilenameDateColumn,
                 _appConfig.ShowFilenameTimeColumn,
-                _appConfig.ShowFilenameSequenceColumn,
+                _appConfig.ShowFilenameFrameColumn,
                 _appConfig.ShowMedianColumn,
                 _appConfig.Theme, 
                 _appConfig.ShowFullScreenHelp,
@@ -1365,7 +1365,7 @@ namespace ApexAstro.Wpf.ViewModels
                 _appConfig.ShowFullFilename = result.showFullFilename ?? _appConfig.ShowFullFilename;
                 _appConfig.ShowFilenameDateColumn = result.showFilenameDateColumn ?? _appConfig.ShowFilenameDateColumn;
                 _appConfig.ShowFilenameTimeColumn = result.showFilenameTimeColumn ?? _appConfig.ShowFilenameTimeColumn;
-                _appConfig.ShowFilenameSequenceColumn = result.showFilenameSequenceColumn ?? _appConfig.ShowFilenameSequenceColumn;
+                _appConfig.ShowFilenameFrameColumn = result.ShowFilenameFrameColumn ?? _appConfig.ShowFilenameFrameColumn;
                 
                 // Track if median column was just enabled
                 bool shouldCalculateMedians = false;

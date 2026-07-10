@@ -1,3 +1,4 @@
+using ApexAstro.Wpf.Helpers;
 using System.Windows;
 
 namespace ApexAstro.Wpf
@@ -45,6 +46,22 @@ namespace ApexAstro.Wpf
             // Initialize checkbox based on current setting
             // If ShowSplashScreen is false, that means "don't show again" was previously checked
             DontShowAgainCheckBox.IsChecked = !showSplashScreen;
+            LoadHelpContent();
+        }
+
+        private void LoadHelpContent()
+        {
+            var gs = MarkdownRenderer.LoadEmbeddedMarkdown("ApexAstro.Wpf.Documentation.GettingStarted.md");
+            if (!string.IsNullOrEmpty(gs))
+                MarkdownRenderer.Render(gs, SplashGettingStartedContent);
+            else
+                MarkdownRenderer.RenderFallback(SplashGettingStartedContent, "Getting Started");
+
+            var doc = MarkdownRenderer.LoadEmbeddedMarkdown("ApexAstro.Wpf.Documentation.Help.md");
+            if (!string.IsNullOrEmpty(doc))
+                MarkdownRenderer.Render(doc, SplashDocumentationContent);
+            else
+                MarkdownRenderer.RenderFallback(SplashDocumentationContent, "Documentation");
         }
 
         /// <summary>
@@ -134,16 +151,6 @@ namespace ApexAstro.Wpf
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
-        }
-
-        /// <summary>
-        /// Event handler for Documentation button
-        /// </summary>
-        private void DocumentationButton_Click(object sender, RoutedEventArgs e)
-        {
-            var documentationWindow = new DocumentationWindow();
-            documentationWindow.Owner = this;
-            documentationWindow.ShowDialog();
         }
 
         /// <summary>

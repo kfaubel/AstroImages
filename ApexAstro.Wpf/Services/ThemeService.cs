@@ -156,6 +156,7 @@ namespace ApexAstro.Wpf.Services
 
             // Code block colors (for documentation)
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 60, 60));        // #3C3C3C
+            app.Resources["ThemeCodeBlockForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));      // #F0F0F0
 
             // Accent colors for file list - dark mode (bright and vibrant)
             app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(135, 206, 255));               // #87CEFF (brighter blue for dark mode)
@@ -220,6 +221,7 @@ namespace ApexAstro.Wpf.Services
 
             // Code block colors (for documentation)
             app.Resources["ThemeCodeBlockBackground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 248, 248));      // #F8F8F8
+            app.Resources["ThemeCodeBlockForeground"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(20, 20, 20));         // #141414
 
             // Accent colors for file list - light mode (distinct and readable with more color saturation)
             app.Resources["ThemeAccentBlue"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 120, 180));                   // #3278B4 (brighter blue for light mode)

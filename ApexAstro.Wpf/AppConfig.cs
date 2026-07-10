@@ -90,10 +90,10 @@ namespace ApexAstro.Wpf
         public bool ShowFilenameTimeColumn { get; set; } = false;
 
         /// <summary>
-        /// Whether to show the trailing sequence number token parsed from the filename.
+        /// Whether to show the trailing frame number token parsed from the filename.
         /// Example: 0306
         /// </summary>
-        public bool ShowFilenameSequenceColumn { get; set; } = false;
+        public bool ShowFilenameFrameColumn { get; set; } = false;
         
         /// <summary>
         /// Whether to show the median column in the file list.
@@ -216,9 +216,9 @@ namespace ApexAstro.Wpf
 
         /// <summary>
         /// Time in seconds to pause between images when playing through the list.
-        /// Default is 1.0 second. Supported values: 0.25, 0.5, 1.0, 1.5, 2.0, 4.0, 8.0
+        /// Default is 0.5 second. Supported values: 0.25, 0.5, 1.0, 1.5, 2.0, 4.0, 8.0
         /// </summary>
-        public double PlayPauseInterval { get; set; } = 1.0;
+        public double PlayPauseInterval { get; set; } = 0.5;
 
         /// <summary>
         /// Aggressiveness of the auto-stretch algorithm (0-10).
@@ -350,7 +350,7 @@ namespace ApexAstro.Wpf
             return string.Empty;
         }
 
-        public static string ExtractSequenceToken(string filename)
+        public static string ExtractFrameToken(string filename)
         {
             var tokens = GetFilenameTokens(filename);
             if (tokens.Length == 0)
