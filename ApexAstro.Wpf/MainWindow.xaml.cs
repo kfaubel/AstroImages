@@ -282,6 +282,47 @@ namespace ApexAstro.Wpf
         }
 
         /// <summary>
+        /// Opens a file or folder path forwarded from a secondary launch.
+        /// If a file is provided, loads its directory and selects that file.
+        /// If a directory is provided, loads that directory.
+        /// </summary>
+        public async Task OpenExternalPathAsync(string incomingPath)
+        {
+            if (string.IsNullOrWhiteSpace(incomingPath))
+            {
+                return;
+            }
+
+            var path = incomingPath.Trim().Trim('"');
+
+            try
+            {
+                if (System.IO.File.Exists(path))
+                {
+                    await LoadFolderAndSelectFileAsync(path);
+                    return;
+                }
+
+                if (System.IO.Directory.Exists(path))
+                {
+                    await LoadFilesWithProgressAsync(path, isStartup: false);
+                    return;
+                }
+
+                // If path doesn't exist directly, try interpreting as a file path and use its directory.
+                var directory = System.IO.Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(directory) && System.IO.Directory.Exists(directory))
+                {
+                    await LoadFilesWithProgressAsync(directory, isStartup: false);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Open External Path", $"Failed to open path '{path}'", ex);
+            }
+        }
+
+        /// <summary>
         /// Loads files from a directory with a progress dialog
         /// </summary>
         private async Task LoadFilesWithProgressAsync(string directoryPath, bool isStartup = false)

@@ -1,6 +1,9 @@
 using System.Windows;
 using System.IO;
+using System.IO.Pipes;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using ApexAstro.Wpf.Services;
 
 namespace ApexAstro.Wpf
@@ -14,6 +17,9 @@ namespace ApexAstro.Wpf
     {
         private static Mutex? _mutex;
         private const string MutexName = "ApexAstro_SingleInstance_Mutex";
+        private const string PipeName = "ApexAstro_SingleInstance_Pipe";
+        private CancellationTokenSource? _ipcCancellation;
+        private Task? _ipcListenerTask;
         
         // Singleton logging service available throughout the application
         public static ILoggingService LoggingService { get; private set; } = new LoggingService();
@@ -55,13 +61,21 @@ namespace ApexAstro.Wpf
             if (!createdNew)
             {
                 // Another instance is already running
-                // Show message and exit
-                System.Windows.MessageBox.Show(
-                    "ApexAstro is already running. Please use the running instance to open files.\n\n" +
-                    "Note: To open multiple files, select them all in Windows Explorer before right-clicking 'Open with'.",
-                    "ApexAstro Already Running",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                bool forwarded = false;
+                if (e.Args.Length > 0)
+                {
+                    forwarded = TrySendPathToRunningInstance(e.Args[0]);
+                }
+
+                if (!forwarded)
+                {
+                    System.Windows.MessageBox.Show(
+                        "ApexAstro is already running. Please use the running instance to open files.\n\n" +
+                        "Note: To open multiple files, select them all in Windows Explorer before right-clicking 'Open with'.",
+                        "ApexAstro Already Running",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
                 
                 Current.Shutdown();
                 return;
@@ -101,6 +115,9 @@ namespace ApexAstro.Wpf
                 
                 // Make the window visible to the user
                 win.Show();
+
+                // Start listening for file/folder paths from subsequent launches.
+                StartIpcListener(win);
 
                 // Load application configuration to check splash screen preference
                 var config = AppConfig.Load();
@@ -144,6 +161,13 @@ namespace ApexAstro.Wpf
         protected override void OnExit(ExitEventArgs e)
         {
             LoggingService.LogInfo("Application exiting");
+
+            if (_ipcCancellation != null)
+            {
+                _ipcCancellation.Cancel();
+                _ipcCancellation.Dispose();
+                _ipcCancellation = null;
+            }
             
             // Safely release the mutex - it may not have been acquired on this thread
             // This can happen when the app is closed from different threads
@@ -170,6 +194,70 @@ namespace ApexAstro.Wpf
             }
             
             base.OnExit(e);
+        }
+
+        private bool TrySendPathToRunningInstance(string path)
+        {
+            try
+            {
+                using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+                client.Connect(500);
+                using var writer = new StreamWriter(client, Encoding.UTF8, 1024, leaveOpen: false);
+                writer.WriteLine(path);
+                writer.Flush();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void StartIpcListener(MainWindow mainWindow)
+        {
+            _ipcCancellation = new CancellationTokenSource();
+            var token = _ipcCancellation.Token;
+
+            _ipcListenerTask = Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        using var server = new NamedPipeServerStream(
+                            PipeName,
+                            PipeDirection.In,
+                            1,
+                            PipeTransmissionMode.Byte,
+                            PipeOptions.Asynchronous);
+
+                        await server.WaitForConnectionAsync(token);
+
+                        using var reader = new StreamReader(server, Encoding.UTF8, false, 1024, leaveOpen: true);
+                        var incomingPath = await reader.ReadLineAsync();
+
+                        if (!string.IsNullOrWhiteSpace(incomingPath))
+                        {
+                            await Dispatcher.InvokeAsync(async () =>
+                            {
+                                if (MainWindow is MainWindow runningWindow)
+                                {
+                                    runningWindow.Activate();
+                                    await runningWindow.OpenExternalPathAsync(incomingPath);
+                                }
+                            });
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError("IPC Listener", "Failed to process forwarded path", ex);
+                    }
+                }
+            }, token);
         }
 
         /// <summary>
