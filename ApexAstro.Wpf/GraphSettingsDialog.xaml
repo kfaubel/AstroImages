@@ -1,0 +1,42 @@
+<Window x:Class="ApexAstro.Wpf.GraphSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Graph Settings"
+        Height="420" Width="400"
+        MinHeight="340" MinWidth="340"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource ThemeWindowBackground}"
+        Foreground="{DynamicResource ThemeForeground}">
+    <Grid Margin="16,12,16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Y axis label -->
+        <TextBlock Grid.Row="0" Text="Y Axis Columns (select one or more)"
+                   FontWeight="SemiBold" Margin="0,0,0,6"/>
+
+        <!-- Y axis list -->
+        <ListBox Grid.Row="1" x:Name="YAxisList"
+                 SelectionMode="Multiple"
+                 Background="{DynamicResource ThemeTextBoxBackground}"
+                 Foreground="{DynamicResource ThemeForeground}"
+                 BorderBrush="{DynamicResource ThemeBorderBrush}"
+                 Margin="0,0,0,12">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                    <Setter Property="Padding" Value="6,3"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Width="75" Margin="0,0,8,0" Click="Cancel_Click"/>
+            <Button Content="OK"     Width="75"                  Click="Ok_Click" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

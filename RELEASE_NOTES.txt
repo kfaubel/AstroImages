@@ -1,5 +1,8 @@
 ApexAstro Release Notes
 
+v1.8.0
+* Added interactive graphing for image metadata with saved graph settings.
+
 v1.7.0 
 
 ApexAstro is the new name for the original AstroImages application.
@@ -8,5 +11,4 @@ New Features:
 * Blinking is now much faster
 * There is now the option to hide the full filename and show just the time and frame number leaving more room for metadata columns.
 * New Getting Started page
-
 

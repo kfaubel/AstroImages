@@ -234,6 +234,45 @@ namespace ApexAstro.Wpf
         public List<string> FileListColumnOrder { get; set; } = new List<string>();
 
         /// <summary>
+        /// Graph settings: name of the column used as the X axis.
+        /// </summary>
+        public string GraphXColumn { get; set; } = "Date";
+
+        /// <summary>
+        /// Graph settings: list of column names used as Y axis series.
+        /// </summary>
+        public List<string> GraphYColumns { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Graph settings: chart type — "Scatter" or "Line".
+        /// </summary>
+        public string GraphChartType { get; set; } = "Scatter";
+
+        /// <summary>
+        /// Graph window width in pixels.
+        /// Persisted between sessions.
+        /// </summary>
+        public double GraphWindowWidth { get; set; } = 1200;
+
+        /// <summary>
+        /// Graph window height in pixels.
+        /// Persisted between sessions.
+        /// </summary>
+        public double GraphWindowHeight { get; set; } = 820;
+
+        /// <summary>
+        /// Graph window left position on screen.
+        /// NaN means use owner-centered default.
+        /// </summary>
+        public double GraphWindowLeft { get; set; } = double.NaN;
+
+        /// <summary>
+        /// Graph window top position on screen.
+        /// NaN means use owner-centered default.
+        /// </summary>
+        public double GraphWindowTop { get; set; } = double.NaN;
+
+        /// <summary>
         /// Static field containing the full path where the configuration file is stored.
         /// Uses the user's AppData folder which is standard for application settings on Windows.
         /// Example path: C:\Users\[username]\AppData\Roaming\ApexAstro\app-config.json

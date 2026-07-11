@@ -1412,6 +1412,68 @@ namespace ApexAstro.Wpf
         }
 
         /// <summary>
+        /// Shows the graph window, opening the settings dialog first if needed.
+        /// </summary>
+        private void ShowGraph_Click(object sender, RoutedEventArgs e)
+        {
+            var availableCols = GetGraphColumns();
+
+            // If no Y columns saved yet, force the settings dialog first
+            bool needSettings = _appConfig.GraphYColumns.Count == 0;
+
+            if (needSettings)
+            {
+                var dlg = new GraphSettingsDialog(
+                    availableCols,
+                    _appConfig.GraphXColumn,
+                    _appConfig.GraphYColumns,
+                    _appConfig.GraphChartType)
+                { Owner = this };
+
+                if (dlg.ShowDialog() != true) return;
+
+                _appConfig.GraphXColumn   = dlg.SelectedXColumn;
+                _appConfig.GraphYColumns  = dlg.SelectedYColumns;
+                _appConfig.GraphChartType = dlg.SelectedChartType;
+                _appConfig.Save();
+            }
+
+            var graphWindow = new GraphWindow(
+                _appConfig,
+                () => _viewModel?.Files?.ToList() ?? new List<FileItem>(),
+                GetGraphColumns)
+            { Owner = this };
+
+            graphWindow.Show(); // modeless
+        }
+
+        /// <summary>
+        /// Returns the set of columns available for graphing: always Time and Filter,
+        /// plus every currently-enabled column from AppConfig.
+        /// </summary>
+        private IEnumerable<string> GetGraphColumns()
+        {
+            var cols = new List<string>();
+
+            // Always-available graph dimensions
+            cols.Add("Time");
+            cols.Add("Filter");
+
+            // Keep common filename columns available for Y-axis usage
+            cols.Add("Date");
+            cols.Add("Frame");
+
+            if (_appConfig.ShowSizeColumn)   cols.Add("Size");
+            if (_appConfig.ShowMedianColumn) { cols.Add("Median"); cols.Add("Mean"); }
+
+            cols.AddRange(_appConfig.CustomKeywords);
+            cols.AddRange(_appConfig.FitsKeywords);
+            cols.AddRange(_appConfig.CsvKeywords);
+
+            return cols.Distinct();
+        }
+
+        /// <summary>
         /// Event handler for Help > About menu item.
         /// Reuses the splash screen window to show application information.
         /// </summary>
