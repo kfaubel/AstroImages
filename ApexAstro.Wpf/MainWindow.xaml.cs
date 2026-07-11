@@ -1761,7 +1761,10 @@ namespace ApexAstro.Wpf
                 return;
 
             // Show the Auto Mark dialog with custom keywords and FITS keywords
-            var autoMarkDialog = new AutoMarkDialog(_appConfig.CustomKeywords, _appConfig.FitsKeywords)
+            var autoMarkDialog = new AutoMarkDialog(
+                _appConfig.CustomKeywords,
+                _appConfig.FitsKeywords,
+                _appConfig.AutoSelectCriteria)
             {
                 Owner = this
             };
@@ -1772,7 +1775,12 @@ namespace ApexAstro.Wpf
                 ApplyAutoMark(criteria);
             };
 
-            autoMarkDialog.ShowDialog();
+            var result = autoMarkDialog.ShowDialog();
+            if (result == true)
+            {
+                _appConfig.AutoSelectCriteria = autoMarkDialog.GetCurrentSettings();
+                _appConfig.Save();
+            }
         }
 
         /// <summary>

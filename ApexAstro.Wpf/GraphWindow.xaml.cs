@@ -115,6 +115,7 @@ namespace ApexAstro.Wpf
             {
                 var yCol = yCols[i];
                 var color = MakeSeriesBaseColor(palette[i % palette.Count]);
+                var observedMax = GetObservedMax(items, yCol);
                 var axis = new LinearAxis
                 {
                     Key = $"Y{i}",
@@ -131,6 +132,12 @@ namespace ApexAstro.Wpf
                     MajorGridlineStyle = i == 0 ? LineStyle.Dot : LineStyle.None,
                     MajorGridlineColor = faint,
                 };
+
+                var preferredMaximum = GetPreferredAxisMaximum(yCol, observedMax);
+                if (preferredMaximum.HasValue)
+                {
+                    axis.Maximum = preferredMaximum.Value;
+                }
 
                 model.Axes.Add(axis);
                 yAxisKeys[yCol] = axis.Key;
@@ -447,6 +454,50 @@ namespace ApexAstro.Wpf
 
             return muted;
         }
+
+        private static double? GetObservedMax(IReadOnlyList<FileItem> items, string yCol)
+        {
+            double? max = null;
+            foreach (var item in items)
+            {
+                if (TryGetNumeric(item, yCol, out var value))
+                {
+                    max = max.HasValue ? Math.Max(max.Value, value) : value;
+                }
+            }
+
+            return max;
+        }
+
+        private static double? GetPreferredAxisMaximum(string yCol, double? observedMax)
+        {
+            if (IsEccentricityColumn(yCol))
+            {
+                return 1.0;
+            }
+
+            if (IsRmsColumn(yCol))
+            {
+                return Math.Max(1.5, observedMax ?? 0);
+            }
+
+            if (IsHfrColumn(yCol))
+            {
+                return Math.Max(2.0, observedMax ?? 0);
+            }
+
+            return null;
+        }
+
+        private static bool IsRmsColumn(string yCol)
+            => string.Equals(yCol, "RMS", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsHfrColumn(string yCol)
+            => string.Equals(yCol, "HFR", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsEccentricityColumn(string yCol)
+            => string.Equals(yCol, "ECC", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(yCol, "Eccentricity", StringComparison.OrdinalIgnoreCase);
 
         private static bool TryGetGraphTimeValue(FileItem item, out DateTime value)
         {

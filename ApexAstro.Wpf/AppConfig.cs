@@ -273,6 +273,12 @@ namespace ApexAstro.Wpf
         public double GraphWindowTop { get; set; } = double.NaN;
 
         /// <summary>
+        /// Saved Auto Select criteria values and enabled flags.
+        /// Restored when opening the Auto Select dialog.
+        /// </summary>
+        public List<AutoSelectCriteriaSetting> AutoSelectCriteria { get; set; } = new List<AutoSelectCriteriaSetting>();
+
+        /// <summary>
         /// Static field containing the full path where the configuration file is stored.
         /// Uses the user's AppData folder which is standard for application settings on Windows.
         /// Example path: C:\Users\[username]\AppData\Roaming\ApexAstro\app-config.json
@@ -336,6 +342,16 @@ namespace ApexAstro.Wpf
                 App.LoggingService?.LogError("Config Save", "Failed to save configuration file", ex);
             }
         }
+    }
+
+    public class AutoSelectCriteriaSetting
+    {
+        public string Key { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; }
+        public string MinValue { get; set; } = string.Empty;
+        public string MaxValue { get; set; } = string.Empty;
+        public bool AllowBlank { get; set; } = true;
+        public string AllowedValues { get; set; } = string.Empty;
     }
 
     public static class FilenameParser

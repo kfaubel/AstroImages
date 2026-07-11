@@ -18,15 +18,25 @@ namespace ApexAstro.Wpf
         public event EventHandler<List<AutoMarkCriteria>>? ApplyRequested;
 
         private List<AutoMarkCriteriaViewModel> _criteria;
+        private readonly Dictionary<string, AutoSelectCriteriaSetting> _savedCriteriaByKey;
 
         /// <summary>
         /// Creates the dialog with the specified keywords to check
         /// </summary>
         /// <param name="customKeywords">Custom keywords extracted from filenames</param>
         /// <param name="fitsKeywords">FITS header keywords</param>
-        public AutoMarkDialog(IEnumerable<string> customKeywords, IEnumerable<string> fitsKeywords)
+        public AutoMarkDialog(
+            IEnumerable<string> customKeywords,
+            IEnumerable<string> fitsKeywords,
+            IEnumerable<AutoSelectCriteriaSetting>? savedCriteria = null)
         {
             InitializeComponent();
+
+            _savedCriteriaByKey = (savedCriteria ?? Enumerable.Empty<AutoSelectCriteriaSetting>())
+                .Where(c => !string.IsNullOrWhiteSpace(c.Key))
+                .GroupBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.Last())
+                .ToDictionary(c => c.Key, StringComparer.OrdinalIgnoreCase);
 
             _criteria = new List<AutoMarkCriteriaViewModel>();
 
@@ -36,6 +46,7 @@ namespace ApexAstro.Wpf
             medianVm.AllowBlank = true;
             medianVm.MinValue = "";
             medianVm.MaxValue = "";
+            ApplySavedValues(medianVm);
             _criteria.Add(medianVm);
 
             // Add custom keywords
@@ -43,6 +54,7 @@ namespace ApexAstro.Wpf
             {
                 var vm = new AutoMarkCriteriaViewModel { Key = keyword, IsCustomKeyword = true };
                 SetDefaultValues(vm);
+                ApplySavedValues(vm);
                 _criteria.Add(vm);
             }
 
@@ -55,6 +67,7 @@ namespace ApexAstro.Wpf
 
                 var vm = new AutoMarkCriteriaViewModel { Key = keyword, IsCustomKeyword = false };
                 SetDefaultValues(vm);
+                ApplySavedValues(vm);
                 _criteria.Add(vm);
             }
 
@@ -71,23 +84,28 @@ namespace ApexAstro.Wpf
             {
                 case "RMS":
                     vm.IsEnabled = true;
-                    vm.MinValue = "";
+                    vm.MinValue = "0.01";
                     vm.MaxValue = "1.2";
                     vm.AllowBlank = false;
                     break;
                 case "STARS":
-                    vm.IsEnabled = true;
-                    vm.MinValue = "100";
+                    vm.IsEnabled = false;
+                    vm.MinValue = "";
                     vm.MaxValue = "";
-                    vm.AllowBlank = false;
+                    vm.AllowBlank = true;
                     break;
                 case "ECC":
                     vm.IsEnabled = true;
-                    vm.MinValue = "";
-                    vm.MaxValue = "0.6";
+                    vm.MinValue = "0";
+                    vm.MaxValue = "0.65";
                     vm.AllowBlank = true;  // ECC can be NaN
                     break;
                 case "HFR":
+                    vm.IsEnabled = true;
+                    vm.MinValue = "0";
+                    vm.MaxValue = "2.0";
+                    vm.AllowBlank = false;
+                    break;
                 case "FWHM":
                     vm.IsEnabled = true;
                     vm.MinValue = "";
@@ -104,6 +122,35 @@ namespace ApexAstro.Wpf
                     vm.AllowBlank = true;
                     break;
             }
+        }
+
+        private void ApplySavedValues(AutoMarkCriteriaViewModel vm)
+        {
+            if (!_savedCriteriaByKey.TryGetValue(vm.Key, out var saved))
+            {
+                return;
+            }
+
+            vm.IsEnabled = saved.IsEnabled;
+            vm.MinValue = saved.MinValue ?? string.Empty;
+            vm.MaxValue = saved.MaxValue ?? string.Empty;
+            vm.AllowBlank = saved.AllowBlank;
+            vm.AllowedValues = saved.AllowedValues ?? string.Empty;
+        }
+
+        public List<AutoSelectCriteriaSetting> GetCurrentSettings()
+        {
+            return _criteria
+                .Select(c => new AutoSelectCriteriaSetting
+                {
+                    Key = c.Key,
+                    IsEnabled = c.IsEnabled,
+                    MinValue = c.MinValue ?? string.Empty,
+                    MaxValue = c.MaxValue ?? string.Empty,
+                    AllowBlank = c.AllowBlank,
+                    AllowedValues = c.AllowedValues ?? string.Empty,
+                })
+                .ToList();
         }
 
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
